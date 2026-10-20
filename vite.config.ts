@@ -4,7 +4,20 @@ const generatedFiles = ["packages/http-api/openapi.json", "packages/api-client/l
 
 const generatedPaths = generatedFiles.join(" ");
 
-const ignorePatterns = [".agents/**", ".claude/**", ".scratch/**", ...generatedFiles];
+const ignorePatterns = [
+  ".agents/**",
+  ".claude/**",
+  ".scratch/**",
+  "packages/server/lib/persistence/migrations/**",
+  ...generatedFiles,
+];
+
+// Tests on real Postgres run only under `test:pg`, which sets TEST_POSTGRES, so `vp test` needs no Docker.
+const postgresTests = "**/*.pg.test.ts";
+const testPostgres = process.env.TEST_POSTGRES === "1";
+
+// The docker-compose.yml service. CI and local runs use it unless DATABASE_URL says otherwise.
+const composeDatabaseUrl = "postgres://formidabile:formidabile@localhost:5432/formidabile";
 
 export default defineConfig({
   staged: {
@@ -21,7 +34,8 @@ export default defineConfig({
     ignorePatterns,
   },
   test: {
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    include: testPostgres ? [postgresTests] : configDefaults.include,
+    exclude: [...configDefaults.exclude, "e2e/**", ...(testPostgres ? [] : [postgresTests])],
   },
   run: {
     cache: true,
@@ -34,10 +48,19 @@ export default defineConfig({
         cache: false,
       },
       test: "vp test",
+      postgres: {
+        command: "docker compose up --wait postgres",
+        cache: false,
+      },
+      "test:pg": {
+        command: `TEST_POSTGRES=1 DATABASE_URL="\${DATABASE_URL:-${composeDatabaseUrl}}" vp test`,
+        dependsOn: ["postgres"],
+        cache: { env: ["DATABASE_URL"] },
+      },
       // Runs the same task names as the CI jobs. Vite Task requires a command, so the gates are dependencies.
       ready: {
         command: "true",
-        dependsOn: ["check", "check:generated", "test"],
+        dependsOn: ["check", "check:generated", "@fb/server#check:migrations", "test", "test:pg"],
       },
     },
   },
