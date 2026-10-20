@@ -1,12 +1,8 @@
 import { configDefaults, defineConfig } from "vite-plus";
 
-const ignorePatterns = [
-  ".agents/**",
-  ".claude/**",
-  ".scratch/**",
-  "packages/http-api/openapi.json",
-  "packages/api-client/lib/schema.d.ts",
-];
+const generatedFiles = ["packages/http-api/openapi.json", "packages/api-client/lib/schema.d.ts"];
+
+const ignorePatterns = [".agents/**", ".claude/**", ".scratch/**", ...generatedFiles];
 
 export default defineConfig({
   staged: {
@@ -29,11 +25,17 @@ export default defineConfig({
     cache: true,
     tasks: {
       check: "vp check",
+      // `git diff` misses a generated file that isn't tracked, so `ls-files` checks both are committed.
+      "check:generated": {
+        command: `git diff --exit-code -- ${generatedFiles.join(" ")} && git ls-files --error-unmatch -- ${generatedFiles.join(" ")}`,
+        dependsOn: ["@fb/api-client#generate"],
+        cache: false,
+      },
       test: "vp test",
       // Runs the same task names as the CI jobs. Vite Task requires a command, so the gates are dependencies.
       ready: {
         command: "true",
-        dependsOn: ["check", "test"],
+        dependsOn: ["check", "check:generated", "test"],
       },
     },
   },

@@ -1,0 +1,15 @@
+{
+  "name": "@fb/api-client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "catalog:"
+  },
+  "devDependencies": {
+    "openapi-typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}
