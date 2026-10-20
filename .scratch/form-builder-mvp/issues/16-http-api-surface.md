@@ -175,6 +175,7 @@ One fact check ran during the session, as a throwaway script against the [defini
   6. On an unknown question type, refuse the whole form rather than skip the question.
   7. A new question type is a contract change, marked by a minor bump of `info.version` and a changelog entry. `format` stays at 1 unless an existing shape changes.
   - Amended by [Trust in response external references](./20-trust-in-response-external-references.md): the contract adds that custom renderers never send `externalRefs`, and states the reference guarantee written there.
+  - Amended by [Revise the phased plan and spec](./30-revise-the-phased-plan-and-spec.md): item 4 also covers `FormNotPublished` on load (show the form as unavailable) and 413 `PayloadTooLarge` on submit or edit (tell the respondent the answers are too long to send). The spec's "`docs/embedding.md` contents" section lists the whole document.
   - Amended by [Retries and idempotency for creates and submissions](./26-retries-and-idempotency-for-creates-and-submissions.md) (ADR 0016): the contract adds the idempotency rules.
     - Mint `idempotencyKey` at the first Submit, keep it until a 201, and mint a new one for the next response. After a definite tagged error it may be kept.
     - A retry resends the same key with an unchanged body. A replay after closing or republishing still returns 201.

@@ -73,6 +73,10 @@ Recorded as [ADR 0007](../../../docs/adr/0007-answer-rows-and-trigger-enforced-p
     - `null` means "create". It inserts the row with `based_on_version_id` set to the current version (or null), and a primary-key violation becomes a 409 conflict.
     - Otherwise, `UPDATE … WHERE form_id = $1 AND revision = $2`. If zero rows are updated, a follow-up read decides between a 409 conflict and "no draft".
   - Discard and publish check the revision the same way. There's no separate "create draft" operation.
+  - Amended by [Revise the phased plan and spec](./30-revise-the-phased-plan-and-spec.md): every draft write (save, including `expectedRevision: null`, discard, publish, and deleting a never-published form) first takes `SELECT … FOR UPDATE` on the form row, scoped to the tenant, the lock publish already takes. Without it, a save could commit between publish's revision check and its draft delete, and an acknowledged save would be lost. Lock order decides the race:
+    - Publish first: a later save or discard with a non-null `expectedRevision` finds no draft and gets `NoDraft`. A save with `expectedRevision: null` creates a new draft based on the new current version.
+    - Save first: publish sees the new revision and gets `RevisionConflict`.
+    - Deleting a never-published form against a save resolves the same way: the loser of the lock sees `RevisionConflict` or `NotFound`.
 - **Publish**: one transaction at `READ COMMITTED`.
   1. Lock the form row with `SELECT … FOR UPDATE`, scoped to the actor's tenant.
   2. Check the draft revision.

@@ -69,6 +69,7 @@ Recorded as [ADR 0006](../../../docs/adr/0006-host-signed-bearer-tokens-and-modu
     - Anonymous.
   - Amended by [Anonymous respondent access and tenancy](./19-anonymous-respondent-access-and-tenancy.md): `/token?project=<id>` mints the anonymous user a grant for that project's tenant and form, looked up on the server, so the browser never picks either.
   - Amended by [Trust in response external references](./20-trust-in-response-external-references.md): for every dev user, `/token?project=<id>` checks that the project is in the user's tenant, then mints `form` and `refs: [{ namespace: "project", refId: <id> }]`. Without `project`, identified users get a tenant-wide token with no `refs`.
+  - Amended by [Revise the phased plan and spec](./30-revise-the-phased-plan-and-spec.md): `/token` for the anonymous dev user without `project` gives 401, because a grant needs `form`. The builder already maps that 401 to its "Sign in" link.
   - A custom `ActorResolver` is proven by an integration test, not by the reference host.
 - **§12 unauthorized tests**: API integration tests on PGlite, using the JWT adapter with a test secret.
   - No token, or an expired, wrongly signed or wrong-audience token, on admin endpoints gives a 401.

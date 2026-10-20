@@ -22,7 +22,7 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
   - **Zod 4** for validation.
 - **Skills**: grilling tickets call `grilling` + `domain-modeling`; prototype tickets call `prototype`; research tickets call `research`.
 - **Research findings** live at `.scratch/form-builder-mvp/research/<name>.md` (no git remote, so no research branches).
-- **Reopened 2026-10-20** after an independent readiness audit found unresolved gaps in the hand-off spec. Each reopened ticket carries its own evidence. Earlier decisions stand unless a reopened ticket amends them; a resolution updates the ADRs and tickets it changes, and Revise the phased plan and spec folds everything into `spec.md`. Don't run `/to-tickets` until that ticket is resolved.
+- **Reopened 2026-10-20** after an independent readiness audit found unresolved gaps in the hand-off spec. Each reopened ticket carries its own evidence. Earlier decisions stand unless a reopened ticket amends them; a resolution updates the ADRs and tickets it changes. [Revise the phased plan and spec](./issues/30-revise-the-phased-plan-and-spec.md) has folded everything into `spec.md`, so the map is at its destination and `/to-tickets` can run.
 
 ## Decisions so far
 
@@ -190,6 +190,14 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
   - Licences: MIT for the project, and a `THIRD_PARTY_NOTICES.md` for the three MIT skill sources.
   - Identity: history is authored as the GitHub noreply address, never the work address.
   - Before phase 0: re-author the commit, add the licence files, review locally, then add `origin` and push. Done on 2026-10-20, and `main` is on GitHub. Phase 0 no longer creates the repo. It adds the `.gitignore`, and creates the ruleset once the four checks have reported.
+- [Revise the phased plan and spec](./issues/30-revise-the-phased-plan-and-spec.md): the [spec](./spec.md) is revised and ready for `/to-tickets`. No ADR.
+  - Folded in: ADRs 0011 to 0016 and every reopened ticket, phase by phase, plus a design envelope and the repo already existing.
+  - Concurrency: every draft write takes `FOR UPDATE` on the form row, fixing a lost update between save and publish. If publish wins, the loser gets `NoDraft`. If save wins, publish gets `RevisionConflict`.
+  - Claims: the token validator ships complete in phase 1.
+  - Accessibility: renderer component tests for focus and ARIA, and a three-browser keyboard-only Playwright run.
+  - New sections: a security-cases table beside the §12 table, and one section listing everything `docs/embedding.md` contains, by phase.
+  - Standalone server: a serving-mode parity test compares `apps/api-server` with the Fetch handler.
+  - `/token` for the anonymous dev user without `project` gives 401.
 
 ## Not yet specified
 

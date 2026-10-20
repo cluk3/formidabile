@@ -61,5 +61,6 @@ Recorded as [ADR 0015](../../../docs/adr/0015-the-module-bounds-request-sizes-an
     - A 256-character `respondentId` gives 422.
   - **`@fb/core`**: a 254-character email answer passes, and a 255-character one fails. The answer-schema contract test gains the email case.
   - **`apps/api-server`, in its `test:pg` smoke test**: one oversized submit gives 413, and `SHOW statement_timeout` on a module connection returns `30s`.
+    - Amended by [Revise the phased plan and spec](./30-revise-the-phased-plan-and-spec.md): the 413 check moves to the `apps/api-server` serving-mode parity test, which sends 411 and 413 requests through both serving modes. The smoke test keeps `statement_timeout`.
   - No tests for Node's timeouts, which are plain configuration, and a timing test would fail at random on CI.
 - **Map**: no new tickets. [Revise the phased plan and spec](./30-revise-the-phased-plan-and-spec.md) folds this into `spec.md` and decides the phases. A suggested placement: the edge middleware, error rows and claim caps in phase 1, the renderer's 413 message and the `docs/embedding.md` sections in phase 2, the server timeouts and `statement_timeout` with the server and persistence layers, and the security cases in the §12 proof table.
