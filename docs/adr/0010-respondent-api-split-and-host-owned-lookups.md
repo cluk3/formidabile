@@ -1,0 +1,22 @@
+# ADR-010: A separate respondent API, with lookups owned by host back-ends
+
+- **Status:** Accepted
+- **Date:** 2026-10-20
+
+The module's HTTP API is split by audience. Everything a respondent does lives under `/respond`: loading the current version, submitting, reading and editing their own response, and fetching a version's answer schema. A submission's external references come from the token, not the body, and a body carrying `externalRefs` gets a 422 (amended 2026-10-20, see ADR-012). A submit carries a required `idempotencyKey`, and a retry with the same key returns the original response as the same 201 (amended 2026-10-20, see ADR-016). Everything else is an admin resource guarded by capabilities. Each endpoint has exactly one audience, and the `/respond` part of `openapi.json` is the whole contract for a host that renders forms itself without `@fb/core`. Errors are tagged bodies with one fixed table of statuses: `Unauthenticated` 401, `Forbidden` 403, `NotFound` 404, the state conflicts at 409, and `ValidationFailed` 422. A body without `Content-Length` gets 411 `LengthRequired`, and one over its endpoint's limit gets 413 `PayloadTooLarge` (amended 2026-10-20, see ADR-015). Admins can delete a never-published form, and deleting a published one gives 409 `FormPublished` (amended 2026-10-20, see ADR-014). ADR-002's `version_superseded` and `already_responded` are spelled `VersionSuperseded` and `AlreadyResponded`.
+
+The calls a reader is most likely to "fix" by mistake:
+
+- **The admin and the respondent read a response at different paths.** `GET /responses/{id}` needs `responses:read`, and `GET /respond/responses/{id}` serves only its owner. One path would need a "capability or owner" check in a single handler, and would mix two contracts in one schema.
+- **Looking up forms or responses by external reference is admin-only.** A host finds the form to show for one of its entities from its own back-end, using a service token it signs. That keeps "who may see which form" with the host (ADR-001 §3.2). A lookup open to respondents would expose the associations, and it can't be scoped for anonymous callers, who have no tenant. Anonymous respondents now carry a tenant and one form, but a grant bound to one form can't look up others, so the lookup stays admin-only (amended 2026-10-20, see ADR-011).
+- **Admin reads accept either `forms:manage` or `responses:read`.** That covers the form list, form detail, versions and references, so an analyst can reach responses and analytics. Only the draft needs `forms:manage` to read. This extends ADR-006, which assigned capabilities only to writes.
+- **The answer-schema endpoint is advisory.** It is the per-version Zod answer schema converted to JSON Schema 2020-12, and the server's check stays final. The generator adds `uniqueItems` and a non-blank `pattern` to close the gaps, and clients must send text trimmed. Date `min`/`max` can't be expressed in standard JSON Schema, so it's carried only as `x-fb-minDate`/`x-fb-maxDate`. A contract test runs the same cases through Zod and a generic validator.
+- **Revisions travel in the JSON body as opaque strings, not as `ETag`/`If-Match`.** Headers would need CORS exposure and header schemas on both sides for no gain. The draft revision comes from a `bigint` sequence that can exceed 2^53, so it's a string.
+- **A renderer that meets an unknown question type refuses the whole form.** Skipping the question could leave a required answer that can never be sent. A new question type is a contract change, marked by a minor bump of `info.version`. The definition's `format` stays at 1, because older definitions still parse.
+
+## Considered options
+
+- **Plain REST resources shared by both audiences.** Rejected for the reasons above.
+- **A respondent-facing lookup by reference.** Rejected: it leaks associations and can't scope anonymous respondents (amended 2026-10-20, see ADR-011: anonymous grants are bound to one form, so there is nothing to look up).
+- **`ETag`/`If-Match` for revisions.** Rejected: it adds plumbing and gives clients nothing they need.
+- **A `/v1` path prefix.** Rejected for now: the host owns the mount prefix, and `info.version` carries the contract version.

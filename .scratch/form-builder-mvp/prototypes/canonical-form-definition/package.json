@@ -1,0 +1,16 @@
+{
+  "name": "prototype-canonical-form-definition",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "walkthrough": "node walkthrough.prototype.ts",
+    "typecheck": "tsc -p . && tsc -p tsconfig.core.json"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "6.0.3"
+  }
+}

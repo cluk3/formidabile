@@ -8,7 +8,7 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
 
 ## Notes
 
-- **Domain**: [ADR 0001](../../docs/adr/0001-modular-versioned-form-management.md) is the authoritative spec; use the vocabulary in [GLOSSARY.md](../../GLOSSARY.md). Never weaken the ADR §5 invariants to fit a technology.
+- **Domain**: [ADR 0001](../../docs/adr/0001-modular-versioned-form-management.md) is the accepted product baseline, amended by later ADRs (each amended clause names its ADR; the later ADR wins); use the vocabulary in [GLOSSARY.md](../../GLOSSARY.md). Never weaken the ADR §5 invariants to fit a technology.
 - **Planning only**: no production code inside this map. Repo scaffolding is phase 0 of the hand-off plan, not work done here.
 - **Shape of the MVP**: a reusable form module (core domain, API, builder UI, renderer, analytics) plus a thin reference host app proving the §3 integration story, all in one repo.
 - **Constraints**: solo personal project, free or self-hostable infrastructure only, local-first (deployable later).
@@ -22,6 +22,7 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
   - **Zod 4** for validation.
 - **Skills**: grilling tickets call `grilling` + `domain-modeling`; prototype tickets call `prototype`; research tickets call `research`.
 - **Research findings** live at `.scratch/form-builder-mvp/research/<name>.md` (no git remote, so no research branches).
+- **Reopened 2026-10-20** after an independent readiness audit found unresolved gaps in the hand-off spec. Each reopened ticket carries its own evidence. Earlier decisions stand unless a reopened ticket amends them; a resolution updates the ADRs and tickets it changes, and Revise the phased plan and spec folds everything into `spec.md`. Don't run `/to-tickets` until that ticket is resolved.
 
 ## Decisions so far
 
@@ -31,19 +32,194 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
 - [Effect v4 HTTP API and OpenAPI contract](./issues/02-effect-v4-http-api-and-openapi-contract.md): an `effect/http-api` definition with Effect Schema at the boundary publishes an OpenAPI 3.1 contract and a derived TypeScript client. The HTTP modules are `@stability unstable`, so pin exact versions.
 - [Effect v4 with Drizzle and Postgres](./issues/03-effect-v4-with-drizzle-and-postgres.md): use Drizzle's native `drizzle-orm/effect-postgres` on `@effect/sql-pg` (now a native driver, not `pg`). Pin the `rc5` build of `drizzle-orm` and `drizzle-kit`, because the `rc` tag crashes on stable Effect. Transactions are atomic, nest as savepoints, and are shared with raw `effect/sql`. Use PGlite for fast tests and real Postgres in CI. Enforce immutability with triggers in custom migrations.
 - [Zod 4 alongside Effect Schema](./issues/04-zod-4-alongside-effect-schema.md): Effect HTTP API and SQL accept only Effect Schema, so Effect Schema owns those contracts. Zod 4 (authored in `zod/mini` for the renderer) owns the form definition and the per-version answer schemas. They cross the HTTP edge as `Schema.Json` plus a Zod parse, or through a small JSON-body adapter; no general converter.
+- [MVP product calls on the ADR open questions](./issues/05-mvp-product-calls-on-the-adr-open-questions.md): recorded as ADR 0002.
+  - Forms: one draft per form; seven question types after the amendment in Canonical form definition model (dropdown and multi-line text are display settings); no file upload or conditional visibility; an open/closed availability toggle; preview never reaches the server.
+  - Submissions: only submitted responses are stored; a submission against a superseded version is rejected and the renderer reloads.
+  - Edits: only identified respondents can edit, and only while the form is open. An edit stays on the response's original version and overwrites the answers.
+  - Response limit: per form, either unlimited or one per respondent.
+  - External references: a mutable association set on forms and a fixed list on responses.
+  - Deletion: admins can hard-delete one response or all of one respondent's responses.
+  - Analytics: inside the module, combining compatible questions by default, with no export.
+- [Frontend framework and renderer embedding strategy](./issues/06-frontend-framework-and-renderer-embedding-strategy.md): recorded as ADR 0003.
+  - Framework and builder: Svelte 5. The builder is a standalone SvelteKit static single-page app using Tailwind and shadcn-svelte, with explicit Save.
+  - Renderer: one Svelte component tree shipped as a Svelte component and as a self-contained `<form-renderer>` custom element in shadow DOM. It loads, submits and reloads by itself.
+  - Preview: reuses the Svelte component.
+  - Reference host: plain TypeScript with no framework.
+  - Revision conflicts: the interface offers reload or stay.
+  - Accessibility: the renderer is gated on WCAG 2.2 AA.
+  - Language: English only.
+- [How the chosen stack fits together](./issues/07-how-the-chosen-stack-fits-together.md): schema split recorded as ADR 0004.
+  - Schemas: Effect Schema owns the HTTP and SQL contracts. `zod/mini` owns the form definition and answers, which cross the edge as `Schema.Json` carrying Zod's JSON Schema for documentation only; the core runs the parse. One 422 `ValidationFailed` body.
+  - Contract and clients: a committed `openapi.json` with a drift check. Every TypeScript consumer uses an `openapi-typescript` + `openapi-fetch` client, and Effect never reaches the browser. The API runs on `@effect/platform-node` and is also exported as a Fetch handler.
+  - Persistence: one `Db` service typed `EffectPgDatabase` for both drivers, and the `SqlError` paths shim guarded by a type test. Migrations run through the Effect migrator.
+  - Tests: PGlite for `vp test`, and real Postgres 18 from docker compose for an opt-in `test:pg`.
+  - Toolchain: exact pins in the pnpm catalog, and a repo-wide `erasableSyntaxOnly` and `skipLibCheck`.
+- [Canonical form definition model](./issues/08-canonical-form-definition-model.md): recorded as ADR 0005, with a `zod/mini` prototype.
+  - Definition: one type for drafts and versions, holding `format: 1`, title, description and ordered question snapshots. The form record has no name of its own.
+  - Question types: seven, after merging short and long text into one text type. Each type is one module (snapshot schema, answer builder, publish rules, display).
+  - Identifiers: the builder mints UUID question identities and opaque option values, and a question identity keeps one type for life.
+  - Validation: draft save and reads check structure only, while publish adds completeness rules and reports every problem at once.
+  - Answers: one object keyed by question identity with untagged values. An unanswered optional question has no key. A strict answer schema is built and cached per version.
+  - Response limit: a form setting like availability, not versioned.
+- [Svelte 5 with Vite+ and the deep-module toolchain](./issues/13-svelte-5-with-vite-plus-and-the-deep-module-toolchain.md): SvelteKit 3 (config in `vite.config.ts`, `#lib`, TypeScript `^6`) and the renderer work with `vp dev`, `vp build` and `vp test` (Vitest browser mode). The renderer is consumed from source and its custom element is a `vp build` library bundle, so neither `vp pack` nor `svelte-package` is used. svelte-check stays as a cached task because tsgolint doesn't type `.svelte` files, while Oxfmt (`fmt.svelte`), Oxlint and dependency-cruiser do handle `.svelte`, though dependency-cruiser misses type-only imports. Use `resolve.conditions: ["source", ...defaultClientConditions]`, and decide how the custom element's injected styles survive strict host CSPs (filed as [Renderer styles under strict host CSPs](./issues/14-renderer-styles-under-strict-host-csps.md)).
+- [Identity, authorization and tenancy seam](./issues/09-identity-authorization-and-tenancy-seam.md): recorded as ADR 0006, and **Tenant** was added to the glossary.
+  - Seam: an `ActorResolver` port produces `Actor { subject, tenant, capabilities }`. The built-in adapter verifies a host-signed JWT bearer token, and in-process hosts may swap in their own resolver.
+  - Permissions: the module enforces three capabilities itself (`forms:manage`, `responses:read`, `responses:delete`), with no host policy port.
+  - Tenancy: one opaque tenant per actor, fixed on each form at creation. Anything across a tenant boundary returns 404.
+  - Respondents: anonymous respondents can submit only to unlimited forms. Identified respondents can see and edit only their own responses.
+  - Clients: the renderer calls `getToken()` before every request. The builder fetches its token from a `tokenUrl` set in a runtime `config.json`.
+  - Reference host and tests: the reference host offers dev users across two tenants, and the ticket lists the unauthorized cases the §12 tests must cover.
+- [Persistence model](./issues/10-persistence-model.md): recorded as ADR 0007.
+  - Layout: all tables live in a `form_management` Postgres schema. Drafts and versions store the definition as JSONB.
+  - Answers: stored as rows, with composite foreign keys that tie each answer to its response's version and to a question key table (`form_version_questions`). A `question_identities` table enforces one type per identity in the database.
+  - Immutability: triggers reject any update, delete or truncate of versions, question keys and identities, any deletion of forms, and changes to fixed response columns. There's no privilege-split role and no row-level security.
+  - Publish: one `READ COMMITTED` transaction under `FOR UPDATE` on the form row, which moves `forms.current_version_id` and deletes the draft. Submit and edit take `FOR SHARE`.
+  - Concurrency: draft revisions come from a sequence so they never repeat. Responses carry their own revision.
+  - Response limit: a `limited` flag plus a partial unique index on `(form_id, respondent_id)`.
+  - Tenancy: only forms carry a tenant. Repository functions take a branded `TenantId` and join through forms.
+  - External references: indexed rows, with lookups of forms and responses by reference.
+  - Deletion: deleting by respondent covers the whole tenant.
+  - Conventions and migrations: UUIDv7 ids and timestamps from Effect `Clock`. The module exports a migration Effect that hosts run.
+- [Package layout](./issues/11-package-layout.md):
+  - Top level: `packages/` for deep modules, `apps/` for runnable apps, a root `e2e/` Playwright project, and `docker-compose.yml`. Packages are named `@fb/*` and are all private.
+  - Packages:
+    - `core`: browser and server; `zod` only. Entry points `definition`, `answers`, and `editing` (the builder's editing rules).
+    - `server`: use cases, authorization, persistence and analytics as folders. Only `lib/persistence` touches Drizzle.
+    - `http-api`: an Effect `index`, a plain Promise `web` handler with `resolveActor` for non-Effect hosts, and `openapi.json`.
+    - `api-client`: the one shared client with `getToken`, generated from `openapi.json` and committed.
+    - `renderer`: a component entry consumed from source, and an `element` entry that is always the built bundle.
+  - Apps:
+    - `api-server`: standalone, with a `test:pg` smoke test only.
+    - `builder`: an app, not a package. It holds only UI state and calls `core/editing`.
+    - `reference-host`: plain TypeScript. A Vite plugin mounts `/api` in-process, plus `/login` and `/token`. It's the API the builder and e2e use.
+  - Rules: dependency-cruiser keeps an explicit browser-safe list that may not import `effect`, Drizzle, `jose`, Node built-ins or the server packages. It also has a fixed matrix of which code may depend on which, and forbids importing `*.config.ts`.
+  - Question types: the renderer and the builder each keep a registry checked against core's question types, so a missing component is a compile error.
+  - tsconfig: a base, and a server tsconfig that adds Node types and the Drizzle shim. The builder extends `$app/tsconfig` plus the base.
+- [Renderer styles under strict host CSPs](./issues/14-renderer-styles-under-strict-host-csps.md): recorded as ADR 0008, with [spike findings](./research/renderer-csp-styles-spike.md).
+  - Guarantee: `<form-renderer>` works under a strict host CSP, with no `'unsafe-inline'`, no `'unsafe-eval'` and no hashes or nonces.
+  - Mechanism: build-only constructable-stylesheet adoption, through a small Vite plugin and the wrapper's `extend` hook. Static `style` attributes are banned in renderer markup.
+  - Trusted Types: supported, as long as host applications allow Svelte's `svelte-trusted-html` policy.
+  - Reference host and tests: it serves a strict CSP in `vp preview`. A three-browser Playwright test plus a Vitest test against the built bundle prove it.
+  - Embedding contract: the host-facing contract lives in `docs/embedding.md`.
+- [Analytics queries and cross-version compatibility](./issues/15-analytics-queries-and-cross-version-compatibility.md): recorded as ADR 0009.
+  - Compatibility: every snapshot of one question identity combines, and nothing splits automatically. Changed options, labels and constraints are reported as structured data. A new `reidentifyQuestion` builder action lets editors stop a changed question from combining.
+  - Views: option counts, boolean splits, and number count, min, max, mean and median. Text, email and date get answered and skipped counts only. Each version reports a question as present (responses, answered, skipped) or absent, never zero-filled. An option's share is measured against the versions that offered it.
+  - Computation: on read, with six fixed per-form queries in one `REPEATABLE READ READ ONLY` transaction, merged with the definitions by pure functions. `answers (version_id, question_id)` replaces `answers (question_id)`.
+  - API: one body with a combined view and a per-version breakdown for every question, and no prose. A form with no published version returns empty, not 404.
+- [HTTP API surface](./issues/16-http-api-surface.md): recorded as ADR 0010, which also amends ADR 0006.
+  - Shape: respondent operations live under `/respond`, and admin resources sit under `/forms`, `/responses` and `/respondents`. There's no `/v1` prefix; `info.version` carries the contract version. The ticket holds the full endpoint table.
+  - Access: admin reads accept either `forms:manage` or `responses:read`, and only the draft needs `forms:manage` to read. Lookups by external reference are admin-only, and the host's back-end calls them with a service token.
+  - Errors: tagged bodies distinguished by `_tag`. 401 `Unauthenticated`, 403 `Forbidden`, 404 `NotFound`, 422 `ValidationFailed`, and 409 for the seven state conflicts (`RevisionConflict`, `NoDraft`, `FormClosed`, `FormNotPublished`, `VersionSuperseded`, `AlreadyResponded`, `ExternalRefLimitReached`).
+  - Revisions travel in the body as opaque strings, never as `ETag`. The response list uses keyset pagination with filters for version, reference and respondent. The forms list is unpaginated.
+  - Response reads embed their version and return raw answers. The respondent load tells the renderer whether to go straight to edit mode or ask for sign-in first.
+  - Answer schema: an advisory JSON Schema endpoint for each version. Four gaps from Zod were observed; three are closed, and the date range is carried as `x-fb-*` extension fields. A contract test runs the same cases through Zod and ajv.
+  - Custom renderers: the contract goes in `docs/embedding.md`. An unknown question type means refusing the whole form.
+- [CI pipeline](./issues/17-ci-pipeline.md):
+  - Host: GitHub Actions on `ubuntu-24.04`. Phase 0 creates a public GitHub repo, with a `.gitignore`, and work lands through PRs.
+  - Gate: a ruleset on `main` requires all four parallel jobs, and nothing runs on a schedule. The jobs are `static` (checks, svelte-check, dependency-cruiser and its fixture test, the drift check, `drizzle-kit check`), `test` (PGlite, Chromium), `test-pg`, and `e2e`.
+  - Setup: `setup-vp` with `cache: true`, Node from `.node-version`, and pnpm from `devEngines`. Postgres comes from the same `docker-compose.yml` as local development, not a service container.
+  - Browsers: renderer e2e runs in all three browsers, and builder e2e in Chromium only.
+  - Caching: only the pnpm store and the Playwright browsers. The `vp run` cache isn't kept between runs.
+  - Local gate: a root `ready` mirrors CI, with no pre-push hook.
+- [Phased implementation plan and spec](./issues/12-phased-implementation-plan-and-spec.md): the hand-off [spec](./spec.md) is written. No ADR.
+  - Spec: an index plus plan. It links the ADRs and tickets, and adds the phase order, deliverables by package, exit tests and the §12 checklist.
+  - Phases: 0 is setup with the final pipeline shape and both frontend build pipelines on placeholders. Then vertical slices: 1 author and publish through the API, 2 respond (renderer, form references and the lookup by reference), 3 builder, 4 responses and history, 5 analytics.
+  - Rules: exit criteria are automated only. Each invariant is proven at the lowest layer that can break it. Migrations are append-only. All seven question types land at once per layer. Admin screens live in the builder. `/to-tickets` decides ticket boundaries.
+  - Seed: tests seed themselves. A host-owned demo seed writes only through the API, and `seed:reset` drops the schema before every e2e run.
+  - Closed phase 0 unknowns: the Effect migrator honours `migrationsSchema`, and the reference host uses `@remix-run/node-fetch-server`.
+- [Accept the domain baseline and its amendments](./issues/18-accept-the-domain-baseline-and-its-amendments.md): ADR 0001 is now Accepted as the baseline, with its text kept, and later ADRs win where they disagree with it. No new ADR.
+  - Recording: each departing ADR 0001 clause carries an inline `(amended …, see ADR-00N)` note, and the amending ADR holds the reason.
+  - Accepted: no form name (ADR 0005), no metadata or categorization, no submission status, and no export (all three ADR 0002), and no analytics filters (ADR 0009). The last three are "not in the MVP".
+  - Reopened: retention and anonymisation go to Personal data classification and erasure, which also owns data-access requests and the §9 note. Form deletion goes to Form lifecycle: deleting or archiving forms. ADR 0002's current answers stand until then.
+- [Anonymous respondent access and tenancy](./issues/19-anonymous-respondent-access-and-tenancy.md): recorded as ADR 0011, which amends ADR 0006 and ADR 0010. **Identified respondent** and **Anonymous respondent** were added to the glossary.
+  - Mechanism: anonymous means a host-signed grant (`anonymous: true`, `tenant`, `form`, no `sub` or capabilities), never "no token". A request with no token is a 401, and the repository keeps its single tenant-scoped path.
+  - Scope: a grant covers one form, and any other form gives 404. Identified respondent tokens stay tenant-wide.
+  - API: a grant works only on load, the answer schema and submit. The load returns `respondent`, and `Unauthenticated` carries `reason` (`missing`, `invalid` or `identityRequired`).
+  - Renderer: `getToken({ formId })` is required and returns a string. The reference host mints grants from its own project data.
+- [Trust in response external references](./issues/20-trust-in-response-external-references.md): recorded as ADR 0012, which amends ADR 0002, ADR 0006, ADR 0010 and ADR 0011. **External reference** in the glossary now says the host asserts a response's references.
+  - Source: a host-signed `refs` claim, allowed on both claim sets and stored atomically at submit. The browser can't supply a reference: there's no renderer input, and `externalRefs` in a body gives a 422.
+  - Binding: `refs` requires `form`, so a token carrying references is bound to one form, and any other form gives 404.
+  - Validation: at most 20 entries, each following the persistence shape limits. Duplicates, bad shapes and `refs` without `form` give 401 `invalid`.
+  - Lifecycle: optional, and fixed at submission. Edits never change them.
+  - Reference host: `/token?project=<id>` mints `form` and the project as `refs` for every dev user, after checking the project is in the user's tenant.
+  - Tests: seven `http-api` cases, and the project-route e2e test checks the response is listed under its project.
+- [Lookup cardinality for form external references](./issues/21-lookup-cardinality-for-form-external-references.md): no ADR, and the module is unchanged.
+  - Cardinality: one reference may sit on any number of forms in a tenant, and the module never chooses. The lookup returns all of them, and an unknown reference gives 200 with an empty list.
+  - Reference host: one shared `resolveProjectForm` keeps the forms that are published and open. With exactly one it mounts the renderer and `/token` mints a token. With zero or several it shows a static "no open form" or "ambiguous" page, and `/token` gives 404. There's no picker and no tie-break.
+  - Tests: an `http-api` lookup test, Vitest tests for the rule and the token route, and two Playwright pages in the renderer project.
+- [Personal data classification and erasure](./issues/22-personal-data-classification-and-erasure.md): recorded as ADR 0013, which amends ADR 0001 §9, ADR 0002 and ADR 0006.
+  - Classification: subjects, answers, response references and response timestamps are personal data. Tenants and form content aren't, by contract, and form references may be.
+  - Subjects: every `sub` must be opaque and pseudonymous, and tenants opaque, as an embedding-contract rule. `published_by` is never erased and its trigger stays unconditional, so erasing an admin isn't in the MVP.
+  - Erasure: hard deletion of responses only, scoped to one tenant. Afterwards a one-per-respondent form accepts that respondent again. Anonymous responses are erased through the references their grants assert.
+  - Access requests: no export. The host lists with `GET /responses?respondentId=…` (every filter is optional) and reads each response.
+  - Retention: owned by the host. Logs never hold answers, references or tokens.
+  - Tests: five phase 4 cases proving versions and analytics stay readable after erasure.
+- [Form lifecycle: deleting or archiving forms](./issues/23-form-lifecycle-deleting-or-archiving-forms.md): recorded as ADR 0014, which amends ADR 0007 and ADR 0010.
+  - Rule: a never-published form can be hard-deleted with its draft and references. A form with any version is permanent, and closing it is the only way to retire it. There's no archived state.
+  - Persistence: the `forms` delete trigger rejects only forms that have a version, and drafts and form references cascade. The version triggers are unchanged.
+  - API: `DELETE /forms/{formId}?expectedRevision=…` (`forms:manage`, 204) checks `NotFound`, then a new 409 `FormPublished`, then `RevisionConflict`. Discarding a never-published form's draft gives `FormNotPublished`, so every form has a draft or a version.
+  - Builder: "Delete form" replaces "Discard draft" on never-published forms.
+  - Tests: trigger and cascade, the use case's conflicts and its race with publish, the `http-api` 403 and 404, and one builder Playwright test.
+- [Expected load and data volumes](./issues/24-expected-load-and-data-volumes.md): demo scale only, with no ADR.
+  - Envelope: 10 tenants, 100 forms per tenant, 50 versions per form, 10,000 responses per form, and 20 people submitting at once. These are assumptions recorded in the spec and `docs/embedding.md`, not enforced and not tested.
+  - Pagination: none added. The forms list and the versions list stay unpaginated.
+  - Caches: there are no per-version caches. The answer schema and its JSON Schema are built on every request.
+  - Analytics: still computed on read. The estimated budget is about 1 second for 20 questions × 10,000 responses, and the 200-question worst case may take several seconds.
+- [Request limits and abuse controls](./issues/25-request-limits-and-abuse-controls.md): recorded as ADR 0015, which amends ADR 0005, ADR 0006, ADR 0010, ADR 0011 and ADR 0012, with [research findings](./research/request-limits.md).
+  - Bodies: 1 MiB for definition and answer bodies and 16 KiB for the rest. A body must declare `Content-Length` (otherwise 411 `LengthRequired`), and an over-limit declaration gets 413 `PayloadTooLarge { limit }` before it is read, the same in both serving modes. Effect's `MaxBodySize` isn't used, because the Fetch path ignores it.
+  - Rates: owned by the host. The module rate-limits nothing and caps no grant lifetime. `docs/embedding.md` tells hosts to rate-limit `/respond` and keep grants to minutes. Single-use grants went to Retries and idempotency for creates and submissions, which rejected them.
+  - Caps, counted in Unicode code points: email answers 254, `sub` and `tenant` 1 to 255 (401 `invalid`, custom resolvers included), `form` a UUID, and `respondentId` 1 to 255 (422). No token length cap beyond the server's header limit.
+  - Timeouts: the standalone server sets `headersTimeout` 10 s and `requestTimeout` 30 s, the host owns them under the Fetch handler, and the module's Postgres connections set `statement_timeout` 30 s. There's no handler timeout.
+  - Tests: 413 and 411 cases plus claim and parameter caps in `http-api`, the email cap in `core`, and a 413 and `statement_timeout` check in the `api-server` smoke test.
+- [Retries and idempotency for creates and submissions](./issues/26-retries-and-idempotency-for-creates-and-submissions.md): recorded as ADR 0016, which amends ADR 0007 and ADR 0010.
+  - Key: only submit takes one, a required `idempotencyKey` UUID in the body, minted by the client. It's stored on the response under `UNIQUE NULLS NOT DISTINCT (form_id, respondent_id, idempotency_key)` and deleted with the response, with no expiry.
+  - Replay: the lookup runs before `FormClosed`, `VersionSuperseded` and `AlreadyResponded`, and returns the same 201 with the current revision. The body isn't compared. A race reruns the use case once.
+  - No keys elsewhere: builder writes and response edits rely on revisions, last-write-wins and deletable never-published forms.
+  - Unknown outcome: a rejected `fetch`, any 5xx, or a reply that doesn't decode. The renderer locks the answers and offers a manual Retry with the same key. An unknown edit offers reload or stay, and the builder reloads.
+  - Rejected: accepting duplicates, an `Idempotency-Key` header, body hashes, and single-use anonymous grants. Grants stay reusable until they expire.
+  - Tests: replay cases on PGlite, a same-key race in `test:pg`, 422 and replay in `http-api`, renderer and builder unknown-outcome tests, and one Playwright test that drops the reply.
+- [Strict-CSP scope for the renderer element](./issues/28-strict-csp-scope-for-the-renderer-element.md): ADR 0008 stands unchanged, with no new ADR. The strict-CSP guarantee stays in the MVP and is built in phase 0 on the placeholder, because its plugin is build pipeline and the spike already paid for it. Building it in phase 2 and requiring `'unsafe-inline'` from hosts were both rejected.
+- [Definition and persistence defects](./issues/27-definition-and-persistence-defects.md): no new ADR. ADR 0005 gains one sentence, and the prototype is updated to match.
+  - Foreign key: `question_identities` gains `UNIQUE (form_id, question_id, type)` as the target for `form_version_questions`.
+  - Unsatisfiable questions: publish guarantees that every question accepts some answer. Multiple-choice counts are 1 to 100 and `minSelected` is at most the number of options, and integer number questions need whole-number bounds.
+  - Ids: core's minting editing functions take an id source, and the builder implements it with Web Crypto.
+  - Envelopes: core drops its envelope types and `draftFrom`. Each envelope is declared once, as an Effect Schema in `@fb/server`, and revisions are opaque strings above persistence. Typed row mappers link Drizzle to those schemas. A schema looser than its column isn't caught, and that's accepted.
+- [Repository hosting and visibility](./issues/29-repository-hosting-and-visibility.md): no ADR, and it amends CI pipeline.
+  - Repo: the public [`cluk3/formidabile`](https://github.com/cluk3/formidabile), already created by you and still empty. CI pipeline is unchanged.
+  - Published: everything tracked, including `.scratch/`, the vendored skills and `skills-lock.json`.
+  - Licences: MIT for the project, and a `THIRD_PARTY_NOTICES.md` for the three MIT skill sources.
+  - Identity: history is authored as the GitHub noreply address, never the work address.
+  - Before phase 0, by hand: re-author the commit, add the licence files, review locally, then add `origin` and push. Phase 0 no longer creates the repo. It adds the `.gitignore`, and creates the ruleset once the four checks have reported.
 
 ## Not yet specified
-
-- **CI pipeline**: what runs where (Vite+ tasks, dependency-cruiser, Playwright, a Postgres service) once the package layout and test-database approach are known.
-- **How analytics queries are built**: in SQL or in application code, and how cross-version compatibility (ADR §8.2) is expressed. Depends on the persistence model.
-- **Privacy and deletion mechanics for the MVP**: what ADR §9 needs in the MVP (respondent data deletion or anonymisation alongside immutable versions). Depends on the retention call in the MVP product calls.
-- **Test data and seeding**: fixtures and seed forms for the reference host and for end-to-end tests.
 
 ## Out of scope
 
 - Production deployment and hosting: the MVP is local-first.
+- Security event logging (which failed authentications, cross-tenant 404s and deletions get logged): operational monitoring that belongs with production deployment. What logs must never contain was decided in [Personal data classification and erasure](./issues/22-personal-data-classification-and-erasure.md).
 - Integration events, webhooks, retries and duplicate notifications (ADR §13, last item).
 - Sharing forms across multiple applications or tenants.
 - Approval workflows for publication.
 - Scheduled future activation of a published version.
 - Manual normalisation of historical answers by administrators.
+- Ruled out by [MVP product calls on the ADR open questions](./issues/05-mvp-product-calls-on-the-adr-open-questions.md) to keep the MVP at the ADR §12 bar:
+  - Multiple concurrent drafts per form.
+  - Autosave, resuming incomplete responses, and carrying answers over on reload.
+  - Edit links or tokens for anonymous respondents.
+  - Revision history for edited responses.
+  - Reopening historical versions for new submissions.
+  - File upload questions and conditional visibility.
+  - Response limits scoped by external reference.
+  - Automatic retention periods and anonymisation.
+  - Response export.
+- Ruled out by [Frontend framework and renderer embedding strategy](./issues/06-frontend-framework-and-renderer-embedding-strategy.md):
+  - A builder that hosts embed.
+  - Drag-and-drop reordering.
+  - Localization and multilingual forms.
+  - Distributing the custom element through npm, the API server or a CDN.
+- Ruled out by [Analytics queries and cross-version compatibility](./issues/15-analytics-queries-and-cross-version-compatibility.md):
+  - Analytics filters by external reference or submission date. The per-version breakdown is the MVP's only segmentation.
+  - Value summaries for text, email and date questions.
+- Ruled out by [Form lifecycle: deleting or archiving forms](./issues/23-form-lifecycle-deleting-or-archiving-forms.md):
+  - Deleting a form that has any published version, even with no responses.
+  - An archived state that hides forms from the form list. It's additive later if the list grows too long.

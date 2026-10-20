@@ -1,9 +1,11 @@
 # ADR-001: Modular, Versioned Form Management System
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-10-20)
 - **Decision type:** Architecture / Domain Design
 - **Scope:** Form definition, versioning, rendering, response collection, and analytics
 - **Date:** 2026-10-19
+
+This is the product baseline. Later accepted ADRs amend it, and each amended clause notes the ADR that changes it. Where a later ADR and this one disagree, the later ADR wins.
 
 ## 1. Context
 
@@ -101,8 +103,8 @@ It should include:
 
 - Unique identifier.
 - Owner or tenant identifier, where applicable.
-- Name and description.
-- Optional metadata and categorization.
+- Name and description (amended 2026-10-20, see ADR-005).
+- Optional metadata and categorization (amended 2026-10-20, see ADR-002).
 - Current published version reference.
 - Lifecycle and availability state.
 - Creation and update timestamps.
@@ -172,7 +174,7 @@ Every response must reference:
 - The exact published form version used for submission.
 - A respondent identifier, where applicable.
 - Optional external entity references supplied through the integration boundary.
-- Submission status and timestamps.
+- Submission status and timestamps (amended 2026-10-20, see ADR-002).
 
 Each answer must be associated with the response and the corresponding question snapshot from that response's form version.
 
@@ -283,7 +285,7 @@ The renderer must be usable by different host applications without requiring dom
 
 Authorized users must be able to inspect individual responses and see:
 
-- Submission status and timestamp.
+- Submission status and timestamp (amended 2026-10-20, see ADR-002).
 - The associated respondent, where available and authorized.
 - External entity references, where applicable.
 - The form version used for submission.
@@ -299,8 +301,8 @@ The analytics capability should support:
 - Response counts grouped by form version.
 - Answer distributions for choice-based questions.
 - Summaries for supported numeric questions.
-- Filtering and segmentation where appropriate.
-- Export of response data, subject to authorization and privacy requirements.
+- Filtering and segmentation where appropriate (amended 2026-10-20, see ADR-009).
+- Export of response data, subject to authorization and privacy requirements (amended 2026-10-20, see ADR-002).
 
 Analytics must distinguish responses collected under different versions.
 
@@ -336,7 +338,7 @@ The implementation must ensure:
 - Respondent data is protected from unauthorized access.
 - File uploads, if supported, have appropriate validation and access controls.
 - Personal data is collected only when necessary.
-- Data export, retention, deletion, and anonymization policies are defined.
+- Data export, retention, deletion, and anonymization policies are defined (amended 2026-10-20, see ADR-013).
 - Tenant or organization isolation is enforced where applicable.
 
 Immutability applies to published form definitions, not necessarily to personal data. Privacy obligations and lawful deletion requirements must be respected even when historical form versions are retained.
