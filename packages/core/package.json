@@ -1,0 +1,13 @@
+{
+  "name": "@fb/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./definition": "./definition.ts",
+    "./answers": "./answers.ts",
+    "./editing": "./editing.ts"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}
