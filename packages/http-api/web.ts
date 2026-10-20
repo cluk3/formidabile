@@ -18,7 +18,7 @@ export const createFormModuleHandler = (_options: FormModuleHandlerOptions): For
     { disableLogger: true },
   );
   return {
-    fetch: (request) => handler(request),
+    fetch: handler,
     migrate: async () => {},
     dispose,
   };

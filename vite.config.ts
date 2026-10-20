@@ -2,6 +2,8 @@ import { configDefaults, defineConfig } from "vite-plus";
 
 const generatedFiles = ["packages/http-api/openapi.json", "packages/api-client/lib/schema.d.ts"];
 
+const generatedPaths = generatedFiles.join(" ");
+
 const ignorePatterns = [".agents/**", ".claude/**", ".scratch/**", ...generatedFiles];
 
 export default defineConfig({
@@ -27,7 +29,7 @@ export default defineConfig({
       check: "vp check",
       // `git diff` misses a generated file that isn't tracked, so `ls-files` checks both are committed.
       "check:generated": {
-        command: `git diff --exit-code -- ${generatedFiles.join(" ")} && git ls-files --error-unmatch -- ${generatedFiles.join(" ")}`,
+        command: `git diff --exit-code -- ${generatedPaths} && git ls-files --error-unmatch -- ${generatedPaths}`,
         dependsOn: ["@fb/api-client#generate"],
         cache: false,
       },

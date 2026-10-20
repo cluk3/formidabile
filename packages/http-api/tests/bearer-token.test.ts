@@ -1,4 +1,4 @@
-import { createFormApiClient } from "@fb/api-client";
+import { createFormApiClient, type FormApiClientOptions } from "@fb/api-client";
 import { createFormModuleHandler } from "@fb/http-api/web";
 import { afterAll, afterEach, expect, test } from "vite-plus/test";
 
@@ -7,7 +7,7 @@ const handler = createFormModuleHandler({
 });
 const authorizationHeaders: Array<string | null> = [];
 
-const clientWith = (getToken: () => string | null | Promise<string | null>) =>
+const clientWith = (getToken: FormApiClientOptions["getToken"]) =>
   createFormApiClient({
     baseUrl: "http://localhost/api",
     getToken,
