@@ -189,7 +189,7 @@ A hand-off spec at `.scratch/form-builder-mvp/spec.md` that locks how the chosen
   - Published: everything tracked, including `.scratch/`, the vendored skills and `skills-lock.json`.
   - Licences: MIT for the project, and a `THIRD_PARTY_NOTICES.md` for the three MIT skill sources.
   - Identity: history is authored as the GitHub noreply address, never the work address.
-  - Before phase 0, by hand: re-author the commit, add the licence files, review locally, then add `origin` and push. Phase 0 no longer creates the repo. It adds the `.gitignore`, and creates the ruleset once the four checks have reported.
+  - Before phase 0: re-author the commit, add the licence files, review locally, then add `origin` and push. Done on 2026-10-20, and `main` is on GitHub. Phase 0 no longer creates the repo. It adds the `.gitignore`, and creates the ruleset once the four checks have reported.
 
 ## Not yet specified
 

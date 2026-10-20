@@ -42,5 +42,6 @@ Decisions:
   2. Add `LICENSE` and `.agents/skills/THIRD_PARTY_NOTICES.md`, and commit them.
   3. Review locally: `git log --format='%an <%ae>'` shows only the noreply address, and `git ls-files` lists only the published set above.
   4. Run `git remote add origin git@github.com:cluk3/formidabile.git`, then `git push -u origin main`.
+  - Done on 2026-10-20. Rather than folding the staged files into the amend, the initial commit was re-authored with `--amend --only`, the pending planning work was committed separately, and the licence files were committed third. The review found no work address or tokens in any revision. `main` is pushed and tracks `origin/main`, and GitHub detects the MIT licence.
 - **Phase 0 (implementing agent)** starts from the existing `origin` and no longer runs `gh repo create`. It adds the `.gitignore` (nothing generated exists before phase 0, so the first push is safe without it), the workflow and `.github/dependabot.yml`. Once the four jobs (`static`, `test`, `test-pg`, `e2e`) have reported on a PR, it creates the `main` ruleset with `gh api`.
 - **CI**: unchanged from CI pipeline. The map's fog patch about CI on a non-public repo is cleared, because the repo is public.
