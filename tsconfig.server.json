@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "types": ["node"],
+    "paths": {
+      "effect/unstable/sql/*": ["${configDir}/node_modules/effect/dist/sql/*.d.ts"]
+    }
+  }
+}

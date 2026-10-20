@@ -1,3 +1,8 @@
+## Workspace
+
+- A pnpm workspace on Vite+. Run `vp install` after pulling, and `vp run ready` before opening a PR. It runs the same tasks as CI.
+- Packages are deep modules: see [packages/README.md](./packages/README.md) before adding or importing one.
+
 ## Agent skills
 
 ### Issue tracker

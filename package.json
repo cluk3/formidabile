@@ -1,0 +1,21 @@
+{
+  "name": "formidabile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "svelte": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.14.0",
+      "onFail": "download"
+    }
+  }
+}
