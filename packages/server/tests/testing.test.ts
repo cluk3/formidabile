@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect";
 import { SqlClient } from "effect/sql";
 import { expect, test } from "vite-plus/test";
 
-const run = <A, E>(effect: Effect.Effect<A, E, Layer.Success<typeof DatabaseTest>>) =>
+const runOnTestDatabase = <A, E>(effect: Effect.Effect<A, E, Layer.Success<typeof DatabaseTest>>) =>
   Effect.runPromise(effect.pipe(Effect.provide(DatabaseTest)));
 
 const appliedMigrations = Effect.gen(function* () {
@@ -16,7 +16,7 @@ const appliedMigrations = Effect.gen(function* () {
 });
 
 test("the test database arrives migrated, and migrating it again applies nothing", async () => {
-  const [before, after] = await run(
+  const [before, after] = await runOnTestDatabase(
     Effect.gen(function* () {
       const before = yield* appliedMigrations;
       yield* migrate;
@@ -29,14 +29,14 @@ test("the test database arrives migrated, and migrating it again applies nothing
 });
 
 test("every build of the test layer is a fresh database", async () => {
-  await run(
+  await runOnTestDatabase(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       yield* sql`CREATE TABLE form_management.leftover (id int)`;
     }),
   );
 
-  const [row] = await run(
+  const [row] = await runOnTestDatabase(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       return yield* sql<{ table: string | null }>`

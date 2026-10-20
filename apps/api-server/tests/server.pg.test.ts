@@ -24,31 +24,32 @@ const freshDatabaseUrl = Effect.acquireRelease(
     ),
 );
 
-const startServer = (url: string) =>
-  Effect.gen(function* () {
-    const { address } = yield* HttpServer.HttpServer;
-    if (address._tag === "UnixPathAddress") throw new Error("expected an internet address");
-    const response = yield* Effect.promise(() => fetch(`http://localhost:${address.port}/`));
+const probeRunningServer = Effect.gen(function* () {
+  const { address } = yield* HttpServer.HttpServer;
+  if (address._tag === "UnixPathAddress") throw new Error("expected an internet address");
+  const response = yield* Effect.promise(() => fetch(`http://localhost:${address.port}/`));
 
-    const sql = yield* SqlClient.SqlClient;
-    const [migrations] = yield* sql<{ count: number }>`
-      SELECT count(*)::int AS count FROM form_management.__drizzle_migrations
-    `;
-    const [setting] = yield* sql<{
-      statement_timeout: string;
-    }>`SHOW statement_timeout`;
-    return {
-      status: response.status,
-      appliedMigrations: migrations?.count,
-      statementTimeout: setting?.statement_timeout,
-    };
-  }).pipe(Effect.provide(ServerLive({ port: 0 }).pipe(Layer.provideMerge(DatabaseLive(url)))));
+  const sql = yield* SqlClient.SqlClient;
+  const [migrations] = yield* sql<{ count: number }>`
+    SELECT count(*)::int AS count FROM form_management.__drizzle_migrations
+  `;
+  const [setting] = yield* sql<{
+    statement_timeout: string;
+  }>`SHOW statement_timeout`;
+  return {
+    status: response.status,
+    appliedMigrations: migrations?.count,
+    statementTimeout: setting?.statement_timeout,
+  };
+});
 
 test("the server migrates at startup, answers HTTP, and its connections time statements out at 30 s", async () => {
   const started = await Effect.runPromise(
     Effect.gen(function* () {
       const { url } = yield* freshDatabaseUrl;
-      return yield* startServer(url);
+      return yield* probeRunningServer.pipe(
+        Effect.provide(ServerLive({ port: 0 }).pipe(Layer.provideMerge(DatabaseLive(url)))),
+      );
     }).pipe(Effect.scoped, Effect.provide(DatabaseLive(databaseUrl))),
   );
 
