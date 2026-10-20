@@ -1,0 +1,17 @@
+{
+  "name": "@fb/http-api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./web": "./web.ts"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@fb/api-client": "workspace:*",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

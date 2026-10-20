@@ -15,6 +15,10 @@ packages/<name>/
 - **No barrels.** Don't add an `index.ts` that re-exports a subtree. Add another root file and list it in `exports`.
 - **Root config files aren't public.** `vite.config.ts`, `drizzle.config.ts` and `tsconfig.json` at a package root belong to that package's tooling. Nothing imports them.
 
+## Generated files
+
+`packages/http-api/openapi.json` is generated from `FormApi`, and `packages/api-client/lib/schema.d.ts` from that file. Both are committed and never edited by hand. After changing the API, run `vp run @fb/api-client#generate` (it regenerates both) and commit the result. `vp run check:generated` regenerates them and fails if either differs from the committed copy, and CI runs it.
+
 ## Browser-safe code
 
 These paths run in the browser:
