@@ -17,16 +17,16 @@ packages/<name>/
 
 ## The workspace
 
-| Workspace             | Entry points                                                  | Runs in         |
-| --------------------- | ------------------------------------------------------------- | --------------- |
-| `@fb/core`            | `definition`, `answers`, `editing`                            | browser, server |
-| `@fb/api-client`      | `.`                                                           | browser         |
-| `@fb/renderer`        | `.` (Svelte component), `./element` (built `<form-renderer>`) | browser         |
-| `@fb/server`          | `.`, `actor`, `database`, `migrate`, `testing`                | server          |
-| `@fb/http-api`        | `.`, `web`                                                    | server          |
-| `apps/api-server`     | none: nothing imports an app                                  | server          |
-| `apps/builder`        | none                                                          | browser         |
-| `apps/reference-host` | none. `src/` is the page, `server/` the Vite plugin           | browser, server |
+| Workspace             | Entry points                                                               | Runs in         |
+| --------------------- | -------------------------------------------------------------------------- | --------------- |
+| `@fb/core`            | `definition`, `answers`, `editing`                                         | browser, server |
+| `@fb/api-client`      | `.`                                                                        | browser         |
+| `@fb/renderer`        | `.` (Svelte component), `./element` (built `<form-renderer>`)              | browser         |
+| `@fb/server`          | `.`, `actor`, `database`, `migrate`, `testing`                             | server          |
+| `@fb/http-api`        | `.`, `web`                                                                 | server          |
+| `apps/api-server`     | none: nothing imports an app                                               | server          |
+| `apps/builder`        | none                                                                       | browser         |
+| `apps/reference-host` | none. `src/` is the page, `server/` the Vite plugin, `seed/` the demo seed | browser, server |
 
 ## Boundaries
 
@@ -49,6 +49,7 @@ packages/<name>/
   | `apps/builder`               | `core`, `api-client`, the `renderer` component (not `element`) |
   | `apps/reference-host/src`    | `renderer/element`, `api-client`                               |
   | `apps/reference-host/server` | `http-api/web` only                                            |
+  | `apps/reference-host/seed`   | `http-api/web`, `api-client`                                   |
 
   Nothing imports from `apps/` (`no-import-of-apps-from-outside`, `no-import-between-apps`).
 
