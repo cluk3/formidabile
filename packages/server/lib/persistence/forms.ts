@@ -1,6 +1,6 @@
-import { desc, and, eq, sql } from "drizzle-orm";
+import { desc, and, eq, exists, sql } from "drizzle-orm";
 import { type Brand, Effect, type Schema } from "effect";
-import type { TenantId } from "../authorization/actor.ts";
+import type { ExternalRef, TenantId } from "../authorization/actor.ts";
 import type {
   Draft,
   DraftSummary,
@@ -12,7 +12,7 @@ import type {
 } from "../envelopes.ts";
 import type { Database } from "./database.ts";
 import { currentInstant, newId } from "./ids.ts";
-import { drafts, forms, formVersions } from "./schema.ts";
+import { drafts, formExternalRefs, forms, formVersions } from "./schema.ts";
 
 type Db = Database["Service"];
 
@@ -128,7 +128,11 @@ const currentVersion = and(
   eq(formVersions.formId, forms.id),
 );
 
-export const listForms = (db: Db, tenant: TenantId) =>
+const isRef = (ref: ExternalRef) =>
+  and(eq(formExternalRefs.namespace, ref.namespace), eq(formExternalRefs.refId, ref.refId));
+
+/** With `ref`, only the forms carrying it. */
+export const listForms = (db: Db, tenant: TenantId, ref?: ExternalRef) =>
   db
     .select({
       form: forms,
@@ -139,7 +143,18 @@ export const listForms = (db: Db, tenant: TenantId) =>
     .from(forms)
     .leftJoin(drafts, eq(drafts.formId, forms.id))
     .leftJoin(formVersions, currentVersion)
-    .where(eq(forms.tenant, tenant))
+    .where(
+      and(
+        eq(forms.tenant, tenant),
+        ref &&
+          exists(
+            db
+              .select({ formId: formExternalRefs.formId })
+              .from(formExternalRefs)
+              .where(and(eq(formExternalRefs.formId, forms.id), isRef(ref))),
+          ),
+      ),
+    )
     .orderBy(desc(forms.updatedAt), desc(forms.id))
     .pipe(
       Effect.map((rows) =>
@@ -156,24 +171,40 @@ export const listForms = (db: Db, tenant: TenantId) =>
     );
 
 export const findFormDetail = (db: Db, tenant: TenantId, formId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* db
+      .select({ form: forms, draft: draftSummaryColumns, currentVersion: versionSummaryColumns })
+      .from(forms)
+      .leftJoin(drafts, eq(drafts.formId, forms.id))
+      .leftJoin(formVersions, currentVersion)
+      .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)));
+    if (row === undefined) return undefined;
+    return {
+      id: row.form.id,
+      availability: row.form.availability,
+      responseLimit: row.form.responseLimit,
+      currentVersion: row.currentVersion && toCurrentVersionSummary(row.currentVersion),
+      draft: row.draft && toDraftSummary(row.draft),
+      externalRefs: yield* findFormExternalRefs(db, row.form.id),
+      createdAt: row.form.createdAt,
+      updatedAt: row.form.updatedAt,
+    } satisfies FormDetail;
+  });
+
+/** Sorted by namespace, then `refId`, byte-wise, so both drivers agree whatever their collation. */
+export const findFormExternalRefs = (db: Db, formId: string) =>
   db
-    .select({ form: forms, draft: draftSummaryColumns, currentVersion: versionSummaryColumns })
-    .from(forms)
-    .leftJoin(drafts, eq(drafts.formId, forms.id))
-    .leftJoin(formVersions, currentVersion)
-    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
-    .pipe(
-      Effect.map(([row]) =>
-        row === undefined
-          ? undefined
-          : ({
-              id: row.form.id,
-              availability: row.form.availability,
-              responseLimit: row.form.responseLimit,
-              currentVersion: row.currentVersion && toCurrentVersionSummary(row.currentVersion),
-              draft: row.draft && toDraftSummary(row.draft),
-              createdAt: row.form.createdAt,
-              updatedAt: row.form.updatedAt,
-            } satisfies FormDetail),
-      ),
+    .select({ namespace: formExternalRefs.namespace, refId: formExternalRefs.refId })
+    .from(formExternalRefs)
+    .where(eq(formExternalRefs.formId, formId))
+    .orderBy(
+      sql`${formExternalRefs.namespace} COLLATE "C"`,
+      sql`${formExternalRefs.refId} COLLATE "C"`,
     );
+
+/** The caller checks the per-form limit under the form's lock. */
+export const insertFormExternalRef = (db: Db, form: LockedForm, ref: ExternalRef) =>
+  db.insert(formExternalRefs).values({ formId: form.id, ...ref });
+
+export const deleteFormExternalRef = (db: Db, form: LockedForm, ref: ExternalRef) =>
+  db.delete(formExternalRefs).where(and(eq(formExternalRefs.formId, form.id), isRef(ref)));
