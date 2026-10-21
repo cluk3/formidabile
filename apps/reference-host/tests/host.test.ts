@@ -18,9 +18,13 @@ const api = HttpRouter.toWebHandler(
   ),
   { disableLogger: true },
 );
+// `DatabaseTest` is already migrated; the count shows the host asks once, before the API's first request.
+let migrations = 0;
 const host = createReferenceHost({
   fetch: (request) => api.handler(request),
-  migrate: async () => {},
+  migrate: async () => {
+    migrations += 1;
+  },
   dispose: api.dispose,
 });
 
@@ -99,9 +103,11 @@ test("an acme-admin token creates a form through /api", async () => {
     ],
   };
 
+  expect(migrations).toBe(0);
   const created = await client.POST("/forms", { body: { definition } });
   const listed = await client.GET("/forms");
 
+  expect(migrations).toBe(1);
   expect(created.response.status).toBe(201);
   expect(listed.data?.forms.map((form) => form.id)).toContain(created.data?.form.id);
 });

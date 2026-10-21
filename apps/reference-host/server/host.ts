@@ -92,17 +92,29 @@ const withCors = (request: Request, response: Response) => {
 };
 
 /** The reference host's server routes: the module's API at `/api`, and dev sign-in at `/login` and `/token`. */
-export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => ({
-  serves: (pathname) => isApiPath(pathname) || pathname === "/login" || pathname === "/token",
-  fetch: async (request) => {
-    const url = new URL(request.url);
-    if (isApiPath(url.pathname)) return api.fetch(unmounted(request));
-    const route = `${request.method} ${url.pathname}`;
-    if (route === "GET /login")
-      return loginPage(signedInUser(request), safeReturn(url.searchParams.get("return")));
-    if (route === "POST /login") return signIn(request);
-    if (route === "GET /token") return withCors(request, await token(request));
-    return new Response(null, { status: 404 });
-  },
-  dispose: () => api.dispose(),
-});
+export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
+  // Migrated before the first API request rather than at startup, so `vp build` never opens the pool.
+  let migrated: Promise<void> | undefined;
+  const migrateOnce = () =>
+    (migrated ??= api.migrate().catch((error: unknown) => {
+      migrated = undefined;
+      throw error;
+    }));
+  return {
+    serves: (pathname) => isApiPath(pathname) || pathname === "/login" || pathname === "/token",
+    fetch: async (request) => {
+      const url = new URL(request.url);
+      if (isApiPath(url.pathname)) {
+        await migrateOnce();
+        return api.fetch(unmounted(request));
+      }
+      const route = `${request.method} ${url.pathname}`;
+      if (route === "GET /login")
+        return loginPage(signedInUser(request), safeReturn(url.searchParams.get("return")));
+      if (route === "POST /login") return signIn(request);
+      if (route === "GET /token") return withCors(request, await token(request));
+      return new Response(null, { status: 404 });
+    },
+    dispose: () => api.dispose(),
+  };
+};
