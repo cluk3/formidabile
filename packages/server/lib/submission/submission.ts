@@ -12,7 +12,11 @@ import {
 } from "../errors.ts";
 import { Database, dieOnDatabaseError, isUniqueViolation } from "../persistence/database.ts";
 import { shareForm } from "../persistence/forms.ts";
-import { insertResponse, latestResponseId } from "../persistence/responses.ts";
+import {
+  findByIdempotencyKey,
+  insertResponse,
+  latestResponseId,
+} from "../persistence/responses.ts";
 import { findVersionContent, storedDefinition } from "../persistence/versions.ts";
 
 export interface SubmitResponse {
@@ -95,6 +99,16 @@ export class Submission extends Context.Service<
               Effect.gen(function* () {
                 const form = yield* shareForm(tx, actor.tenant, formId);
                 if (form === undefined) return yield* new NotFound();
+                // A retry reports the response its key already made, whatever changed since (ADR 0016).
+                const replayed = yield* findByIdempotencyKey(
+                  tx,
+                  form,
+                  actor.subject,
+                  submission.idempotencyKey,
+                );
+                if (replayed !== undefined) {
+                  return { responseId: replayed.id, revision: String(replayed.revision) };
+                }
                 // Only a published form opens, so an open form has a current version.
                 if (form.availability === "closed" || form.currentVersionId === null) {
                   return yield* new FormClosed();
@@ -124,9 +138,11 @@ export class Submission extends Context.Service<
             { isolationLevel: "read committed" },
           );
           return yield* attempt.pipe(
-            // A concurrent first submission won the limit's index: the rerun finds it.
+            // A concurrent submission won the limit's index or the key: the rerun finds it.
             Effect.catchIf(
-              (error) => isUniqueViolation(error, "responses_one_per_respondent"),
+              (error) =>
+                isUniqueViolation(error, "responses_one_per_respondent") ||
+                isUniqueViolation(error, "responses_idempotency_key_unique"),
               () => attempt,
             ),
             dieOnDatabaseError,
