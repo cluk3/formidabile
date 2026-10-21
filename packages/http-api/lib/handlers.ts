@@ -13,8 +13,18 @@ const FormsHandlers = HttpApiBuilder.group(
       .handle("create", ({ payload }) =>
         CurrentActor.use((actor) => forms.create(actor, payload.definition)),
       )
-      .handle("list", () =>
-        CurrentActor.use((actor) => Effect.map(forms.list(actor), (list) => ({ forms: list }))),
+      .handle("list", ({ query: { refNamespace, refId } }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(
+            forms.list(
+              actor,
+              refNamespace === undefined || refId === undefined
+                ? undefined
+                : { namespace: refNamespace, refId },
+            ),
+            (list) => ({ forms: list }),
+          ),
+        ),
       )
       .handle("detail", ({ params }) =>
         CurrentActor.use((actor) => forms.detail(actor, params.formId)),
@@ -24,6 +34,20 @@ const FormsHandlers = HttpApiBuilder.group(
       )
       .handle("delete", ({ params, query }) =>
         CurrentActor.use((actor) => forms.delete(actor, params.formId, query.expectedRevision)),
+      )
+      .handle("addExternalRef", ({ params, payload }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(forms.addExternalRef(actor, params.formId, payload), (externalRefs) => ({
+            externalRefs,
+          })),
+        ),
+      )
+      .handle("removeExternalRef", ({ params, query }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(forms.removeExternalRef(actor, params.formId, query), (externalRefs) => ({
+            externalRefs,
+          })),
+        ),
       );
   }),
 );

@@ -1,6 +1,7 @@
 import { FormDefinition } from "@fb/core/definition";
 import {
   Draft,
+  ExternalRefLimitReached,
   Forbidden,
   Form,
   FormDefinitionJson,
@@ -16,7 +17,7 @@ import {
   ValidationFailed,
   VersionSummary,
 } from "@fb/server";
-import { type Actor, Unauthenticated } from "@fb/server/actor";
+import { type Actor, ExternalRef, Unauthenticated } from "@fb/server/actor";
 import { Context, Schema } from "effect";
 import {
   HttpApi,
@@ -53,6 +54,18 @@ const FormIdParams = { formId: Schema.String.check(Schema.isUUID()) };
 /** Revisions travel as opaque strings in the body, or the query for a discard or a delete (ADR 0010). */
 const Revision = Schema.String;
 
+/** A lookup by reference names both halves, or neither. */
+const FormListQuery = Schema.Struct({
+  refNamespace: Schema.optionalKey(ExternalRef.fields.namespace),
+  refId: Schema.optionalKey(ExternalRef.fields.refId),
+}).check(
+  Schema.makeFilter((query) => (query.refNamespace === undefined) === (query.refId === undefined), {
+    expected: "refNamespace and refId together",
+  }),
+);
+
+const ExternalRefs = Schema.Struct({ externalRefs: Schema.Array(ExternalRef) });
+
 export class FormsGroup extends HttpApiGroup.make("forms")
   .add(
     HttpApiEndpoint.post("create", "/forms", {
@@ -61,6 +74,7 @@ export class FormsGroup extends HttpApiGroup.make("forms")
       error: [Forbidden, ValidationFailed],
     }),
     HttpApiEndpoint.get("list", "/forms", {
+      query: FormListQuery,
       success: Schema.Struct({ forms: Schema.Array(FormSummary) }),
       error: Forbidden,
     }),
@@ -79,6 +93,18 @@ export class FormsGroup extends HttpApiGroup.make("forms")
       params: FormIdParams,
       query: { expectedRevision: Revision },
       error: [Forbidden, NotFound, FormPublished, RevisionConflict],
+    }),
+    HttpApiEndpoint.post("addExternalRef", "/forms/:formId/external-refs", {
+      params: FormIdParams,
+      payload: ExternalRef,
+      success: ExternalRefs,
+      error: [Forbidden, NotFound, ExternalRefLimitReached],
+    }),
+    HttpApiEndpoint.delete("removeExternalRef", "/forms/:formId/external-refs", {
+      params: FormIdParams,
+      query: ExternalRef,
+      success: ExternalRefs,
+      error: [Forbidden, NotFound],
     }),
   )
   .middleware(EdgeValidation)
