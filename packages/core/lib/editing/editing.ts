@@ -5,6 +5,7 @@ import {
   type QuestionSnapshotOf,
   type QuestionTypeName,
 } from "../definition/form-definition.ts";
+import { OPTIONS_CAP } from "../definition/types/choice-options.ts";
 
 /**
  * Mints identifiers for the editing functions. Core has no `crypto`, so the builder supplies one
@@ -135,3 +136,44 @@ export const moveQuestion = (
   const rest = questions.toSpliced(from, 1);
   return { ...definition, questions: rest.toSpliced(to, 0, questions[from]!) };
 };
+
+const replaceOptions = (
+  definition: FormDefinition,
+  questionId: string,
+  replace: (options: ChoiceOption[]) => ChoiceOption[],
+): FormDefinition =>
+  replaceQuestion(definition, questionId, (q) => {
+    if (q.type !== "single_choice" && q.type !== "multiple_choice")
+      throw new RangeError(`Question ${questionId} has no options`);
+    return {
+      ...q,
+      config: { ...q.config, options: replace(q.config.options) },
+    } as QuestionSnapshot;
+  });
+
+/**
+ * Appends a blank option with a minted value to a choice question. Throws at the option cap, so the
+ * builder disables adding there.
+ */
+export const addOption = (
+  definition: FormDefinition,
+  questionId: string,
+  ids: IdSource,
+): FormDefinition =>
+  replaceOptions(definition, questionId, (options) => {
+    if (options.length >= OPTIONS_CAP)
+      throw new RangeError(`A question has at most ${OPTIONS_CAP} options`);
+    return optionsFrom(options, options.length + 1, ids);
+  });
+
+/** Removes a choice question's option. Re-adding it later mints a new value. */
+export const removeOption = (
+  definition: FormDefinition,
+  questionId: string,
+  value: string,
+): FormDefinition =>
+  replaceOptions(definition, questionId, (options) => {
+    const index = options.findIndex((option) => option.value === value);
+    if (index === -1) throw new RangeError(`Question ${questionId} has no option ${value}`);
+    return options.toSpliced(index, 1);
+  });

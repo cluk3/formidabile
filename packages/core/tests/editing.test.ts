@@ -6,10 +6,12 @@ import {
   type QuestionTypeName,
 } from "@fb/core/definition";
 import {
+  addOption,
   addQuestion,
   changeQuestionType,
   moveQuestion,
   reidentifyQuestion,
+  removeOption,
 } from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -243,5 +245,97 @@ describe("moveQuestion", () => {
 
   test("refuses an identity the definition doesn't have", () => {
     expect(() => moveQuestion(survey, uuid(9), 0)).toThrow(`No question ${uuid(9)}`);
+  });
+});
+
+describe("addOption", () => {
+  test("appends a blank option with a minted value", () => {
+    const edited = addOption(survey, colour.id, idSource());
+    expect(edited).toEqual({
+      ...survey,
+      questions: [
+        name,
+        {
+          ...colour,
+          config: {
+            ...colour.config,
+            options: [...colour.config.options, { value: "minted-1", label: "" }],
+          },
+        },
+        age,
+      ],
+    });
+    expect(parsed(edited)).toEqual(edited);
+  });
+
+  test("adds to multiple choice questions too", () => {
+    const ids = idSource();
+    const start = addQuestion(empty, "multiple_choice", ids);
+    const edited = addOption(start, uuid(101), ids);
+    expect(edited.questions[0]!.config).toEqual({
+      options: [
+        { value: "minted-1", label: "" },
+        { value: "minted-2", label: "" },
+      ],
+    });
+  });
+
+  test("refuses a 101st option", () => {
+    const ids = idSource();
+    const full = Array.from({ length: 97 }).reduce<FormDefinition>(
+      (definition) => addOption(definition, colour.id, ids),
+      survey,
+    );
+    expect(parsed(full).questions[1]!.config).toHaveProperty("options.length", 100);
+    expect(() => addOption(full, colour.id, ids)).toThrow("A question has at most 100 options");
+  });
+
+  test("refuses a question without options", () => {
+    expect(() => addOption(survey, age.id, idSource())).toThrow(
+      `Question ${age.id} has no options`,
+    );
+  });
+});
+
+describe("removeOption", () => {
+  test("removes an option by value, leaving the others' values as they were", () => {
+    const edited = removeOption(survey, colour.id, "g");
+    expect(edited).toEqual({
+      ...survey,
+      questions: [
+        name,
+        {
+          ...colour,
+          config: {
+            ...colour.config,
+            options: [
+              { value: "r", label: "Red" },
+              { value: "b", label: "Blue" },
+            ],
+          },
+        },
+        age,
+      ],
+    });
+    expect(parsed(edited)).toEqual(edited);
+  });
+
+  test("gives a re-added option a new value", () => {
+    const edited = addOption(removeOption(survey, colour.id, "g"), colour.id, idSource());
+    expect(edited.questions[1]!.config).toHaveProperty("options", [
+      { value: "r", label: "Red" },
+      { value: "b", label: "Blue" },
+      { value: "minted-1", label: "" },
+    ]);
+  });
+
+  test("refuses a value the question doesn't offer", () => {
+    expect(() => removeOption(survey, colour.id, "y")).toThrow(
+      `Question ${colour.id} has no option y`,
+    );
+  });
+
+  test("refuses a question without options", () => {
+    expect(() => removeOption(survey, name.id, "r")).toThrow(`Question ${name.id} has no options`);
   });
 });
