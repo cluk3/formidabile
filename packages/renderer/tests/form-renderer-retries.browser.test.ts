@@ -186,3 +186,28 @@ test("a getToken that throws sends nothing, so the answers stay editable", async
   await expect.element(page.getByText(thanks)).toBeVisible();
   expect(posts(requests)).toHaveLength(1);
 });
+
+test("a getToken that throws during Retry keeps the answers locked on the unconfirmed submission", async () => {
+  let calls = 0;
+  const { requests } = fakeApi(definitionOf([questions.name]), { submits: [unavailable] });
+  const flaky = async () => {
+    calls += 1;
+    if (calls === 3) throw new Error("token endpoint down");
+    return "token-1";
+  };
+  await render(FormRenderer, { apiBaseUrl, formId, getToken: flaky });
+
+  await userEvent.fill(labelled("Your name"), "Ada");
+  await userEvent.click(button("Submit"));
+  await expect.element(page.getByRole("alert")).toHaveTextContent(unconfirmed);
+  await userEvent.click(button("Retry"));
+  await expect.poll(() => calls).toBe(3);
+
+  await expect.element(page.getByRole("alert")).toHaveTextContent(unconfirmed);
+  await expect.element(labelled("Your name")).toBeDisabled();
+  await userEvent.click(button("Retry"));
+  await expect.element(page.getByText(thanks)).toBeVisible();
+  const [first, second] = posts(requests).map(({ body }) => body);
+  expect(posts(requests)).toHaveLength(2);
+  expect(second).toEqual(first);
+});

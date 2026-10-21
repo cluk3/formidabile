@@ -230,7 +230,10 @@
       try {
         reply = await send();
       } catch (error) {
-        return error instanceof NotSent ? warn({ code: "sendFailed" }) : unknown();
+        // An unsent Retry leaves the earlier submission as unconfirmed as it was.
+        return error instanceof NotSent && notice?.code !== "submitUnconfirmed"
+          ? warn({ code: "sendFailed" })
+          : unknown();
       }
       const { data, error, response } = reply;
       if (response.ok && typeof data?.responseId === "string") {
