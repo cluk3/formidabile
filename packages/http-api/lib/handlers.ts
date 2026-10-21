@@ -106,6 +106,12 @@ const RespondHandlers = HttpApiBuilder.group(
       )
       .handle("submit", ({ params, payload }) =>
         CurrentActor.use((actor) => submission.submit(actor, params.formId, payload)),
+      )
+      .handle("readResponse", ({ params }) =>
+        CurrentActor.use((actor) => submission.read(actor, params.responseId)),
+      )
+      .handle("editResponse", ({ params, payload }) =>
+        CurrentActor.use((actor) => submission.edit(actor, params.responseId, payload)),
       );
   }),
 );
