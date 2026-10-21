@@ -2,7 +2,7 @@ import { Drafts, FormModuleLive, Forms, Publication } from "@fb/server";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { CurrentActor, FormApi } from "./api.ts";
-import { AuthenticationLive, EdgeValidationLive } from "./middleware.ts";
+import { AuthenticationLive, BodyLimitsLive, EdgeValidationLive } from "./middleware.ts";
 
 const FormsHandlers = HttpApiBuilder.group(
   FormApi,
@@ -98,5 +98,5 @@ const VersionsHandlers = HttpApiBuilder.group(
 /** The whole API, given a `Database` and an `ActorResolver`. */
 export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
   Layer.provide([FormsHandlers, DraftsHandlers, VersionsHandlers]),
-  Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive]),
+  Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive, BodyLimitsLive]),
 );

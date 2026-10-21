@@ -22,10 +22,23 @@ export type FormModuleHandlerOptions = {
 );
 
 export interface FormModuleHandler {
+  /**
+   * A body must declare its `Content-Length` (411 otherwise), as every body reaching a Node server does.
+   * A request built in-process has none: pass it through `declareLength` first.
+   */
   readonly fetch: (request: Request) => Promise<Response>;
   readonly migrate: () => Promise<void>;
   readonly dispose: () => Promise<void>;
 }
+
+/** Buffers an in-process request's body and declares its length, as an HTTP transport would. */
+export const declareLength = async (request: Request): Promise<Request> => {
+  if (request.body === null || request.headers.has("content-length")) return request;
+  const body = await request.arrayBuffer();
+  const headers = new Headers(request.headers);
+  headers.set("content-length", String(body.byteLength));
+  return new Request(request, { method: request.method, body, headers });
+};
 
 const hostResolver = (resolveActor: (request: Request) => Promise<Actor | null>) =>
   Layer.succeed(ActorResolver, {

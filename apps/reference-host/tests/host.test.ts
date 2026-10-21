@@ -1,5 +1,6 @@
 import { createFormApiClient } from "@fb/api-client";
 import { FormApiLive, JwtActorResolver } from "@fb/http-api";
+import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
@@ -87,7 +88,7 @@ test("an acme-admin token creates a form through /api", async () => {
   const client = createFormApiClient({
     baseUrl: `${origin}/api`,
     getToken: async () => ((await (await token(cookie)).json()) as { token: string }).token,
-    fetch: (request) => host.fetch(request),
+    fetch: async (request) => host.fetch(await declareLength(request)),
   });
   const definition = {
     format: 1 as const,
