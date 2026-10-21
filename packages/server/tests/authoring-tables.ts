@@ -196,7 +196,7 @@ export const describeAuthoringTables = (database: Layer.Layer<Services, unknown>
       ],
       [
         "TRUNCATE on form_management.form_version_questions",
-        (sql) => sql`TRUNCATE form_management.form_version_questions`,
+        (sql) => sql`TRUNCATE form_management.form_version_questions CASCADE`,
       ],
       [
         "UPDATE on form_management.question_identities",
