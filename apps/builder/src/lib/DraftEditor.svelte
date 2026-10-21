@@ -7,6 +7,7 @@
     type QuestionTypeName,
   } from "@fb/core/definition";
   import { addQuestion, QUESTIONS_CAP } from "@fb/core/editing";
+  import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
   import { outcome, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
@@ -15,6 +16,7 @@
   import { fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
+  import PublicationHistory from "#lib/PublicationHistory.svelte";
   import QuestionCard from "#lib/QuestionCard.svelte";
 
   let {
@@ -43,9 +45,12 @@
   let missing = $state(false);
   let busy = $state(false);
   let confirmingDelete = $state(false);
+  let previewing = $state(false);
   let notice = $state<string | null>(null);
   let conflict = $state<string | null>(null);
   let issues = $state.raw<Issue[]>([]);
+  /** What `issues` stopped. */
+  let refused = $state<"saved" | "published">("saved");
   let newType = $state<QuestionTypeName>("text");
 
   const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
@@ -201,14 +206,18 @@
       const parsed = parseDefinition(result.data.definition);
       saved = parsed.ok ? parsed.value : sent;
       if (definition === sent) definition = saved;
-      revision = result.data.revision;
+      const { revision: at, basedOnVersionId, updatedAt } = result.data;
+      revision = at;
+      if (form !== null) form = { ...form, draft: { revision: at, basedOnVersionId, updatedAt } };
       notice = "Draft saved";
     } else if (result.kind === "rejected") {
       const { error } = result;
       if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
       else if (error._tag === "NoDraft") conflict = "This draft was discarded since you opened it.";
-      else if (error._tag === "ValidationFailed") issues = error.issues;
-      else notice = "This form no longer exists.";
+      else if (error._tag === "ValidationFailed") {
+        refused = "saved";
+        issues = error.issues;
+      } else notice = "This form no longer exists.";
     } else if (result.kind === "tooLarge") {
       notice = "This form is too large to save";
     } else if (result.kind === "unknown") {
@@ -216,6 +225,44 @@
       notice = "We couldn't confirm the draft was saved, so it has been reloaded.";
     } else if (result.kind === "signIn") {
       signedOut = true;
+    } else {
+      notice = tokenUnavailable;
+    }
+  };
+
+  /** Publishes the saved draft as the form's next version; the editor then shows that version. */
+  const publish = async () => {
+    if (revision === null) return;
+    const expectedRevision = revision;
+    begin();
+    const result = await outcome(() =>
+      client.POST("/forms/{formId}/draft/publish", {
+        params: { path: { formId } },
+        body: { expectedRevision },
+      }),
+    );
+    busy = false;
+    if (result.kind === "ok") {
+      await load();
+      notice = `Published version ${result.data.version.number}`;
+    } else if (result.kind === "rejected") {
+      const { error } = result;
+      if (error._tag === "ValidationFailed") {
+        refused = "published";
+        issues = error.issues;
+      } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+      else if (error._tag === "NoDraft") {
+        await load();
+        notice = "This draft was already published or discarded, so the form has been reloaded.";
+      } else if (error._tag === "NotFound") missing = true;
+      else notice = "The draft couldn't be published.";
+    } else if (result.kind === "unknown") {
+      await load();
+      notice = "We couldn't confirm the draft was published, so the form has been reloaded.";
+    } else if (result.kind === "signIn") {
+      signedOut = true;
+    } else if (result.kind === "tooLarge") {
+      notice = "The draft couldn't be published.";
     } else {
       notice = tokenUnavailable;
     }
@@ -245,6 +292,15 @@
   {:else}
     <div class="flex flex-wrap items-center gap-4">
       <Button onclick={save} disabled={busy || definition === saved}>Save</Button>
+      <Button variant="outline" aria-pressed={previewing} onclick={() => (previewing = !previewing)}
+        >Preview</Button
+      >
+      <Button
+        variant="outline"
+        disabled={busy || revision === null || definition !== saved}
+        title={definition === saved ? undefined : "Save the draft before publishing it"}
+        onclick={publish}>Publish</Button
+      >
       {#if form.currentVersion === null}
         <Button
           variant="destructive"
@@ -284,13 +340,20 @@
     {/if}
     {#if issues.length > 0}
       <div role="alert" class="rounded-md border p-3">
-        <p>The draft couldn't be saved:</p>
+        <p>The draft couldn't be {refused}:</p>
         <ul class="list-disc pl-5">
           {#each issues as issue, i (i)}
             <li>{issue.message}</li>
           {/each}
         </ul>
       </div>
+    {/if}
+
+    {#if previewing}
+      <section class="rounded-md border" aria-labelledby={`${uid}-preview`}>
+        <h2 id={`${uid}-preview`} class="px-4 pt-4 text-lg font-semibold">Preview</h2>
+        <FormRenderer preview={definition} />
+      </section>
     {/if}
 
     <label class={fieldClass}>
@@ -357,6 +420,8 @@
       reload={reloadForm}
       signIn={() => (signedOut = true)}
     />
+
+    <PublicationHistory {client} {form} signIn={() => (signedOut = true)} />
 
     <section class="flex flex-col gap-3" aria-labelledby={`${uid}-refs`}>
       <h2 id={`${uid}-refs`} class="text-lg font-semibold">External references</h2>
