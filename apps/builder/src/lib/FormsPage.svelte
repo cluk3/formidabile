@@ -42,6 +42,8 @@
       signedOut = true;
     } else if (result.kind === "tokenUnavailable") {
       notice = tokenUnavailable;
+    } else if (result.kind === "tooLarge") {
+      notice = "This form is too large to save";
     } else {
       const { error } = result;
       notice =
@@ -88,7 +90,9 @@
       <ul class="divide-y rounded-md border">
         {#each forms as form (form.id)}
           <li class="flex items-center justify-between gap-4 p-3">
-            <span class="font-medium">{form.title === "" ? "Untitled form" : form.title}</span>
+            <a class="font-medium hover:underline" href={`/forms/${form.id}`}>
+              {form.title === "" ? "Untitled form" : form.title}
+            </a>
             <span class="text-sm text-muted-foreground">
               {form.currentVersion === null ? "Draft" : `Published v${form.currentVersion.number}`}
             </span>

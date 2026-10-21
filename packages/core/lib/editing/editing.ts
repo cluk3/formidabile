@@ -123,6 +123,12 @@ export const changeQuestionType = (
   );
 };
 
+/** Removes a question. Adding it back later mints a new identity, so analytics don't combine the two. */
+export const removeQuestion = (definition: FormDefinition, questionId: string): FormDefinition => ({
+  ...definition,
+  questions: definition.questions.toSpliced(indexOf(definition, questionId), 1),
+});
+
 /** Moves a question to position `to` in display order. Identities and content are untouched. */
 export const moveQuestion = (
   definition: FormDefinition,
