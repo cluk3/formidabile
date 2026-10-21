@@ -13,7 +13,10 @@
       "svelte": "./index.ts",
       "default": "./index.ts"
     },
-    "./element": "./dist/form-renderer.js"
+    "./element": {
+      "types": "./element.d.ts",
+      "default": "./dist/form-renderer.js"
+    }
   },
   "dependencies": {
     "svelte": "catalog:"
