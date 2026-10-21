@@ -469,6 +469,12 @@ importers:
 
   packages/renderer:
     dependencies:
+      '@fb/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@fb/core':
+        specifier: workspace:*
+        version: link:../core
       svelte:
         specifier: 'catalog:'
         version: 5.57.2
