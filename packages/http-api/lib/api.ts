@@ -6,6 +6,8 @@ import {
   FormDefinitionJson,
   FormDetail,
   FormNotPublished,
+  FormPublished,
+  FormSettings,
   FormSummary,
   FormVersion,
   NoDraft,
@@ -48,6 +50,9 @@ export class EdgeValidation extends HttpApiMiddleware.Service<EdgeValidation>()(
 
 const FormIdParams = { formId: Schema.String.check(Schema.isUUID()) };
 
+/** Revisions travel as opaque strings in the body, or the query for a discard or a delete (ADR 0010). */
+const Revision = Schema.String;
+
 export class FormsGroup extends HttpApiGroup.make("forms")
   .add(
     HttpApiEndpoint.post("create", "/forms", {
@@ -64,12 +69,20 @@ export class FormsGroup extends HttpApiGroup.make("forms")
       success: FormDetail,
       error: [Forbidden, NotFound],
     }),
+    HttpApiEndpoint.patch("updateSettings", "/forms/:formId", {
+      params: FormIdParams,
+      payload: FormSettings,
+      success: Form,
+      error: [Forbidden, ValidationFailed, NotFound, FormNotPublished],
+    }),
+    HttpApiEndpoint.delete("delete", "/forms/:formId", {
+      params: FormIdParams,
+      query: { expectedRevision: Revision },
+      error: [Forbidden, NotFound, FormPublished, RevisionConflict],
+    }),
   )
   .middleware(EdgeValidation)
   .middleware(Authentication) {}
-
-/** Revisions travel as opaque strings in the body, or the query for a discard (ADR 0010). */
-const Revision = Schema.String;
 
 export class DraftsGroup extends HttpApiGroup.make("drafts")
   .add(

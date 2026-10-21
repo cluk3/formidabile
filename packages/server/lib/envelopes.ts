@@ -22,6 +22,13 @@ export const Form = Schema.Struct({
 }).annotate({ identifier: "Form" });
 export type Form = typeof Form.Type;
 
+/** Null or missing leaves a setting unchanged; the last write wins. */
+export const FormSettings = Schema.Struct({
+  availability: Schema.optionalKey(Schema.NullOr(Availability)),
+  responseLimit: Schema.optionalKey(Schema.NullOr(ResponseLimit)),
+}).annotate({ identifier: "FormSettings" });
+export type FormSettings = typeof FormSettings.Type;
+
 export const VersionSummary = Schema.Struct({
   id: Schema.String,
   number: Schema.Int,

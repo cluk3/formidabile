@@ -192,3 +192,137 @@ describe("reading forms", () => {
     expect(error).toMatchObject({ _tag: "ValidationFailed", issues: [{ path: ["formId"] }] });
   });
 });
+
+const publish = async (formId: string, expectedRevision: string) => {
+  const { data, response } = await api
+    .clientAs("acme-admin")
+    .POST("/forms/{formId}/draft/publish", {
+      params: { path: { formId } },
+      body: { expectedRevision },
+    });
+  if (data === undefined) throw new Error(`publish gave ${response.status}`);
+  return data;
+};
+
+describe("deleting a form", () => {
+  test("an admin deletes a never-published form with 204, and it's gone", async () => {
+    const { form, draft } = await createForm("Throwaway");
+    const admin = api.clientAs("acme-admin");
+
+    const { response } = await admin.DELETE("/forms/{formId}", {
+      params: { path: { formId: form.id }, query: { expectedRevision: draft.revision } },
+    });
+    const detail = await admin.GET("/forms/{formId}", { params: { path: { formId: form.id } } });
+
+    expect(response.status).toBe(204);
+    expect(detail.response.status).toBe(404);
+  });
+
+  test("deleting a published form gets 409 FormPublished", async () => {
+    const { form, draft } = await createForm("Permanent");
+    await publish(form.id, draft.revision);
+
+    const { response, error } = await api.clientAs("acme-admin").DELETE("/forms/{formId}", {
+      params: { path: { formId: form.id }, query: { expectedRevision: draft.revision } },
+    });
+
+    expect(response.status).toBe(409);
+    expect(error).toEqual({ _tag: "FormPublished" });
+  });
+});
+
+describe("changing a form's settings", () => {
+  test("an admin opens a published form and limits its responses", async () => {
+    const { form, draft } = await createForm("Opening");
+    const { form: published } = await publish(form.id, draft.revision);
+
+    const { response, data } = await api.clientAs("acme-admin").PATCH("/forms/{formId}", {
+      params: { path: { formId: form.id } },
+      body: { availability: "open", responseLimit: "one_per_respondent" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(data).toEqual({
+      ...published,
+      availability: "open",
+      responseLimit: "one_per_respondent",
+      updatedAt: expect.any(String),
+    });
+  });
+
+  test("opening a never-published form gets 409 FormNotPublished", async () => {
+    const { form } = await createForm("Not yet");
+
+    const { response, error } = await api.clientAs("acme-admin").PATCH("/forms/{formId}", {
+      params: { path: { formId: form.id } },
+      body: { availability: "open" },
+    });
+
+    expect(response.status).toBe(409);
+    expect(error).toEqual({ _tag: "FormNotPublished" });
+  });
+
+  test("an unknown availability gets 422 from the edge", async () => {
+    const { form } = await createForm("Strict settings");
+
+    const { response, error } = await api.clientAs("acme-admin").PATCH("/forms/{formId}", {
+      params: { path: { formId: form.id } },
+      body: { availability: "archived" } as never,
+    });
+
+    expect(response.status).toBe(422);
+    expect(error).toMatchObject({ _tag: "ValidationFailed", issues: [{ path: ["availability"] }] });
+  });
+});
+
+describe("deleting and settings authorization", () => {
+  const deleteAndChange = (
+    user: "acme-analyst" | "globex-admin",
+    formId: string,
+    revision: string,
+  ) => {
+    const client = api.clientAs(user);
+    return Promise.all([
+      client.DELETE("/forms/{formId}", {
+        params: { path: { formId }, query: { expectedRevision: revision } },
+      }),
+      client.PATCH("/forms/{formId}", {
+        params: { path: { formId } },
+        body: { responseLimit: "one_per_respondent" },
+      }),
+    ]);
+  };
+
+  test("acme-analyst gets 403 for deleting and changing settings", async () => {
+    const { form, draft } = await createForm("Analyst can't manage");
+
+    for (const { response, error } of await deleteAndChange(
+      "acme-analyst",
+      form.id,
+      draft.revision,
+    )) {
+      expect(response.status).toBe(403);
+      expect(error).toEqual({ _tag: "Forbidden", capability: "forms:manage" });
+    }
+  });
+
+  test("another tenant's admin gets 404 for deleting and changing settings", async () => {
+    const { form, draft } = await createForm("Acme manages");
+
+    for (const { response, error } of await deleteAndChange(
+      "globex-admin",
+      form.id,
+      draft.revision,
+    )) {
+      expect(response.status).toBe(404);
+      expect(error).toEqual({ _tag: "NotFound" });
+    }
+    const detail = await api.clientAs("acme-admin").GET("/forms/{formId}", {
+      params: { path: { formId: form.id } },
+    });
+    expect(detail.data).toMatchObject({
+      responseLimit: "unlimited",
+      draft: { revision: draft.revision },
+    });
+  });
+});

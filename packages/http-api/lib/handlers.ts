@@ -18,6 +18,12 @@ const FormsHandlers = HttpApiBuilder.group(
       )
       .handle("detail", ({ params }) =>
         CurrentActor.use((actor) => forms.detail(actor, params.formId)),
+      )
+      .handle("updateSettings", ({ params, payload }) =>
+        CurrentActor.use((actor) => forms.updateSettings(actor, params.formId, payload)),
+      )
+      .handle("delete", ({ params, query }) =>
+        CurrentActor.use((actor) => forms.delete(actor, params.formId, query.expectedRevision)),
       );
   }),
 );
