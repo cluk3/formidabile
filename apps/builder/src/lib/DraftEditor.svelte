@@ -12,12 +12,12 @@
   import { outcome, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { questionEditors, questionTypeNames } from "#lib/editors/editors.ts";
   import { fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
   import PublicationHistory from "#lib/PublicationHistory.svelte";
   import QuestionCard from "#lib/QuestionCard.svelte";
+  import { questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
     client,
@@ -400,7 +400,7 @@
         <label for={`${uid}-new-type`}>New question type</label>
         <select id={`${uid}-new-type`} class={nativeInputClass} bind:value={newType}>
           {#each questionTypeNames as type (type)}
-            <option value={type}>{questionEditors[type].name}</option>
+            <option value={type}>{registry[type].name}</option>
           {/each}
         </select>
       </div>

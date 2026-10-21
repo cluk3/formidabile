@@ -1,14 +1,16 @@
 <script lang="ts">
-  import type { FormApiClient, Schemas } from "@fb/api-client";
+  import type { Schemas } from "@fb/api-client";
   import { onMount } from "svelte";
-  import { outcome } from "#lib/api.ts";
+  import { outcome, type BuilderClient } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
 
-  let { client, signInHref }: { client: FormApiClient; signInHref: string } = $props();
+  let { client, signInHref }: { client: BuilderClient; signInHref: string } = $props();
 
   let forms = $state<ReadonlyArray<Schemas["FormSummary"]> | null>(null);
+  /** An analyst reads forms and responses but can't create forms. */
+  let canManage = $state(false);
   let signedOut = $state(false);
   let loadFailed = $state(false);
   let notice = $state<string | null>(null);
@@ -54,23 +56,30 @@
     creating = false;
   };
 
-  onMount(load);
+  onMount(() => {
+    void client.capabilities().then((capabilities) => {
+      canManage = capabilities.includes("forms:manage");
+    });
+    void load();
+  });
 </script>
 
 <section class="flex flex-col gap-6">
   {#if signedOut}
     <p>
-      Sign in as an admin who can manage forms.
+      Sign in as an admin, or as an analyst to read responses.
       <a class="font-medium underline" href={signInHref}>Sign in</a>
     </p>
   {:else}
-    <form class="flex items-end gap-2" onsubmit={create}>
-      <div class="flex grow flex-col gap-1.5">
-        <Label for="new-form-title">Title</Label>
-        <Input id="new-form-title" bind:value={title} maxlength={200} />
-      </div>
-      <Button type="submit" disabled={creating}>Create form</Button>
-    </form>
+    {#if canManage}
+      <form class="flex items-end gap-2" onsubmit={create}>
+        <div class="flex grow flex-col gap-1.5">
+          <Label for="new-form-title">Title</Label>
+          <Input id="new-form-title" bind:value={title} maxlength={200} />
+        </div>
+        <Button type="submit" disabled={creating}>Create form</Button>
+      </form>
+    {/if}
 
     {#if notice !== null}
       <p role="status">{notice}</p>
@@ -93,9 +102,17 @@
             <a class="font-medium hover:underline" href={`/forms/${form.id}`}>
               {form.title === "" ? "Untitled form" : form.title}
             </a>
-            <span class="text-sm text-muted-foreground">
+            <span class="grow text-right text-sm text-muted-foreground">
               {form.currentVersion === null ? "Draft" : `Published v${form.currentVersion.number}`}
             </span>
+            {#if form.currentVersion !== null}
+              <a class="text-sm font-medium hover:underline" href={`/forms/${form.id}/responses`}
+                >Responses</a
+              >
+              <a class="text-sm font-medium hover:underline" href={`/forms/${form.id}/analytics`}
+                >Analytics</a
+              >
+            {/if}
           </li>
         {/each}
       </ul>

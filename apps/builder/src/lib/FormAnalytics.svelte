@@ -13,7 +13,7 @@
   } from "#lib/analytics.ts";
   import { outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
-  import { questionEditors } from "#lib/editors/editors.ts";
+  import { registry } from "#lib/registry.ts";
 
   let {
     client,
@@ -38,6 +38,7 @@
     );
     if (result.kind === "ok") analytics = result.data;
     else if (result.kind === "signIn") signedOut = true;
+    else if (result.kind === "rejected" && result.error._tag === "Forbidden") signedOut = true;
     else if (result.kind === "rejected" && result.error._tag === "NotFound") missing = true;
     else failed = true;
   };
@@ -134,7 +135,7 @@
 <section class="flex flex-col gap-8">
   {#if signedOut}
     <p>
-      Sign in as an admin who can read responses.
+      Sign in as someone who can read responses.
       <a class="font-medium underline" href={signInHref}>Sign in</a>
     </p>
   {:else if missing}
@@ -176,7 +177,7 @@
       <section class="flex flex-col gap-3" aria-labelledby={`${uid}-question-${index}`}>
         <div>
           <h2 id={`${uid}-question-${index}`} class="text-lg font-semibold">{question.label}</h2>
-          <p class="text-sm text-muted-foreground">{questionEditors[question.type].name}</p>
+          <p class="text-sm text-muted-foreground">{registry[question.type].name}</p>
           {#if !question.inCurrentVersion}
             <p class="text-sm text-muted-foreground">Not in the current version.</p>
           {/if}

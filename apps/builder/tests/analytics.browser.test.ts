@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
 import FormAnalytics from "#lib/FormAnalytics.svelte";
-import { config, fakeHost, json } from "./fake-host.ts";
+import { admin, analyst, config, fakeHost, json } from "./fake-host.ts";
 
 const formId = crypto.randomUUID();
 const at = "2026-10-21T08:00:00.000Z";
@@ -171,12 +171,12 @@ const analytics: Schemas["FormAnalytics"] = {
   questions: [rating, days, recommend, source],
 };
 
-const renderAnalytics = (answer: (route: string) => Response) => {
+const renderAnalytics = (answer: (route: string) => Response, capabilities = admin) => {
   const requests: string[] = [];
   const fetch = fakeHost((route) => {
     requests.push(route);
     return answer(route);
-  });
+  }, capabilities);
   const screen = render(FormAnalytics, {
     client: createBuilderClient(config, fetch),
     formId,
@@ -349,6 +349,24 @@ test("an unknown form says it doesn't exist", async () => {
   const { screen } = renderAnalytics(() => json(404, { _tag: "NotFound", resource: "form" }));
 
   await expect.element((await screen).getByText("This form doesn't exist.")).toBeVisible();
+});
+
+test("an analyst, who can only read responses, sees the analytics", async () => {
+  const { screen } = renderAnalytics(answering(analytics), analyst);
+
+  await expect
+    .element((await screen).getByRole("table", { name: "Responses by version" }))
+    .toBeVisible();
+});
+
+test("a token without responses:read asks to sign in", async () => {
+  const { screen } = renderAnalytics(() =>
+    json(403, { _tag: "Forbidden", capability: "responses:read" }),
+  );
+
+  await expect
+    .element((await screen).getByRole("link", { name: "Sign in" }))
+    .toHaveAttribute("href", config.loginUrl);
 });
 
 test("a refused token asks to sign in", async () => {

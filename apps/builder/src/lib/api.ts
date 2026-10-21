@@ -1,7 +1,7 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
 import type { BuilderConfig } from "#lib/config.ts";
 
-/** The host gave no token (401), or one without `forms:manage`: only signing in again helps. */
+/** The host gave no token (401), or one for neither an admin nor an analyst: only signing in again helps. */
 class SignInRequired extends Error {}
 
 /** The token endpoint failed some other way, so the API call was never sent. */
@@ -20,34 +20,57 @@ const capabilitiesOf = (token: string): unknown => {
   }
 };
 
+/** Admins manage forms; analysts only read them and their responses (ADR 0010). */
+const builderCapabilities = ["forms:manage", "responses:read"];
+
+export type BuilderClient = FormApiClient & {
+  /**
+   * The signed-in user's capabilities, from a fresh token's claims (none without a usable token). They decide what
+   * the builder offers; the API decides what's allowed.
+   */
+  capabilities(): Promise<ReadonlyArray<string>>;
+};
+
 /**
- * The API client for the signed-in admin. Before each call it asks the host's `tokenUrl`, with the host's cookie,
- * for a fresh token. The builder only reads the token's claims to decide whether to ask for a sign-in; the API
- * verifies it.
+ * The API client for the signed-in admin or analyst. Before each call it asks the host's `tokenUrl`, with the
+ * host's cookie, for a fresh token. The builder only reads the token's claims to decide whether to ask for a sign-in
+ * and what to offer; the API verifies it.
  */
 export const createBuilderClient = (
   config: BuilderConfig,
   fetch: typeof globalThis.fetch = globalThis.fetch,
-): FormApiClient =>
-  createFormApiClient({
+): BuilderClient => {
+  const signedIn = async () => {
+    const response = await fetch(config.tokenUrl, { credentials: "include" }).catch(() => {
+      throw new TokenUnavailable();
+    });
+    if (response.status === 401) throw new SignInRequired();
+    const body: unknown = response.ok ? await response.json().catch(() => undefined) : undefined;
+    const token =
+      typeof body === "object" && body !== null ? Reflect.get(body, "token") : undefined;
+    if (typeof token !== "string") throw new TokenUnavailable();
+    const claimed = capabilitiesOf(token);
+    const capabilities: string[] = Array.isArray(claimed)
+      ? claimed.filter((capability) => typeof capability === "string")
+      : [];
+    if (!builderCapabilities.some((capability) => capabilities.includes(capability))) {
+      throw new SignInRequired();
+    }
+    return { token, capabilities };
+  };
+  const client = createFormApiClient({
     baseUrl: config.apiBaseUrl,
     fetch: (request) => fetch(request),
-    getToken: async () => {
-      const response = await fetch(config.tokenUrl, { credentials: "include" }).catch(() => {
-        throw new TokenUnavailable();
-      });
-      if (response.status === 401) throw new SignInRequired();
-      const body: unknown = response.ok ? await response.json().catch(() => undefined) : undefined;
-      const token =
-        typeof body === "object" && body !== null ? Reflect.get(body, "token") : undefined;
-      if (typeof token !== "string") throw new TokenUnavailable();
-      const capabilities = capabilitiesOf(token);
-      if (!Array.isArray(capabilities) || !capabilities.includes("forms:manage")) {
-        throw new SignInRequired();
-      }
-      return token;
-    },
+    getToken: async () => (await signedIn()).token,
   });
+  return Object.assign(client, {
+    capabilities: () =>
+      signedIn().then(
+        ({ capabilities }) => capabilities,
+        () => [],
+      ),
+  });
+};
 
 /** The host's sign-in page, returning to `returnTo` afterwards. */
 export const signInUrl = (loginUrl: string, returnTo: string): string => {
