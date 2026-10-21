@@ -1,5 +1,13 @@
 import type { FormModuleHandler } from "@fb/http-api/web";
-import { type DevUser, devUsers, isDevUser, mintDevToken } from "./dev-users.ts";
+import { type DevUser, devUsers, isDevUser, mintDevToken, mintFormToken } from "./dev-users.ts";
+import {
+  type ProjectForm,
+  projectNamespace,
+  projectTenant,
+  resolveProjectForm,
+} from "./projects.ts";
+
+type Resolve = (tenant: string, projectId: string) => Promise<ProjectForm>;
 
 /** The builder's `vp preview` origin, which calls `/api` and `/token` with credentials. */
 export const builderOrigin = "http://localhost:4174";
@@ -74,11 +82,24 @@ const signIn = async (request: Request) => {
 
 const json = (status: number, body: unknown) => Response.json(body, { status });
 
-// A grant for the anonymous user needs a `form`, which `/token` can't name until it takes a project.
-const token = async (request: Request) => {
+// Without a project, a dev user gets a tenant-wide token; the anonymous user's grant needs the project's form.
+const token = async (request: Request, project: string | null, resolve: Resolve) => {
   const user = signedInUser(request);
-  if (user === null) return json(401, { error: "Not signed in" });
-  return json(200, { token: await mintDevToken(user) });
+  if (project === null) {
+    if (user === null) return json(401, { error: "Not signed in" });
+    return json(200, { token: await mintDevToken(user) });
+  }
+  const tenant = projectTenant(project);
+  if (tenant === null) return json(404, { error: "No such project" });
+  if (user !== null && devUsers[user].tenant !== tenant)
+    return json(403, { error: "This project is in another tenant" });
+  const resolved = await resolve(tenant, project);
+  if (resolved.kind !== "one") return json(404, { error: "No single open form for this project" });
+  return json(200, {
+    token: await mintFormToken(user, { tenant, id: resolved.form.id }, [
+      { namespace: projectNamespace, refId: project },
+    ]),
+  });
 };
 
 // `/token` is read by the builder from its own origin with the cookie, so it answers that origin with credentials.
@@ -100,6 +121,10 @@ export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
       migrated = undefined;
       throw error;
     }));
+  const resolve: Resolve = async (tenant, projectId) => {
+    await migrateOnce();
+    return resolveProjectForm(api.fetch, tenant, projectId);
+  };
   return {
     serves: (pathname) => isApiPath(pathname) || pathname === "/login" || pathname === "/token",
     fetch: async (request) => {
@@ -112,7 +137,8 @@ export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
       if (route === "GET /login")
         return loginPage(signedInUser(request), safeReturn(url.searchParams.get("return")));
       if (route === "POST /login") return signIn(request);
-      if (route === "GET /token") return withCors(request, await token(request));
+      if (route === "GET /token")
+        return withCors(request, await token(request, url.searchParams.get("project"), resolve));
       return new Response(null, { status: 404 });
     },
     dispose: () => api.dispose(),

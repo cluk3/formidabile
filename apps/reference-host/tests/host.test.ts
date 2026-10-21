@@ -1,24 +1,13 @@
 import { createFormApiClient } from "@fb/api-client";
-import { FormApiLive, JwtActorResolver } from "@fb/http-api";
 import { declareLength } from "@fb/http-api/web";
-import { DatabaseTest } from "@fb/server/testing";
-import { Layer } from "effect";
-import { HttpRouter, HttpServer } from "effect/http";
 import { jwtVerify } from "jose";
-import { afterAll, expect, test } from "vite-plus/test";
-import { devJwt } from "../server/dev-users.ts";
+import { afterAll, describe, expect, test } from "vite-plus/test";
 import { builderOrigin, createReferenceHost } from "../server/host.ts";
+import { clientFor, projectForm, startApi } from "./api.ts";
 
 const origin = "http://localhost:4173";
 
-// The module's API on a fresh PGlite database, checking tokens with the dev secret, as the plugin's handler does.
-const api = HttpRouter.toWebHandler(
-  FormApiLive.pipe(
-    Layer.provide([JwtActorResolver(devJwt), DatabaseTest]),
-    Layer.provide(HttpServer.layerServices),
-  ),
-  { disableLogger: true },
-);
+const api = startApi();
 // `DatabaseTest` is already migrated; the count shows the host asks once, before the API's first request.
 let migrations = 0;
 const host = createReferenceHost({
@@ -39,8 +28,23 @@ const signIn = async (user: string) => {
   return response.headers.get("set-cookie")?.split(";")[0] ?? "";
 };
 
-const token = (cookie: string, headers: Record<string, string> = {}) =>
-  host.fetch(new Request(`${origin}/token`, { headers: { cookie, ...headers } }));
+const token = (cookie: string, headers: Record<string, string> = {}, query = "") =>
+  host.fetch(new Request(`${origin}/token${query}`, { headers: { cookie, ...headers } }));
+
+const verified = async (response: Response) => {
+  const { token: minted } = (await response.json()) as { token: string };
+  const { payload } = await jwtVerify(
+    minted,
+    new TextEncoder().encode("reference-host-dev-secret"),
+    {
+      issuer: "reference-host",
+      audience: "form-module",
+      algorithms: ["HS256"],
+      requiredClaims: ["exp"],
+    },
+  );
+  return payload;
+};
 
 const allCapabilities = ["forms:manage", "responses:read", "responses:delete"];
 
@@ -54,18 +58,7 @@ test.each([
   const response = await token(await signIn(user));
 
   expect(response.status).toBe(200);
-  const { token: minted } = (await response.json()) as { token: string };
-  const { payload } = await jwtVerify(
-    minted,
-    new TextEncoder().encode("reference-host-dev-secret"),
-    {
-      issuer: "reference-host",
-      audience: "form-module",
-      algorithms: ["HS256"],
-      requiredClaims: ["exp"],
-    },
-  );
-  expect(payload).toEqual({
+  expect(await verified(response)).toEqual({
     sub: user,
     tenant,
     capabilities,
@@ -118,4 +111,78 @@ test("/token answers the builder's origin with credentials", async () => {
 
   expect(response.headers.get("access-control-allow-origin")).toBe(builderOrigin);
   expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+});
+
+describe("/token?project=", () => {
+  const admin = clientFor("acme-admin", (request) => api.handler(request));
+  const newProject = () => `acme-${crypto.randomUUID()}`;
+  const projectToken = (cookie: string, projectId: string) =>
+    token(cookie, {}, `?project=${encodeURIComponent(projectId)}`);
+
+  test.each([["acme-admin"], ["acme-analyst"], ["alice"], ["bob"]])(
+    "mints %s an identified token bound to the project's one open form, carrying its reference",
+    async (user) => {
+      const projectId = newProject();
+      const form = await projectForm(admin, projectId, "open");
+      await projectForm(admin, projectId, "closed");
+
+      const response = await projectToken(await signIn(user), projectId);
+
+      expect(response.status).toBe(200);
+      expect(await verified(response)).toEqual({
+        sub: user,
+        tenant: "acme",
+        capabilities: expect.any(Array),
+        form: form.id,
+        refs: [{ namespace: "project", refId: projectId }],
+        iss: "reference-host",
+        aud: "form-module",
+        iat: expect.any(Number),
+        exp: expect.any(Number),
+      });
+    },
+  );
+
+  test("mints the anonymous user a grant in the project's tenant that expires after 5 minutes", async () => {
+    const projectId = newProject();
+    const form = await projectForm(admin, projectId, "open");
+
+    const response = await projectToken("", projectId);
+
+    expect(response.status).toBe(200);
+    const payload = await verified(response);
+    expect(payload).toEqual({
+      anonymous: true,
+      tenant: "acme",
+      form: form.id,
+      refs: [{ namespace: "project", refId: projectId }],
+      iss: "reference-host",
+      aud: "form-module",
+      iat: expect.any(Number),
+      exp: expect.any(Number),
+    });
+    expect(payload.exp! - payload.iat!).toBe(5 * 60);
+  });
+
+  test.each<[string, ReadonlyArray<"unpublished" | "closed" | "open">]>([
+    ["no open form", ["unpublished", "closed"]],
+    ["several open forms", ["open", "open"]],
+  ])("gives 404 for a project with %s", async (_, states) => {
+    const projectId = newProject();
+    for (const state of states) await projectForm(admin, projectId, state);
+
+    expect((await projectToken(await signIn("alice"), projectId)).status).toBe(404);
+    expect((await projectToken("", projectId)).status).toBe(404);
+  });
+
+  test("refuses a project in another tenant", async () => {
+    const projectId = newProject();
+    await projectForm(admin, projectId, "open");
+
+    expect((await projectToken(await signIn("globex-admin"), projectId)).status).toBe(403);
+  });
+
+  test("gives 404 for an id that names no dev tenant", async () => {
+    expect((await projectToken(await signIn("alice"), "initech-launch")).status).toBe(404);
+  });
 });
