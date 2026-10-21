@@ -5,6 +5,7 @@
     props: {
       apiBaseUrl: { attribute: "api-base-url", type: "String" },
       formId: { attribute: "form-id", type: "String" },
+      responseId: { attribute: "response-id", type: "String" },
     },
     extend: (ce) =>
       class extends ce {
@@ -35,22 +36,33 @@
 
 <script lang="ts">
   import FormRenderer from "./FormRenderer.svelte";
+  import type { RendererError } from "./problems.ts";
   import type { GetToken } from "./props.ts";
 
   let {
     apiBaseUrl,
     formId,
+    responseId,
     getToken,
-  }: { apiBaseUrl?: string; formId?: string; getToken?: GetToken } = $props();
+  }: { apiBaseUrl?: string; formId?: string; responseId?: string; getToken?: GetToken } = $props();
 
   const element = $host();
   const onsubmitted = (detail: { readonly responseId: string }) =>
     element.dispatchEvent(new CustomEvent("submitted", { detail }));
+  const onerror = (detail: RendererError) =>
+    element.dispatchEvent(new CustomEvent("error", { detail }));
 </script>
 
-<!-- Nothing renders until the host has given all three inputs. -->
+<!-- Nothing renders until the host has given all three required inputs; `response-id` is optional. -->
 {#if apiBaseUrl && formId && getToken}
-  {#key formId}
-    <FormRenderer {apiBaseUrl} {formId} {getToken} {onsubmitted} />
+  {#key `${formId} ${responseId ?? ""}`}
+    <FormRenderer
+      {apiBaseUrl}
+      {formId}
+      responseId={responseId || undefined}
+      {getToken}
+      {onsubmitted}
+      {onerror}
+    />
   {/key}
 {/if}
