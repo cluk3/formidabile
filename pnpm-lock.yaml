@@ -387,10 +387,19 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: 'catalog:'
         version: 1.0.0
+      jose:
+        specifier: 'catalog:'
+        version: 6.2.13
     devDependencies:
+      '@fb/server':
+        specifier: workspace:*
+        version: link:../../packages/server
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
