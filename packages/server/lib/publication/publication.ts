@@ -1,4 +1,4 @@
-import { type FormDefinition, parseDefinition, validateForPublish } from "@fb/core/definition";
+import { validateForPublish } from "@fb/core/definition";
 import { Context, Effect, Layer, type Schema } from "effect";
 import type { Actor } from "../authorization/actor.ts";
 import { requireAdminRead, requireCapability } from "../authorization/authorization.ts";
@@ -17,14 +17,9 @@ import {
   findVersion,
   insertCurrentVersion,
   listVersions,
+  storedDefinition,
   versionDefinitions,
 } from "../persistence/versions.ts";
-
-const storedDefinition = (json: Schema.Json): FormDefinition => {
-  const parsed = parseDefinition(json);
-  if (!parsed.ok) throw new Error("A published definition no longer parses");
-  return parsed.value;
-};
 
 export class Publication extends Context.Service<
   Publication,

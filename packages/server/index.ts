@@ -2,8 +2,10 @@ import { Layer } from "effect";
 import { Drafts } from "./lib/drafts/drafts.ts";
 import { Forms } from "./lib/forms/forms.ts";
 import { Publication } from "./lib/publication/publication.ts";
+import { Submission } from "./lib/submission/submission.ts";
 
 export {
+  AnswersJson,
   Availability,
   Draft,
   DraftSummary,
@@ -13,12 +15,16 @@ export {
   FormSettings,
   FormSummary,
   FormVersion,
+  RespondentForm,
   ResponseLimit,
+  SubmittedResponse,
   VersionSummary,
 } from "./lib/envelopes.ts";
 export {
+  AlreadyResponded,
   ExternalRefLimitReached,
   Forbidden,
+  FormClosed,
   FormNotPublished,
   FormPublished,
   Issue,
@@ -26,9 +32,16 @@ export {
   NotFound,
   RevisionConflict,
   ValidationFailed,
+  VersionSuperseded,
 } from "./lib/errors.ts";
 export type { SaveDraft } from "./lib/drafts/drafts.ts";
-export { Drafts, Forms, Publication };
+export type { SubmitResponse } from "./lib/submission/submission.ts";
+export { Drafts, Forms, Publication, Submission };
 
 /** Every use case, given a `Database`. */
-export const FormModuleLive = Layer.mergeAll(Forms.layer, Drafts.layer, Publication.layer);
+export const FormModuleLive = Layer.mergeAll(
+  Forms.layer,
+  Drafts.layer,
+  Publication.layer,
+  Submission.layer,
+);

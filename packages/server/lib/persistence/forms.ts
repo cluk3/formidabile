@@ -105,6 +105,21 @@ export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
     .for("update")
     .pipe(Effect.map(([row]) => row && (toForm(row) as LockedForm)));
 
+/**
+ * A form row locked `FOR SHARE` in the actor's tenant, which responses are read and written under: it waits
+ * for a publish or a settings change, but not for other submissions.
+ */
+export type SharedForm = Form & Brand.Brand<"SharedForm">;
+
+/** Must run inside the transaction, which holds the lock until it ends. */
+export const shareForm = (db: Db, tenant: TenantId, formId: string) =>
+  db
+    .select()
+    .from(forms)
+    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
+    .for("share")
+    .pipe(Effect.map(([row]) => row && (toForm(row) as SharedForm)));
+
 /** Its draft goes by cascade; a trigger refuses the delete once the form has any version. */
 export const deleteForm = (db: Db, form: LockedForm) =>
   db.delete(forms).where(eq(forms.id, form.id));

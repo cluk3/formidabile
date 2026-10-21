@@ -116,6 +116,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/respond/forms/{formId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["respond.load"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/respond/forms/{formId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["respond.submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -129,11 +161,19 @@ export interface components {
             /** @enum {string} */
             _tag: "LengthRequired";
         };
-        UnauthenticatedEncoded: {
+        AlreadyRespondedEncoded: {
             /** @enum {string} */
-            _tag: "Unauthenticated";
+            _tag: "AlreadyResponded";
+            responseId: string;
+        };
+        VersionSupersededEncoded: {
             /** @enum {string} */
-            reason: "missing" | "invalid" | "identityRequired";
+            _tag: "VersionSuperseded";
+            currentVersionId: string;
+        };
+        FormClosedEncoded: {
+            /** @enum {string} */
+            _tag: "FormClosed";
         };
         ValidationFailedEncoded: {
             /** @enum {string} */
@@ -143,24 +183,39 @@ export interface components {
                 message: string;
             }[];
         };
+        UnauthenticatedEncoded: {
+            /** @enum {string} */
+            _tag: "Unauthenticated";
+            /** @enum {string} */
+            reason: "missing" | "invalid" | "identityRequired";
+        };
         NotFoundEncoded: {
             /** @enum {string} */
             _tag: "NotFound";
         };
-        ForbiddenEncoded: {
-            /** @enum {string} */
-            _tag: "Forbidden";
-            /** @enum {string} */
-            capability: "forms:manage" | "responses:read" | "responses:delete";
+        SubmittedResponse: {
+            responseId: string;
+            revision: string;
         };
-        FormVersion: {
-            id: string;
-            number: number;
-            publishedAt: string;
-            publishedBy: string;
-            derivedFromVersionId: string | null;
-            isCurrent: boolean;
-            definition: components["schemas"]["FormDefinition"];
+        AnyAnswers: {
+            [key: string]: string | number | boolean | string[];
+        };
+        FormNotPublishedEncoded: {
+            /** @enum {string} */
+            _tag: "FormNotPublished";
+        };
+        RespondentForm: {
+            formId: string;
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            /** @enum {string} */
+            respondent: "identified" | "anonymous";
+            version: {
+                id: string;
+                number: number;
+                definition: components["schemas"]["FormDefinition"];
+            };
+            myResponseId: string | null;
         };
         FormDefinition: {
             /** @constant */
@@ -259,6 +314,21 @@ export interface components {
                 config: Record<string, never>;
             })[];
         };
+        ForbiddenEncoded: {
+            /** @enum {string} */
+            _tag: "Forbidden";
+            /** @enum {string} */
+            capability: "forms:manage" | "responses:read" | "responses:delete";
+        };
+        FormVersion: {
+            id: string;
+            number: number;
+            publishedAt: string;
+            publishedBy: string;
+            derivedFromVersionId: string | null;
+            isCurrent: boolean;
+            definition: components["schemas"]["FormDefinition"];
+        };
         VersionSummary: {
             id: string;
             number: number;
@@ -284,10 +354,6 @@ export interface components {
             currentVersionId: string | null;
             createdAt: string;
             updatedAt: string;
-        };
-        FormNotPublishedEncoded: {
-            /** @enum {string} */
-            _tag: "FormNotPublished";
         };
         Draft: {
             formId: string;
@@ -1389,6 +1455,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "respond.load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description RespondentForm */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RespondentForm"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description FormNotPublished | FormClosed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormNotPublishedEncoded"] | components["schemas"]["FormClosedEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "respond.submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    versionId: string;
+                    answers: components["schemas"]["AnyAnswers"];
+                    /** Format: uuid */
+                    idempotencyKey: string;
+                };
+            };
+        };
+        responses: {
+            /** @description SubmittedResponse */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmittedResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description FormClosed | VersionSuperseded | AlreadyResponded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormClosedEncoded"] | components["schemas"]["VersionSupersededEncoded"] | components["schemas"]["AlreadyRespondedEncoded"];
                 };
             };
             /** @description LengthRequired */

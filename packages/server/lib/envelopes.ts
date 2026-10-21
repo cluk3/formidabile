@@ -7,10 +7,16 @@ import { ExternalRef } from "./authorization/actor.ts";
  */
 export const FormDefinitionJson = Schema.Json.annotate({ identifier: "FormDefinition" });
 
+/**
+ * Answers as JSON: `@fb/core` validates them against the version, and `@fb/http-api` documents them with
+ * core's `AnyAnswers` under this identifier.
+ */
+export const AnswersJson = Schema.Json.annotate({ identifier: "AnyAnswers" });
+
 export const Availability = Schema.Literals(["open", "closed"]);
 export const ResponseLimit = Schema.Literals(["unlimited", "one_per_respondent"]);
 
-/** Draft revisions come from a `bigint` sequence that can pass 2^53, so above persistence they're opaque. */
+/** Revisions are opaque above persistence: a draft's comes from a `bigint` sequence that can pass 2^53. */
 const Revision = Schema.String;
 
 export const Form = Schema.Struct({
@@ -73,6 +79,23 @@ export const FormSummary = Schema.Struct({
   updatedAt: Schema.Date,
 }).annotate({ identifier: "FormSummary" });
 export type FormSummary = typeof FormSummary.Type;
+
+/** What a respondent loads: the form's current version, and enough to decide on a sign-in prompt. */
+export const RespondentForm = Schema.Struct({
+  formId: Schema.String,
+  responseLimit: ResponseLimit,
+  respondent: Schema.Literals(["identified", "anonymous"]),
+  version: Schema.Struct({ id: Schema.String, number: Schema.Int, definition: FormDefinitionJson }),
+  /** Set only for an identified respondent who already answered a one-per-respondent form. */
+  myResponseId: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "RespondentForm" });
+export type RespondentForm = typeof RespondentForm.Type;
+
+export const SubmittedResponse = Schema.Struct({
+  responseId: Schema.String,
+  revision: Revision,
+}).annotate({ identifier: "SubmittedResponse" });
+export type SubmittedResponse = typeof SubmittedResponse.Type;
 
 export const FormDetail = Schema.Struct({
   id: Schema.String,

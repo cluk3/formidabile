@@ -1,9 +1,13 @@
+import { AnyAnswers } from "@fb/core/answers";
 import { FormDefinition } from "@fb/core/definition";
 import {
+  AlreadyResponded,
+  AnswersJson,
   Draft,
   ExternalRefLimitReached,
   Forbidden,
   Form,
+  FormClosed,
   FormDefinitionJson,
   FormDetail,
   FormNotPublished,
@@ -13,9 +17,12 @@ import {
   FormVersion,
   NoDraft,
   NotFound,
+  RespondentForm,
   RevisionConflict,
+  SubmittedResponse,
   ValidationFailed,
   VersionSummary,
+  VersionSuperseded,
 } from "@fb/server";
 import { type Actor, ExternalRef, Unauthenticated } from "@fb/server/actor";
 import { Context, Schema } from "effect";
@@ -28,7 +35,7 @@ import {
   HttpApiSecurity,
   OpenApi,
 } from "effect/http-api";
-import { toJSONSchema } from "zod/mini";
+import { toJSONSchema, type z } from "zod/mini";
 
 export class CurrentActor extends Context.Service<CurrentActor, Actor>()(
   "@fb/http-api/CurrentActor",
@@ -190,21 +197,58 @@ export class VersionsGroup extends HttpApiGroup.make("versions")
   .middleware(Authentication)
   .middleware(BodyLimits) {}
 
+/** Respondents' operations, under the respondent rules rather than capabilities (ADR 0010). */
+export class RespondGroup extends HttpApiGroup.make("respond")
+  .add(
+    HttpApiEndpoint.get("load", "/respond/forms/:formId", {
+      params: FormIdParams,
+      success: RespondentForm,
+      error: [NotFound, FormNotPublished, FormClosed],
+    }),
+    HttpApiEndpoint.post("submit", "/respond/forms/:formId/responses", {
+      params: FormIdParams,
+      // References come only from the token, so `externalRefs` in the body is refused (ADR 0012).
+      payload: Schema.Struct({
+        versionId: Schema.String.check(Schema.isUUID()),
+        answers: AnswersJson,
+        idempotencyKey: Schema.String.check(Schema.isUUID()),
+      }),
+      success: SubmittedResponse.pipe(HttpApiSchema.status(201)),
+      error: [
+        NotFound,
+        Unauthenticated,
+        ValidationFailed,
+        FormClosed,
+        VersionSuperseded,
+        AlreadyResponded,
+      ],
+    })
+      .annotate(BodyLimit, largeBody)
+      .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
+  )
+  .middleware(EdgeValidation)
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
+
+const documented = (schema: z.ZodMiniType) => {
+  const { $schema: _, ...json } = toJSONSchema(schema, { target: "draft-2020-12", io: "input" });
+  return json;
+};
+
 export class FormApi extends HttpApi.make("FormApi")
   .add(FormsGroup)
   .add(DraftsGroup)
   .add(VersionsGroup)
+  .add(RespondGroup)
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",
       version: "0.1.0",
-      // `FormDefinitionJson` is plain JSON to Effect. Zod's JSON Schema documents it, and `@fb/core` parses it.
+      // `FormDefinitionJson` and `AnswersJson` are plain JSON to Effect. Zod's JSON Schemas document them, and
+      // `@fb/core` parses them.
       transform: (spec) => {
-        const { $schema: _, ...schema } = toJSONSchema(FormDefinition, {
-          target: "draft-2020-12",
-          io: "input",
-        });
-        spec.components.schemas.FormDefinition = schema;
+        spec.components.schemas.FormDefinition = documented(FormDefinition);
+        spec.components.schemas.AnyAnswers = documented(AnyAnswers);
         return spec;
       },
     }),
