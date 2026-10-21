@@ -145,7 +145,7 @@ Both also carry `exp`, `iss` and `aud`. `capabilities` holds any of `forms:manag
 
 - An identified token without `form` covers its whole tenant.
 - An anonymous grant, and an identified token with `form`, reach only that form and its responses. Any other form gives 404, as another tenant's form does, so the 404 doesn't confirm the form exists ([ADR 0011](./adr/0011-anonymous-respondents-hold-host-signed-form-bound-grants.md)).
-- An anonymous grant works only on the respondent load and submit. Submitting with a grant to a form limited to one response per respondent, and reading or editing a response with a grant, give 401 `identityRequired`. Admin endpoints give 403.
+- An anonymous grant works only on the respondent load, the answer schema and submit. Submitting with a grant to a form limited to one response per respondent, and reading or editing a response with a grant, give 401 `identityRequired`. Admin endpoints give 403.
 
 ### Refusals
 
