@@ -8,10 +8,19 @@
 
 **Status:** ready-for-agent
 
-- [ ] Adding a reference is idempotent, and a form holds at most 100: the 101st gives `ExternalRefLimitReached`. Removing a missing reference is a no-op.
-- [ ] The form list's `refNamespace` and `refId` filter returns every matching form in the tenant, sorted by `updatedAt` descending. An unknown reference gives 200 with an empty list.
-- [ ] References are tested with arbitrary namespaces.
-- [ ] One reference on two forms in the tenant returns both, and the same reference in another tenant isn't returned.
-- [ ] Changing references without `forms:manage` gives 403.
-- [ ] `openapi.json` and the client are regenerated.
+- [x] Adding a reference is idempotent, and a form holds at most 100: the 101st gives `ExternalRefLimitReached`. Removing a missing reference is a no-op.
+- [x] The form list's `refNamespace` and `refId` filter returns every matching form in the tenant, sorted by `updatedAt` descending. An unknown reference gives 200 with an empty list.
+- [x] References are tested with arbitrary namespaces.
+- [x] One reference on two forms in the tenant returns both, and the same reference in another tenant isn't returned.
+- [x] Changing references without `forms:manage` gives 403.
+- [x] `openapi.json` and the client are regenerated.
 - [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+
+## Comments
+
+**2026-10-21, implementing agent:** Built on branch `t24-form-refs`. The last box stays open until the PR's CI jobs report. Notes for later tickets (25 and 39 especially):
+
+- HTTP, in the `forms` group: `POST /forms/{formId}/external-refs` (body `{ namespace, refId }`) and `DELETE /forms/{formId}/external-refs?namespace=&refId=`, both 200 `{ externalRefs }` with the form's whole set, `forms:manage` only. `GET /forms?refNamespace=&refId=` is the lookup; it takes both or neither (one alone gives 422), and any admin read (`forms:manage` or `responses:read`) may call it, so ticket 25's `responses:read` service token works. `FormDetail` now has `externalRefs`.
+- `@fb/server/actor` now exports `ExternalRef` as an Effect Schema (namespace 1 to 64 code points matching `^[a-z][a-z0-9_.-]*$`, `refId` 1 to 255 code points), and the token `refs` check reuses it. A malformed reference gives 422 at the edge, on the lookup too.
+- `Forms` gains `addExternalRef(actor, formId, ref)` and `removeExternalRef(actor, formId, ref)`, and `list(actor, ref?)`. Both writes lock the form row (`lockForm`), so concurrent adds can't pass the 100 limit; `@fb/server` exports `ExternalRefLimitReached` (409, `{ limit: 100 }`). Re-adding a held reference succeeds even at 100. Another tenant's form gives `NotFound`. Sets are sorted by namespace, then `refId`, byte-wise (`COLLATE "C"`), so both drivers agree.
+- Changing references doesn't touch `forms.updated_at`: references are the host's associations, not an edit of the form, and attaching one shouldn't reorder the admin's list.
