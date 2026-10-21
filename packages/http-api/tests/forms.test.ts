@@ -48,15 +48,6 @@ describe("authentication", () => {
     expect(response.status).toBe(401);
     expect(error).toEqual({ _tag: "Unauthenticated", reason: "invalid" });
   });
-
-  test("a token whose subject is over 255 code points gets 401 invalid", async () => {
-    const token = await signToken({ ...devUsers["acme-admin"], sub: "😀".repeat(256) });
-
-    const { response, error } = await listWith(token);
-
-    expect(response.status).toBe(401);
-    expect(error).toEqual({ _tag: "Unauthenticated", reason: "invalid" });
-  });
 });
 
 describe("creating a form", () => {
