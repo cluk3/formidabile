@@ -16,6 +16,7 @@
   import { fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
+  import PublicationHistory from "#lib/PublicationHistory.svelte";
   import QuestionCard from "#lib/QuestionCard.svelte";
 
   let {
@@ -205,7 +206,9 @@
       const parsed = parseDefinition(result.data.definition);
       saved = parsed.ok ? parsed.value : sent;
       if (definition === sent) definition = saved;
-      revision = result.data.revision;
+      const { revision: at, basedOnVersionId, updatedAt } = result.data;
+      revision = at;
+      if (form !== null) form = { ...form, draft: { revision: at, basedOnVersionId, updatedAt } };
       notice = "Draft saved";
     } else if (result.kind === "rejected") {
       const { error } = result;
@@ -417,6 +420,8 @@
       reload={reloadForm}
       signIn={() => (signedOut = true)}
     />
+
+    <PublicationHistory {client} {form} signIn={() => (signedOut = true)} />
 
     <section class="flex flex-col gap-3" aria-labelledby={`${uid}-refs`}>
       <h2 id={`${uid}-refs`} class="text-lg font-semibold">External references</h2>

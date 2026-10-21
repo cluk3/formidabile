@@ -45,7 +45,7 @@ const publishHost = (stored: Stored, publish?: (host: PublishHost) => Response) 
     publishedAt: at,
     publishedBy: "acme-admin",
     derivedFromVersionId: null,
-    isCurrent: version === stored.versions.at(-1),
+    isCurrent: version === host.stored.versions.at(-1),
   });
   const draftBody = (draft: Draft) => ({ formId, ...draft, updatedAt: at });
   const host: PublishHost = {
@@ -215,4 +215,51 @@ test("an unknown outcome on publish says so and reloads the form", async () => {
   );
   await expect.element(screen.getByRole("button", { name: "Delete form" })).not.toBeInTheDocument();
   await expect.element(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+});
+
+test("the history lists the versions, reads one, and marks the current one against the draft", async () => {
+  const v1 = { id: crypto.randomUUID(), number: 1, definition: definitionOf("First") };
+  const host = publishHost({
+    versions: [v1],
+    draft: { definition: definitionOf("Second"), revision: "r0", basedOnVersionId: v1.id },
+  });
+  const screen = await renderEditor(host.fetch);
+  const history = screen.getByRole("region", { name: "Publication history" });
+
+  await expect.element(history.getByText("Version 1 is current.")).toBeVisible();
+  await expect
+    .element(history.getByText("An unpublished draft, based on version 1, is open in the editor."))
+    .toBeVisible();
+  const first = history.getByRole("listitem").filter({ hasText: "Version 1" });
+  await expect.element(first.getByText("Current", { exact: true })).toBeVisible();
+
+  await first.getByRole("button", { name: "Read version 1" }).click();
+  await expect.element(history.getByRole("heading", { name: "First" })).toBeVisible();
+
+  await screen.getByRole("button", { name: "Publish" }).click();
+
+  await expect.element(history.getByText("Version 2 is current.")).toBeVisible();
+  await expect
+    .element(history.getByText("No unpublished draft: the editor shows version 2."))
+    .toBeVisible();
+  const items = history.getByRole("listitem");
+  await expect.element(items.nth(0).getByText("Version 2", { exact: true })).toBeVisible();
+  await expect.element(items.nth(0).getByText("Current", { exact: true })).toBeVisible();
+  await expect.element(items.nth(1).getByText("Version 1", { exact: true })).toBeVisible();
+  await expect.element(items.nth(1).getByText("Current", { exact: true })).not.toBeInTheDocument();
+});
+
+test("a form that was never published says so in its history", async () => {
+  const host = publishHost({
+    versions: [],
+    draft: { definition: definitionOf("Survey"), revision: "r0", basedOnVersionId: null },
+  });
+  const screen = await renderEditor(host.fetch);
+
+  await expect
+    .element(
+      screen.getByRole("region", { name: "Publication history" }).getByText("Not published yet."),
+    )
+    .toBeVisible();
+  expect(host.requests).not.toContain(`GET /forms/${formId}/versions`);
 });
