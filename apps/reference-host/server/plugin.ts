@@ -14,6 +14,13 @@ const strictContentSecurityPolicy = [
 
 const composeDatabaseUrl = "postgres://formidabile:formidabile@localhost:5432/formidabile";
 
+// Dev tokens only: the HS256 secret is public by design.
+const devJwt = {
+  issuer: "reference-host",
+  audience: "form-module",
+  secret: "reference-host-dev-secret",
+};
+
 const apiMiddleware = (
   fetch: (request: Request) => Promise<Response>,
 ): Connect.NextHandleFunction => {
@@ -36,6 +43,7 @@ const contentSecurityPolicyMiddleware: Connect.NextHandleFunction = (_req, res, 
 export const referenceHost = (): Plugin => {
   const handler = createFormModuleHandler({
     databaseUrl: process.env.DATABASE_URL ?? composeDatabaseUrl,
+    jwt: devJwt,
   });
   return {
     name: "reference-host",
