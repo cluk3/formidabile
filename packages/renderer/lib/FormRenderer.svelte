@@ -380,7 +380,6 @@
   }
   .title {
     margin: 0 0 0.5rem;
-    color: rgb(10, 20, 30);
   }
   .description {
     margin: 0 0 1rem;
