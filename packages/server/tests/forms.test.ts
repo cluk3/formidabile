@@ -1,8 +1,8 @@
-import { FormModuleLive, Forms, Publication } from "@fb/server";
+import { Drafts, FormModuleLive, Forms, Publication } from "@fb/server";
 import { Actor, TenantId } from "@fb/server/actor";
 import { DatabaseTest } from "@fb/server/testing";
 import { Effect, Layer, Option } from "effect";
-import { expect, test } from "vite-plus/test";
+import { describe, expect, test } from "vite-plus/test";
 
 const admin = Actor.Identified({
   subject: "acme-admin",
@@ -42,4 +42,166 @@ test("a published form without a draft shows its current version's title and sum
   };
   expect(summary).toMatchObject({ title: "Published title", hasDraft: false, currentVersion });
   expect(detail).toMatchObject({ draft: null, currentVersion });
+});
+
+const run = <A, E>(effect: Effect.Effect<A, E, Forms | Drafts | Publication>) =>
+  Effect.runPromise(effect.pipe(Effect.provide(FormModuleLive.pipe(Layer.provide(DatabaseTest)))));
+
+const services = Effect.all({ forms: Forms, drafts: Drafts, publication: Publication });
+
+describe("deleting a form", () => {
+  test("deleting a never-published form removes it with its draft", async () => {
+    const { listed, detail, draft } = await run(
+      Effect.gen(function* () {
+        const { forms, drafts } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Throwaway"));
+        yield* forms.delete(admin, form.id, draft.revision);
+        return {
+          listed: (yield* forms.list(admin)).map((summary) => summary.id),
+          detail: yield* Effect.flip(forms.detail(admin, form.id)),
+          draft: yield* Effect.flip(drafts.read(admin, form.id)),
+        };
+      }),
+    );
+
+    expect(listed).toEqual([]);
+    expect(detail._tag).toBe("NotFound");
+    expect(draft._tag).toBe("NotFound");
+  });
+
+  test("deleting a published form gives FormPublished, whether its draft is current or stale", async () => {
+    const { current, stale, versions } = await run(
+      Effect.gen(function* () {
+        const { forms, drafts, publication } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Published"));
+        yield* publication.publish(admin, form.id, draft.revision);
+        const edit = yield* drafts.save(admin, form.id, {
+          expectedRevision: null,
+          definition: definition("Edited"),
+        });
+        return {
+          current: yield* Effect.flip(forms.delete(admin, form.id, edit.revision)),
+          stale: yield* Effect.flip(forms.delete(admin, form.id, draft.revision)),
+          versions: yield* publication.versions(admin, form.id),
+        };
+      }),
+    );
+
+    expect(current._tag).toBe("FormPublished");
+    expect(stale._tag).toBe("FormPublished");
+    expect(versions).toHaveLength(1);
+  });
+
+  test("deleting with a stale revision gives RevisionConflict and keeps the newer draft", async () => {
+    const { error, draft, saved } = await run(
+      Effect.gen(function* () {
+        const { forms, drafts } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Shared"));
+        const saved = yield* drafts.save(admin, form.id, {
+          expectedRevision: draft.revision,
+          definition: definition("Another admin's edit"),
+        });
+        return {
+          error: yield* Effect.flip(forms.delete(admin, form.id, draft.revision)),
+          draft: yield* drafts.read(admin, form.id),
+          saved,
+        };
+      }),
+    );
+
+    expect(error._tag).toBe("RevisionConflict");
+    expect(draft).toEqual(saved);
+  });
+
+  test("deleting another tenant's form gives NotFound and leaves it in place", async () => {
+    const globexAdmin = Actor.Identified({ ...admin, tenant: TenantId.make("globex") });
+    const { error, detail } = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Acme only"));
+        return {
+          error: yield* Effect.flip(forms.delete(globexAdmin, form.id, draft.revision)),
+          detail: yield* forms.detail(admin, form.id),
+        };
+      }),
+    );
+
+    expect(error._tag).toBe("NotFound");
+    expect(detail.draft).not.toBeNull();
+  });
+});
+
+describe("changing a form's settings", () => {
+  test("an admin opens a published form, then limits it to one response per respondent", async () => {
+    const { opened, limited, detail } = await run(
+      Effect.gen(function* () {
+        const { forms, publication } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Survey"));
+        yield* publication.publish(admin, form.id, draft.revision);
+        const opened = yield* forms.updateSettings(admin, form.id, { availability: "open" });
+        const limited = yield* forms.updateSettings(admin, form.id, {
+          availability: null,
+          responseLimit: "one_per_respondent",
+        });
+        return { opened, limited, detail: yield* forms.detail(admin, form.id) };
+      }),
+    );
+
+    expect(opened).toMatchObject({ availability: "open", responseLimit: "unlimited" });
+    expect(limited).toMatchObject({ availability: "open", responseLimit: "one_per_respondent" });
+    expect(detail).toMatchObject({ availability: "open", responseLimit: "one_per_respondent" });
+  });
+
+  test("opening a never-published form gives FormNotPublished, but its response limit still changes", async () => {
+    const { opening, limited } = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Unpublished"));
+        return {
+          opening: yield* Effect.flip(
+            forms.updateSettings(admin, form.id, {
+              availability: "open",
+              responseLimit: "one_per_respondent",
+            }),
+          ),
+          limited: yield* forms.updateSettings(admin, form.id, {
+            responseLimit: "one_per_respondent",
+          }),
+        };
+      }),
+    );
+
+    expect(opening._tag).toBe("FormNotPublished");
+    expect(limited).toMatchObject({ availability: "closed", responseLimit: "one_per_respondent" });
+  });
+
+  test.each([
+    ["no settings", {}],
+    ["only nulls", { availability: null, responseLimit: null }],
+  ])("a change with %s gives ValidationFailed", async (_, settings) => {
+    const error = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Unchanged"));
+        return yield* Effect.flip(forms.updateSettings(admin, form.id, settings));
+      }),
+    );
+
+    expect(error).toMatchObject({ _tag: "ValidationFailed", issues: [{ path: [] }] });
+  });
+
+  test("changing another tenant's form gives NotFound", async () => {
+    const globexAdmin = Actor.Identified({ ...admin, tenant: TenantId.make("globex") });
+    const error = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Acme only"));
+        return yield* Effect.flip(
+          forms.updateSettings(globexAdmin, form.id, { availability: "closed" }),
+        );
+      }),
+    );
+
+    expect(error._tag).toBe("NotFound");
+  });
 });

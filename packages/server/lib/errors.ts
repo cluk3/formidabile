@@ -30,6 +30,13 @@ export class FormNotPublished extends Schema.TaggedError<FormNotPublished>()(
   { httpApiStatus: 409 },
 ) {}
 
+/** A form with any published version is permanent: close it instead (ADR 0014). */
+export class FormPublished extends Schema.TaggedError<FormPublished>()(
+  "FormPublished",
+  {},
+  { httpApiStatus: 409 },
+) {}
+
 export const Issue = Schema.Struct({
   path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
   message: Schema.String,

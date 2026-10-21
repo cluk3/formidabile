@@ -10,6 +10,7 @@ export {
   Form,
   FormDefinitionJson,
   FormDetail,
+  FormSettings,
   FormSummary,
   FormVersion,
   ResponseLimit,
@@ -18,6 +19,7 @@ export {
 export {
   Forbidden,
   FormNotPublished,
+  FormPublished,
   Issue,
   NoDraft,
   NotFound,
