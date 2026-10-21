@@ -8,6 +8,8 @@ const ignorePatterns = [
   ".agents/**",
   ".claude/**",
   ".scratch/**",
+  // Deliberately broken imports for `.dependency-cruiser.cjs`'s own test.
+  "boundaries/fixtures/**",
   "packages/server/lib/persistence/migrations/**",
   ...generatedFiles,
 ];
@@ -35,6 +37,38 @@ export default defineConfig({
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
     ignorePatterns: lintIgnorePatterns,
+    overrides: [
+      {
+        // dependency-cruiser sees a `.svelte` file only after Svelte compiles it, which erases `import type`, so
+        // a type-only deep import there gets past it. This rule catches it. Every import is checked, not only types.
+        files: ["**/*.svelte"],
+        rules: {
+          "no-restricted-imports": [
+            "error",
+            {
+              patterns: [
+                {
+                  group: [
+                    "@fb/*/*/**",
+                    "@fb/*/lib",
+                    "@fb/*/lib/**",
+                    "@fb/*/tests",
+                    "@fb/*/tests/**",
+                  ],
+                  message:
+                    "Import a package through its entry points, such as `@fb/core/definition`, never its subfolders.",
+                },
+                {
+                  group: ["**/packages/**"],
+                  message:
+                    "Import a package by its name, such as `@fb/core/definition`, never by relative path.",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ],
   },
   test: {
     projects: [
@@ -60,6 +94,7 @@ export default defineConfig({
     cache: true,
     tasks: {
       check: "vp check",
+      boundaries: "depcruise packages apps e2e --config .dependency-cruiser.cjs",
       // `git diff` misses a generated file that isn't tracked, so `ls-files` checks both are committed.
       "check:generated": {
         command: `git diff --exit-code -- ${generatedPaths} && git ls-files --error-unmatch -- ${generatedPaths}`,
@@ -92,6 +127,7 @@ export default defineConfig({
         command: "true",
         dependsOn: [
           "check",
+          "boundaries",
           "check:svelte",
           "check:generated",
           "@fb/server#check:migrations",
