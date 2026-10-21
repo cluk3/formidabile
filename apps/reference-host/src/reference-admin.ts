@@ -16,7 +16,9 @@ export interface ReferenceAdmin {
 
 const ok = <T>(action: string, result: { data?: T; error?: unknown; response: Response }): T => {
   if (result.data === undefined) {
-    const tag = (result.error as { _tag?: unknown } | undefined)?._tag;
+    const { error } = result;
+    const tag =
+      typeof error === "object" && error !== null && "_tag" in error ? error._tag : undefined;
     throw new Error(
       `${action} failed with ${result.response.status}${typeof tag === "string" ? ` (${tag})` : ""}`,
     );
