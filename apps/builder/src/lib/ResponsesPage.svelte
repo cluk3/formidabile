@@ -5,6 +5,7 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { fieldClass, nativeInputClass } from "#lib/editors/props.ts";
+  import ResponseDetail from "#lib/ResponseDetail.svelte";
 
   let {
     client,
@@ -33,6 +34,7 @@
   let loadFailed = $state(false);
   let loading = $state(false);
   let notice = $state<string | null>(null);
+  let opened = $state.raw<Schemas["ResponseDetail"] | null>(null);
 
   /** One page of the list under `filters`, newest first: the first one, or the page after `cursor`. */
   const loadPage = async (filters: Filters, cursor?: string) => {
@@ -51,6 +53,25 @@
     else if (result.kind === "rejected" && result.error._tag === "ValidationFailed") {
       notice = `These filters aren't valid: ${result.error.issues.map((issue) => issue.message).join("; ")}`;
     } else loadFailed = true;
+  };
+
+  const open = async (summary: Schemas["ResponseSummary"]) => {
+    notice = null;
+    const result = await outcome(() =>
+      client.GET("/responses/{responseId}", { params: { path: { responseId: summary.id } } }),
+    );
+    if (result.kind === "ok") opened = result.data;
+    else if (result.kind === "signIn") signedOut = true;
+    else if (result.kind === "rejected" && result.error._tag === "NotFound") {
+      forget(summary.id);
+      notice = "This response no longer exists.";
+    } else notice = "Couldn't open the response.";
+  };
+
+  /** Drops a response that's gone from the list, and from the detail if it's open. */
+  const forget = (responseId: string) => {
+    responses = responses?.filter((response) => response.id !== responseId) ?? null;
+    if (opened?.response.id === responseId) opened = null;
   };
 
   const loadVersions = async () => {
@@ -139,6 +160,7 @@
                 response.submittedAt,
               ).toLocaleString()}
             </span>
+            <Button variant="outline" size="sm" onclick={() => open(response)}>Open</Button>
           </li>
         {/each}
       </ul>
@@ -151,6 +173,11 @@
       {#if loadFailed}
         <p role="status">Couldn't load more responses.</p>
       {/if}
+    {/if}
+    {#if opened !== null}
+      {#key opened}
+        <ResponseDetail detail={opened} close={() => (opened = null)} />
+      {/key}
     {/if}
   {/if}
 </section>

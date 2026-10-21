@@ -12,8 +12,8 @@
   import { tick } from "svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { editorOf, questionEditors, questionTypeNames } from "#lib/editors/editors.ts";
   import { checkClass, fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
+  import { editorOf, questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
     question,
@@ -68,7 +68,7 @@
         }}
       >
         {#each questionTypeNames as type (type)}
-          <option value={type}>{questionEditors[type].name}</option>
+          <option value={type}>{registry[type].name}</option>
         {/each}
       </select>
     </div>

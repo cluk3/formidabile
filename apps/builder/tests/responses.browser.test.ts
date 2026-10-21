@@ -232,3 +232,86 @@ test("a filter the API refuses lists its problems", async () => {
     .element(screen.getByText("These filters aren't valid: Expected at most 255 characters"))
     .toBeVisible();
 });
+
+test("an opened response reads as its own version's questions and answers, not through the renderer", async () => {
+  const name = textQuestion("Name");
+  const colour: QuestionSnapshot = {
+    id: crypto.randomUUID(),
+    type: "single_choice",
+    label: "Favourite colour",
+    required: true,
+    config: {
+      options: [
+        { value: "o-red", label: "Red" },
+        { value: "o-blue", label: "Blue" },
+      ],
+      display: "radio",
+    },
+  };
+  const v1 = version(1, [
+    name,
+    { id: crypto.randomUUID(), type: "email", label: "Email", required: true, config: {} },
+    {
+      id: crypto.randomUUID(),
+      type: "number",
+      label: "Age",
+      required: true,
+      config: { integer: true },
+    },
+    { id: crypto.randomUUID(), type: "date", label: "Born", required: true, config: {} },
+    colour,
+    {
+      id: crypto.randomUUID(),
+      type: "multiple_choice",
+      label: "Toppings",
+      required: true,
+      config: {
+        options: [
+          { value: "o-ham", label: "Ham, smoked" },
+          { value: "o-egg", label: "Egg" },
+          { value: "o-oil", label: "Oil" },
+        ],
+      },
+    },
+    { id: crypto.randomUUID(), type: "boolean", label: "Ready?", required: true, config: {} },
+    textQuestion("Comments"),
+  ]);
+  const v2 = version(2, [{ ...name, label: "Full name" }]);
+  const [, email, age, born, , toppings, ready] = v1.definition.questions;
+  const answered = response(v1, "alice", {
+    [name.id]: "Ada",
+    [email!.id]: "ada@example.com",
+    [age!.id]: 36,
+    [born!.id]: "1815-12-10",
+    [colour.id]: "o-blue",
+    [toppings!.id]: ["o-ham", "o-oil"],
+    [ready!.id]: true,
+  });
+  const host = responsesHost([v1, v2], [answered, response(v2, "bob")]);
+  const screen = await renderPage(host.fetch);
+
+  const item = screen.getByRole("listitem").filter({ hasText: "alice" });
+  await item.getByRole("button", { name: "Open" }).click();
+
+  const detail = screen.getByRole("region", { name: "Response from alice" });
+  await expect.element(detail.getByText("Version 1", { exact: false })).toBeVisible();
+  const answerTo = (label: string) =>
+    detail.getByRole("definition").nth(v1.definition.questions.findIndex((q) => q.label === label));
+  await expect.element(detail.getByText("Name", { exact: true })).toBeVisible();
+  await expect.element(detail.getByText("Full name", { exact: true })).not.toBeInTheDocument();
+  await expect.element(answerTo("Name")).toHaveTextContent("Ada");
+  await expect
+    .element(answerTo("Email").getByRole("link", { name: "ada@example.com" }))
+    .toHaveAttribute("href", "mailto:ada@example.com");
+  await expect.element(answerTo("Age")).toHaveTextContent("36");
+  await expect
+    .element(answerTo("Born").getByText("1815-12-10"))
+    .toHaveAttribute("datetime", "1815-12-10");
+  await expect.element(answerTo("Favourite colour")).toHaveTextContent("Blue");
+  const picked = answerTo("Toppings").getByRole("listitem");
+  expect(picked.elements().map((li) => li.textContent?.trim())).toEqual(["Ham, smoked", "Oil"]);
+  await expect.element(answerTo("Ready?")).toHaveTextContent("Yes");
+  await expect.element(answerTo("Comments")).toHaveTextContent("Not answered");
+  expect(detail.getByRole("textbox").elements()).toEqual([]);
+  expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);
+});
