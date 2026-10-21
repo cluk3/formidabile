@@ -1,6 +1,6 @@
 import { Actor, ActorResolver, Capability, TenantId, Unauthenticated } from "@fb/server/actor";
 import { Effect, Layer, Option, Schema } from "effect";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet, type JWTVerifyResult, jwtVerify } from "jose";
 
 /** The host signs tokens with an HS256 shared secret, or with a key published at a JWKS URL. */
 export type JwtOptions = { readonly issuer: string; readonly audience: string } & (
@@ -22,16 +22,15 @@ const invalid = () => new Unauthenticated({ reason: "invalid" });
 
 /** The built-in `ActorResolver`: a host-signed JWT, checked against the configured issuer and audience. */
 export const JwtActorResolver = (options: JwtOptions) => {
-  const key =
-    "secret" in options
-      ? new TextEncoder().encode(options.secret)
-      : createRemoteJWKSet(new URL(options.jwksUrl));
-  const verifyOptions = {
-    issuer: options.issuer,
-    audience: options.audience,
-    requiredClaims: ["exp"],
-    ...("secret" in options && { algorithms: ["HS256"] }),
-  };
+  const checks = { issuer: options.issuer, audience: options.audience, requiredClaims: ["exp"] };
+  let verify: (token: string) => Promise<JWTVerifyResult>;
+  if ("secret" in options) {
+    const secret = new TextEncoder().encode(options.secret);
+    verify = (token) => jwtVerify(token, secret, { ...checks, algorithms: ["HS256"] });
+  } else {
+    const keys = createRemoteJWKSet(new URL(options.jwksUrl));
+    verify = (token) => jwtVerify(token, keys, checks);
+  }
   return Layer.succeed(ActorResolver, {
     resolve: (request) => {
       const authorization = request.headers.authorization;
@@ -39,14 +38,7 @@ export const JwtActorResolver = (options: JwtOptions) => {
         return Effect.fail(new Unauthenticated({ reason: "missing" }));
       const token = bearerToken.exec(authorization)?.[1];
       if (token === undefined) return Effect.fail(invalid());
-      return Effect.tryPromise({
-        // A function key and a byte key take different overloads.
-        try: () =>
-          key instanceof Uint8Array
-            ? jwtVerify(token, key, verifyOptions)
-            : jwtVerify(token, key, verifyOptions),
-        catch: invalid,
-      }).pipe(
+      return Effect.tryPromise({ try: () => verify(token), catch: invalid }).pipe(
         Effect.flatMap(({ payload }) => decodeIdentifiedClaims(payload)),
         Effect.mapError(invalid),
         Effect.map((claims) =>

@@ -53,15 +53,23 @@ export const createFormModuleHandler = (options: FormModuleHandlerOptions): Form
           FormApiLive,
           HttpRouter.cors({ allowedOrigins: options.cors, credentials: true }),
         );
-  const { handler, dispose } = HttpRouter.toWebHandler(
-    routes.pipe(Layer.provide([resolver, database]), Layer.provide(HttpServer.layerServices)),
-    { memoMap, disableLogger: true },
-  );
+  // Built on the first request: building opens the pool, which would keep a process that never serves alive.
+  let web:
+    | {
+        readonly handler: (request: Request) => Promise<Response>;
+        readonly dispose: () => Promise<void>;
+      }
+    | undefined;
+  const app = () =>
+    (web ??= HttpRouter.toWebHandler(
+      routes.pipe(Layer.provide([resolver, database]), Layer.provide(HttpServer.layerServices)),
+      { memoMap, disableLogger: true },
+    ));
   return {
-    fetch: (request) => handler(request),
+    fetch: (request) => app().handler(request),
     migrate: () => runtime.runPromise(migrate),
     dispose: async () => {
-      await dispose();
+      await web?.dispose();
       await runtime.dispose();
     },
   };
