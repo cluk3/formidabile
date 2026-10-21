@@ -76,4 +76,5 @@ The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`,
 
 - [packages/README.md](./packages/README.md): how the packages are laid out, and the database and migration rules.
 - [AGENTS.md](./AGENTS.md): instructions for coding agents.
+- [docs/embedding.md](./docs/embedding.md): the host-facing contract for embedding the renderer or writing your own.
 - [docs/adr/](./docs/adr/): architecture decisions.
