@@ -9,7 +9,10 @@
 </script>
 
 <main class="mx-auto max-w-3xl p-8">
-  <a class="text-sm text-muted-foreground hover:underline" href="/">All forms</a>
+  <nav class="flex gap-4 text-sm text-muted-foreground">
+    <a class="hover:underline" href="/">All forms</a>
+    <a class="hover:underline" href={`/forms/${params.formId}/responses`}>Responses</a>
+  </nav>
   <h1 class="mt-2 mb-6 text-2xl font-semibold">Edit form</h1>
   {#key params.formId}
     <DraftEditor
