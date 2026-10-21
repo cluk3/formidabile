@@ -12,6 +12,9 @@ const ignorePatterns = [
   ...generatedFiles,
 ];
 
+// shadcn-svelte's generated components are vendored: the CLI owns their formatting and they aren't linted.
+const lintIgnorePatterns = [...ignorePatterns, "apps/builder/src/lib/components/ui/**"];
+
 // Tests on real Postgres run only under `test:pg`, which sets TEST_POSTGRES, so `vp test` needs no Docker.
 const postgresTests = "**/*.pg.test.ts";
 const testPostgres = process.env.TEST_POSTGRES === "1";
@@ -31,7 +34,7 @@ export default defineConfig({
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
     options: { typeAware: true, typeCheck: true },
-    ignorePatterns,
+    ignorePatterns: lintIgnorePatterns,
   },
   test: {
     projects: [
@@ -67,12 +70,12 @@ export default defineConfig({
       test: { command: "vp test", dependsOn: ["@fb/renderer#build"] },
       "check:svelte": {
         command: "true",
-        dependsOn: ["@fb/renderer#check:svelte"],
+        dependsOn: ["@fb/renderer#check:svelte", "@fb/builder#check:svelte"],
       },
-      // Runs Playwright against `vp preview` of the reference host, which `playwright.config.ts` starts.
+      // Runs Playwright against `vp preview` of the reference host and the builder, which `playwright.config.ts` starts.
       e2e: {
         command: "playwright test --config e2e/playwright.config.ts",
-        dependsOn: ["@fb/reference-host#build"],
+        dependsOn: ["@fb/reference-host#build", "@fb/builder#build"],
         cache: false,
       },
       postgres: {
