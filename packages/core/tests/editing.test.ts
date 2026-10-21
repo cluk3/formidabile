@@ -10,8 +10,11 @@ import {
   addQuestion,
   changeQuestionType,
   moveQuestion,
+  OPTIONS_CAP,
+  QUESTIONS_CAP,
   reidentifyQuestion,
   removeOption,
+  removeQuestion,
 } from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -340,13 +343,38 @@ describe("removeOption", () => {
   });
 });
 
-test("the editing entry exports the six editing functions and nothing else", async () => {
+describe("removeQuestion", () => {
+  test("removes a question, leaving the others as they were", () => {
+    const edited = removeQuestion(survey, colour.id);
+    expect(edited).toEqual({ ...survey, questions: [name, age] });
+    expect(parsed(edited)).toEqual(edited);
+  });
+
+  test("refuses an identity the definition doesn't have", () => {
+    expect(() => removeQuestion(survey, uuid(9))).toThrow(`No question ${uuid(9)}`);
+  });
+});
+
+test("the caps the builder disables its actions at", () => {
+  const ids = idSource();
+  const full = Array.from({ length: QUESTIONS_CAP }).reduce<FormDefinition>(
+    (definition) => addQuestion(definition, "boolean", ids),
+    empty,
+  );
+  expect(() => addQuestion(full, "boolean", ids)).toThrow(RangeError);
+  expect(OPTIONS_CAP).toBe(100);
+});
+
+test("the editing entry exports the editing functions, their caps and nothing else", async () => {
   expect(Object.keys(await import("@fb/core/editing")).sort()).toEqual([
+    "OPTIONS_CAP",
+    "QUESTIONS_CAP",
     "addOption",
     "addQuestion",
     "changeQuestionType",
     "moveQuestion",
     "reidentifyQuestion",
     "removeOption",
+    "removeQuestion",
   ]);
 });
