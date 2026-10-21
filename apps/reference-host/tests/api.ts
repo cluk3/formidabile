@@ -1,20 +1,13 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
-import { FormApiLive, FormApiRouterConfig, JwtActorResolver } from "@fb/http-api";
+import { JwtActorResolver, toFormApiWebHandler } from "@fb/http-api";
 import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
-import { HttpRouter, HttpServer } from "effect/http";
 import { type DevUser, devJwt, mintDevToken } from "../server/dev-users.ts";
 
 /** The module's API on a fresh PGlite database, checking tokens with the dev secret, as the plugin's handler does. */
 export const startApi = () =>
-  HttpRouter.toWebHandler(
-    FormApiLive.pipe(
-      Layer.provide([JwtActorResolver(devJwt), DatabaseTest]),
-      Layer.provide(HttpServer.layerServices),
-    ),
-    { routerConfig: FormApiRouterConfig, disableLogger: true },
-  );
+  toFormApiWebHandler(Layer.merge(JwtActorResolver(devJwt), DatabaseTest));
 
 type Fetch = (request: Request) => Promise<Response>;
 

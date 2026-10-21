@@ -7,7 +7,10 @@ import {
   Responses,
   Submission,
 } from "@fb/server";
+import type { ActorResolver } from "@fb/server/actor";
+import type { Database } from "@fb/server/database";
 import { Effect, Layer } from "effect";
+import { HttpRouter, HttpServer } from "effect/http";
 import { HttpApiBuilder } from "effect/http-api";
 import { answerJsonSchema } from "./answer-schema.ts";
 import { CurrentActor, FormApi } from "./api.ts";
@@ -171,14 +174,14 @@ const AnalyticsHandlers = HttpApiBuilder.group(
 );
 
 /**
- * Router options for serving `FormApiLive`. The router 404s a path parameter longer than `maxParamLength` UTF-16
- * units (100 by default) before its schema sees it, which would refuse a valid 255-code-point `respondentId`.
- * Node's default 16 KiB header limit already bounds the request line.
+ * The router 404s a path parameter longer than `maxParamLength` UTF-16 units (100 by default) before its schema
+ * sees it, which would refuse a valid 255-code-point `respondentId`. Node's default 16 KiB header limit already
+ * bounds the request line. The router reads this when it is built, outside `FormApiLive`, so only the two ways of
+ * serving below pass it.
  */
-export const FormApiRouterConfig = { maxParamLength: 16 * 1024 } as const;
+const routerConfig = { maxParamLength: 16 * 1024 } as const;
 
-/** The whole API, given a `Database` and an `ActorResolver`; serve it with `FormApiRouterConfig`. */
-export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
+const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
   Layer.provide([
     FormsHandlers,
     DraftsHandlers,
@@ -189,3 +192,25 @@ export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
   ]),
   Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive, BodyLimitsLive]),
 );
+
+/** The whole API on an `HttpServer`, given a `Database` and an `ActorResolver`. */
+export const FormApiServer = HttpRouter.serve(FormApiLive, { routerConfig });
+
+/**
+ * The whole API as a Fetch handler, given its `Database` and `ActorResolver`. `routes` adds router-wide
+ * middleware such as CORS; `memoMap` shares layers, such as the database pool, with the caller.
+ */
+export const toFormApiWebHandler = <E>(
+  dependencies: Layer.Layer<ActorResolver | Database, E>,
+  options: {
+    readonly routes?: Layer.Layer<never, never, HttpRouter.HttpRouter>;
+    readonly memoMap?: Layer.MemoMap;
+  } = {},
+) =>
+  HttpRouter.toWebHandler(
+    (options.routes === undefined ? FormApiLive : Layer.merge(FormApiLive, options.routes)).pipe(
+      Layer.provide(dependencies),
+      Layer.provide(HttpServer.layerServices),
+    ),
+    { memoMap: options.memoMap, routerConfig, disableLogger: true },
+  );

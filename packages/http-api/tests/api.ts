@@ -1,9 +1,8 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
-import { FormApiLive, FormApiRouterConfig, JwtActorResolver } from "@fb/http-api";
+import { JwtActorResolver, toFormApiWebHandler } from "@fb/http-api";
 import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
-import { HttpRouter, HttpServer } from "effect/http";
 import { type JWTPayload, SignJWT } from "jose";
 
 export const jwt = {
@@ -48,13 +47,8 @@ export const baseUrl = "http://localhost";
 
 /** The API on a fresh PGlite database, served through a Fetch handler with the JWT resolver. */
 export const startApi = () => {
-  const { handler, dispose } = HttpRouter.toWebHandler(
-    FormApiLive.pipe(
-      Layer.provide(JwtActorResolver(jwt)),
-      Layer.provide(DatabaseTest),
-      Layer.provide(HttpServer.layerServices),
-    ),
-    { routerConfig: FormApiRouterConfig, disableLogger: true },
+  const { handler, dispose } = toFormApiWebHandler(
+    Layer.merge(JwtActorResolver(jwt), DatabaseTest),
   );
   const fetch = (request: Request) => handler(request);
   const clientWithToken = (getToken: () => string | null | Promise<string | null>): FormApiClient =>
