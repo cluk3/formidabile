@@ -206,7 +206,23 @@ export interface paths {
         get: operations["responses.read"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["responses.delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/respondents/{respondentId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["responses.deleteByRespondent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -239,15 +255,18 @@ export interface components {
                 message: string;
             }[];
         };
-        NotFoundEncoded: {
-            /** @enum {string} */
-            _tag: "NotFound";
-        };
         ForbiddenEncoded: {
             /** @enum {string} */
             _tag: "Forbidden";
             /** @enum {string} */
             capability: "forms:manage" | "responses:read" | "responses:delete";
+        };
+        DeletedResponses: {
+            deleted: number;
+        };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
         };
         ResponseDetail: {
             response: {
@@ -2113,6 +2132,147 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "responses.delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                responseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description <No Content> */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "responses.deleteByRespondent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                respondentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description DeletedResponses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletedResponses"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description LengthRequired */

@@ -3,7 +3,7 @@ import { type Database, DatabaseLive } from "@fb/server/database";
 import { migrate } from "@fb/server/migrate";
 import { Effect, Layer, ManagedRuntime } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
-import { FormApiLive, JwtActorResolver, type JwtOptions } from "./index.ts";
+import { FormApiLive, FormApiRouterConfig, JwtActorResolver, type JwtOptions } from "./index.ts";
 
 export type FormModuleHandlerOptions = {
   /** Browser origins allowed to call the API, with credentials. */
@@ -86,7 +86,7 @@ export const createFormModuleHandler = (options: FormModuleHandlerOptions): Form
   const app = () =>
     (web ??= HttpRouter.toWebHandler(
       routes.pipe(Layer.provide([resolver, database]), Layer.provide(HttpServer.layerServices)),
-      { memoMap, disableLogger: true },
+      { memoMap, routerConfig: FormApiRouterConfig, disableLogger: true },
     ));
   return {
     fetch: (request) => app().handler(request),

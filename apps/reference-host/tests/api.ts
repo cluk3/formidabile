@@ -1,5 +1,5 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
-import { FormApiLive, JwtActorResolver } from "@fb/http-api";
+import { FormApiLive, FormApiRouterConfig, JwtActorResolver } from "@fb/http-api";
 import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
@@ -13,7 +13,7 @@ export const startApi = () =>
       Layer.provide([JwtActorResolver(devJwt), DatabaseTest]),
       Layer.provide(HttpServer.layerServices),
     ),
-    { disableLogger: true },
+    { routerConfig: FormApiRouterConfig, disableLogger: true },
   );
 
 type Fetch = (request: Request) => Promise<Response>;

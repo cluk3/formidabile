@@ -8,6 +8,7 @@ import { Submission } from "./lib/submission/submission.ts";
 export {
   AnswersJson,
   Availability,
+  DeletedResponses,
   Draft,
   DraftSummary,
   EditedResponse,

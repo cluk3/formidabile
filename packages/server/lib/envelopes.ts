@@ -157,6 +157,12 @@ export const ResponseDetail = Schema.Struct({
 }).annotate({ identifier: "ResponseDetail" });
 export type ResponseDetail = typeof ResponseDetail.Type;
 
+/** How many responses an erasure removed; 0 when the respondent had none in the tenant. */
+export const DeletedResponses = Schema.Struct({ deleted: Schema.Int }).annotate({
+  identifier: "DeletedResponses",
+});
+export type DeletedResponses = typeof DeletedResponses.Type;
+
 export const FormDetail = Schema.Struct({
   id: Schema.String,
   availability: Availability,

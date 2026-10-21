@@ -141,11 +141,24 @@ const ResponsesHandlers = HttpApiBuilder.group(
       )
       .handle("read", ({ params }) =>
         CurrentActor.use((actor) => responses.read(actor, params.responseId)),
+      )
+      .handle("delete", ({ params }) =>
+        CurrentActor.use((actor) => responses.delete(actor, params.responseId)),
+      )
+      .handle("deleteByRespondent", ({ params }) =>
+        CurrentActor.use((actor) => responses.deleteByRespondent(actor, params.respondentId)),
       );
   }),
 );
 
-/** The whole API, given a `Database` and an `ActorResolver`. */
+/**
+ * Router options for serving `FormApiLive`. The router 404s a path parameter longer than `maxParamLength` UTF-16
+ * units (100 by default) before its schema sees it, which would refuse a valid 255-code-point `respondentId`.
+ * Node's default 16 KiB header limit already bounds the request line.
+ */
+export const FormApiRouterConfig = { maxParamLength: 16 * 1024 } as const;
+
+/** The whole API, given a `Database` and an `ActorResolver`; serve it with `FormApiRouterConfig`. */
 export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
   Layer.provide([
     FormsHandlers,
