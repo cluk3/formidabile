@@ -167,6 +167,13 @@ const rows: Record<string, Row> = {
         },
       }),
   },
+  "an anonymous grant reading a response is 401 identityRequired": {
+    status: 401,
+    request: () =>
+      request("GET", `/respond/responses/${crypto.randomUUID()}`, {
+        claims: { anonymous: true, tenant: "acme", form: openForm.id },
+      }),
+  },
   "an unknown form is 404": {
     status: 404,
     request: () => request("GET", `/forms/${crypto.randomUUID()}`, { claims: admin }),

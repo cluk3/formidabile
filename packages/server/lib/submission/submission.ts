@@ -121,19 +121,21 @@ export class Submission extends Context.Service<
         }),
         submit: Effect.fn("Submission.submit")(function* (actor, formId, submission) {
           if (!reaches(actor, formId)) return yield* new NotFound();
-          if (actor._tag === "Anonymous") {
-            return yield* new Unauthenticated({ reason: "identityRequired" });
-          }
+          const respondentId = actor._tag === "Identified" ? actor.subject : null;
           const attempt = db.transaction(
             (tx) =>
               Effect.gen(function* () {
                 const form = yield* shareForm(tx, actor.tenant, formId);
                 if (form === undefined) return yield* new NotFound();
+                // The limit counts responses per respondent, so a grant can't answer a limited form (ADR 0011).
+                if (respondentId === null && form.responseLimit === "one_per_respondent") {
+                  return yield* new Unauthenticated({ reason: "identityRequired" });
+                }
                 // A retry reports the response its key already made, whatever changed since (ADR 0016).
                 const replayed = yield* findByIdempotencyKey(
                   tx,
                   form,
-                  actor.subject,
+                  respondentId,
                   submission.idempotencyKey,
                 );
                 if (replayed !== undefined) {
@@ -146,8 +148,8 @@ export class Submission extends Context.Service<
                 if (submission.versionId !== form.currentVersionId) {
                   return yield* new VersionSuperseded({ currentVersionId: form.currentVersionId });
                 }
-                if (form.responseLimit === "one_per_respondent") {
-                  const responseId = yield* latestResponseId(tx, form, actor.subject);
+                if (respondentId !== null && form.responseLimit === "one_per_respondent") {
+                  const responseId = yield* latestResponseId(tx, form, respondentId);
                   if (responseId !== undefined) return yield* new AlreadyResponded({ responseId });
                 }
                 const version = yield* findVersionContent(tx, form, form.currentVersionId);
@@ -158,7 +160,7 @@ export class Submission extends Context.Service<
                 if (!valid.ok) return yield* new ValidationFailed({ issues: valid.issues });
                 const inserted = yield* insertResponse(tx, form, {
                   versionId: form.currentVersionId,
-                  respondentId: actor.subject,
+                  respondentId,
                   idempotencyKey: submission.idempotencyKey,
                   answers: valid.value,
                   refs: actor.refs,

@@ -720,3 +720,115 @@ describe("a form-bound actor", () => {
     expect(own).toBe(responseId);
   });
 });
+
+describe("an anonymous grant", () => {
+  const refs = [{ namespace: "project", refId: "apollo" }];
+  const grant = (formId: string, tenant = acme) => Actor.Anonymous({ tenant, formId, refs });
+
+  test("submits to its open, unlimited form with no respondent id and the grant's refs", async () => {
+    const { submitted, stored, storedRefRows } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const submitted = yield* submit(grant(formId), formId, v1.id);
+        return {
+          submitted,
+          stored: yield* storedResponse(submitted.responseId),
+          storedRefRows: yield* storedRefs(submitted.responseId),
+        };
+      }),
+    );
+
+    expect(submitted).toEqual({ responseId: expect.any(String), revision: "1" });
+    expect(stored?.respondentId).toBeNull();
+    expect(storedRefRows).toEqual(refs);
+  });
+
+  test("a replay returns the original response and inserts nothing", async () => {
+    const { original, replayed, other, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const idempotencyKey = crypto.randomUUID();
+        const send = Submission.use((submission) =>
+          submission.submit(grant(formId), formId, { versionId: v1.id, answers, idempotencyKey }),
+        );
+        const original = yield* send;
+        const replayed = yield* send;
+        const other = yield* submit(grant(formId), formId, v1.id);
+        return { original, replayed, other, count: yield* responseCount(formId) };
+      }),
+    );
+
+    expect(replayed).toEqual(original);
+    expect(other.responseId).not.toBe(original.responseId);
+    expect(count).toBe(2);
+  });
+
+  test("loads a limited form as anonymous, and submitting to it gives identityRequired", async () => {
+    const { loaded, refused, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { responseLimit: "one_per_respondent" }),
+        );
+        return {
+          loaded: yield* Submission.use((submission) => submission.load(grant(formId), formId)),
+          refused: yield* Effect.flip(submit(grant(formId), formId, v1.id)),
+          count: yield* responseCount(formId),
+        };
+      }),
+    );
+
+    expect(loaded).toMatchObject({
+      responseLimit: "one_per_respondent",
+      respondent: "anonymous",
+      myResponseId: null,
+    });
+    expect(refused).toMatchObject({ _tag: "Unauthenticated", reason: "identityRequired" });
+    expect(count).toBe(0);
+  });
+
+  test("gives NotFound on another form's load and submit, and on its form in another tenant", async () => {
+    const { tags, count } = await run(
+      Effect.gen(function* () {
+        const submission = yield* Submission;
+        const a = yield* openForm;
+        const b = yield* openForm;
+        const otherTenant = grant(b.formId, TenantId.make("globex"));
+        return {
+          tags: [
+            (yield* Effect.flip(submission.load(grant(a.formId), b.formId)))._tag,
+            (yield* Effect.flip(submit(grant(a.formId), b.formId, b.v1.id)))._tag,
+            (yield* Effect.flip(submission.load(otherTenant, b.formId)))._tag,
+            (yield* Effect.flip(submit(otherTenant, b.formId, b.v1.id)))._tag,
+          ],
+          count: yield* responseCount(b.formId),
+        };
+      }),
+    );
+
+    expect(tags).toEqual(["NotFound", "NotFound", "NotFound", "NotFound"]);
+    expect(count).toBe(0);
+  });
+
+  test("gives identityRequired on reading or editing a response, and changes nothing", async () => {
+    const { refusals, storedValues } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId } = yield* submit(grant(formId), formId, v1.id);
+        return {
+          refusals: [
+            yield* Effect.flip(read(grant(formId), responseId)),
+            yield* Effect.flip(edit(grant(formId), responseId, "1", { [readyId]: false })),
+          ],
+          storedValues: (yield* storedAnswers(responseId)).map(({ value }) => value),
+        };
+      }),
+    );
+
+    expect(refusals).toEqual([
+      expect.objectContaining({ _tag: "Unauthenticated", reason: "identityRequired" }),
+      expect.objectContaining({ _tag: "Unauthenticated", reason: "identityRequired" }),
+    ]);
+    expect(storedValues).toEqual([true]);
+  });
+});
