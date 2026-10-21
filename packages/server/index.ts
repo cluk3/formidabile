@@ -5,7 +5,10 @@ import { Publication } from "./lib/publication/publication.ts";
 import { Responses } from "./lib/responses/responses.ts";
 import { Submission } from "./lib/submission/submission.ts";
 
+export { mergeAnalytics, type AnalyticsCounts } from "./lib/analytics/merge.ts";
 export {
+  AnalyticsConstraints,
+  AnalyticsSummary,
   AnswersJson,
   Availability,
   DeletedResponses,
@@ -13,11 +16,13 @@ export {
   DraftSummary,
   EditedResponse,
   Form,
+  FormAnalytics,
   FormDefinitionJson,
   FormDetail,
   FormSettings,
   FormSummary,
   FormVersion,
+  QuestionAnalytics,
   RespondentForm,
   RespondentResponse,
   ResponseDetail,

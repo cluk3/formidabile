@@ -1,3 +1,4 @@
+import type { QuestionTypeName } from "@fb/core/definition";
 import { Schema } from "effect";
 import { ExternalRef } from "./authorization/actor.ts";
 
@@ -162,6 +163,121 @@ export const DeletedResponses = Schema.Struct({ deleted: Schema.Int }).annotate(
   identifier: "DeletedResponses",
 });
 export type DeletedResponses = typeof DeletedResponses.Type;
+
+const Count = Schema.Int;
+/** Version numbers, ascending. */
+const VersionNumbers = Schema.Array(Schema.Int);
+/** The labels other versions gave, beside the label of the highest-numbered version (ADR 0009). */
+const OtherLabels = Schema.Array(Schema.Struct({ label: Schema.String, versions: VersionNumbers }));
+
+const QuestionTypeName = Schema.Literals([
+  "text",
+  "email",
+  "number",
+  "date",
+  "single_choice",
+  "multiple_choice",
+  "boolean",
+] satisfies ReadonlyArray<QuestionTypeName>);
+
+/** Each option's share is `count / base`; `base` counts only the versions that offered it. */
+const ChoiceSummary = Schema.Struct({
+  type: Schema.Literals(["single_choice", "multiple_choice"]),
+  options: Schema.Array(
+    Schema.Struct({
+      value: Schema.String,
+      label: Schema.String,
+      otherLabels: OtherLabels,
+      count: Count,
+      base: Count,
+      offeredIn: VersionNumbers,
+    }),
+  ),
+});
+
+/** Tagged by the question's type. Text, email and date questions report only answered and skipped counts. */
+export const AnalyticsSummary = Schema.Union([
+  ChoiceSummary,
+  Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
+  // All but `count` are null when nothing was answered.
+  Schema.Struct({
+    type: Schema.Literal("number"),
+    count: Count,
+    min: Schema.NullOr(Schema.Number),
+    max: Schema.NullOr(Schema.Number),
+    mean: Schema.NullOr(Schema.Number),
+    median: Schema.NullOr(Schema.Number),
+  }),
+  Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
+]).annotate({ identifier: "AnalyticsSummary" });
+export type AnalyticsSummary = typeof AnalyticsSummary.Type;
+
+/** A version's own constraints on a number or multiple-choice question. */
+export const AnalyticsConstraints = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("number"),
+    integer: Schema.Boolean,
+    min: Schema.NullOr(Schema.Number),
+    max: Schema.NullOr(Schema.Number),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("multiple_choice"),
+    minSelected: Schema.NullOr(Schema.Int),
+    maxSelected: Schema.NullOr(Schema.Int),
+  }),
+]).annotate({ identifier: "AnalyticsConstraints" });
+export type AnalyticsConstraints = typeof AnalyticsConstraints.Type;
+
+/** Absent versions carry no counts: a question a version lacked was never skipped there. */
+const VersionAnalytics = Schema.Union([
+  Schema.Struct({ version: Schema.Int, present: Schema.Literal(false) }),
+  Schema.Struct({
+    version: Schema.Int,
+    present: Schema.Literal(true),
+    responses: Count,
+    answered: Count,
+    skipped: Count,
+    summary: AnalyticsSummary,
+    constraints: Schema.NullOr(AnalyticsConstraints),
+  }),
+]);
+
+/** One question identity across every version, combined, with the per-version breakdown beside it. */
+export const QuestionAnalytics = Schema.Struct({
+  questionId: Schema.String,
+  type: QuestionTypeName,
+  label: Schema.String,
+  otherLabels: OtherLabels,
+  inCurrentVersion: Schema.Boolean,
+  combined: Schema.Struct({
+    responses: Count,
+    answered: Count,
+    skipped: Count,
+    /** The responses of versions without the question. */
+    absentResponses: Count,
+    summary: AnalyticsSummary,
+  }),
+  byVersion: Schema.Array(VersionAnalytics),
+}).annotate({ identifier: "QuestionAnalytics" });
+export type QuestionAnalytics = typeof QuestionAnalytics.Type;
+
+/** A form's analytics, with no prose: versions are referenced by number, and `versions` maps them to ids. */
+export const FormAnalytics = Schema.Struct({
+  formId: Schema.String,
+  totalResponses: Count,
+  /** Every version, ascending. */
+  versions: Schema.Array(
+    Schema.Struct({
+      versionId: Schema.String,
+      number: Schema.Int,
+      publishedAt: Schema.Date,
+      responses: Count,
+    }),
+  ),
+  /** The current version's questions in its order, then dropped ones, most recently dropped first. */
+  questions: Schema.Array(QuestionAnalytics),
+}).annotate({ identifier: "FormAnalytics" });
+export type FormAnalytics = typeof FormAnalytics.Type;
 
 export const FormDetail = Schema.Struct({
   id: Schema.String,
