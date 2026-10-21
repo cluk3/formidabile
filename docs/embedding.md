@@ -71,13 +71,13 @@ A host can use `error` to add its own sign-in link: the reference host does that
 
 The element's styles live in its shadow root. Hosts theme it through inherited custom properties and `::part()`.
 
-| Custom property            | Styles                                              |
-| -------------------------- | --------------------------------------------------- |
-| `--form-renderer-text`     | The text color                                      |
-| `--form-renderer-muted`    | Question descriptions                               |
-| `--form-renderer-accent`   | The "(required)" marker                             |
-| `--form-renderer-border`   | Question cards and text controls                    |
-| `--form-renderer-error`    | Error messages, notices and invalid inputs' outline |
+| Custom property          | Styles                                              |
+| ------------------------ | --------------------------------------------------- |
+| `--form-renderer-text`   | The text color                                      |
+| `--form-renderer-muted`  | Question descriptions                               |
+| `--form-renderer-accent` | The "(required)" marker                             |
+| `--form-renderer-border` | Question cards and text controls                    |
+| `--form-renderer-error`  | Error messages, notices and invalid inputs' outline |
 
 The parts are `root`, `title`, `description`, `question`, `label`, `input`, `error`, `action` (the Reload, Stay and "Edit your response" buttons) and `submit`.
 
@@ -104,19 +104,35 @@ The module never authenticates anyone. The host signs a JWT for each request, an
 
 Exactly two claim sets are valid. Every other combination is 401 `invalid`.
 
-| Claim set            | Required                                       | Optional       | Forbidden               |
-| -------------------- | ---------------------------------------------- | -------------- | ----------------------- |
-| Identified token     | `sub`, `tenant`, `capabilities`                | `form`, `refs` | `anonymous`             |
-| Anonymous grant      | `anonymous: true`, `tenant`, `form`            | `refs`         | `sub`, `capabilities`   |
+| Claim set        | Required                            | Optional       | Forbidden             |
+| ---------------- | ----------------------------------- | -------------- | --------------------- |
+| Identified token | `sub`, `tenant`, `capabilities`     | `form`, `refs` | `anonymous`           |
+| Anonymous grant  | `anonymous: true`, `tenant`, `form` | `refs`         | `sub`, `capabilities` |
 
 Both also carry `exp`, `iss` and `aud`. `capabilities` holds any of `forms:manage`, `responses:read` and `responses:delete`. A respondent's identified token may have none. Unknown claims are ignored.
 
 ```json
-{ "iss": "https://host.example", "aud": "form-module", "exp": 1792570000, "sub": "u_8f3a", "tenant": "acme", "capabilities": [], "form": "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e", "refs": [{ "namespace": "project", "refId": "apollo" }] }
+{
+  "iss": "https://host.example",
+  "aud": "form-module",
+  "exp": 1792570000,
+  "sub": "u_8f3a",
+  "tenant": "acme",
+  "capabilities": [],
+  "form": "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e",
+  "refs": [{ "namespace": "project", "refId": "apollo" }]
+}
 ```
 
 ```json
-{ "iss": "https://host.example", "aud": "form-module", "exp": 1792570000, "anonymous": true, "tenant": "acme", "form": "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e" }
+{
+  "iss": "https://host.example",
+  "aud": "form-module",
+  "exp": 1792570000,
+  "anonymous": true,
+  "tenant": "acme",
+  "form": "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e"
+}
 ```
 
 ### Limits
@@ -133,12 +149,12 @@ Both also carry `exp`, `iss` and `aud`. `capabilities` holds any of `forms:manag
 
 ### Refusals
 
-| Status | Body                                                    | When                                                                                                    |
-| ------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 401    | `{ _tag: "Unauthenticated", reason: "missing" }`          | No token. A request with no token is never treated as anonymous.                                        |
+| Status | Body                                                      | When                                                                                                     |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 401    | `{ _tag: "Unauthenticated", reason: "missing" }`          | No token. A request with no token is never treated as anonymous.                                         |
 | 401    | `{ _tag: "Unauthenticated", reason: "invalid" }`          | A bad signature, an expired token, a wrong issuer or audience, a malformed claim set or a breached limit |
-| 401    | `{ _tag: "Unauthenticated", reason: "identityRequired" }` | A grant used where an identified respondent is needed                                                   |
-| 403    | `{ _tag: "Forbidden", capability }`                       | Authenticated, without the capability the endpoint needs                                                |
+| 401    | `{ _tag: "Unauthenticated", reason: "identityRequired" }` | A grant used where an identified respondent is needed                                                    |
+| 403    | `{ _tag: "Forbidden", capability }`                       | Authenticated, without the capability the endpoint needs                                                 |
 
 ### Short-lived grants
 
@@ -172,12 +188,12 @@ default-src 'self'; base-uri 'none'; object-src 'none'; require-trusted-types-fo
 
 A host may write its own renderer against the `/respond` endpoints ([HTTP API surface](../.scratch/form-builder-mvp/issues/16-http-api-surface.md), [ADR 0010](./adr/0010-respondent-api-split-and-host-owned-lookups.md)). Every error body is JSON told apart by `_tag`.
 
-| Method and path                           | Request                                    | Success                                                                                |
-| ----------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `GET /respond/forms/{formId}`             |                                            | 200 `{ formId, responseLimit, respondent, version: { id, number, definition }, myResponseId }` |
-| `POST /respond/forms/{formId}/responses`  | `{ versionId, answers, idempotencyKey }`   | 201 `{ responseId, revision }`                                                         |
-| `GET /respond/responses/{responseId}`     |                                            | 200 `{ response, version, editable }`                                                  |
-| `PUT /respond/responses/{responseId}`     | `{ expectedRevision, answers }`            | 200 `{ responseId, revision, editedAt }`                                               |
+| Method and path                          | Request                                  | Success                                                                                        |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /respond/forms/{formId}`            |                                          | 200 `{ formId, responseLimit, respondent, version: { id, number, definition }, myResponseId }` |
+| `POST /respond/forms/{formId}/responses` | `{ versionId, answers, idempotencyKey }` | 201 `{ responseId, revision }`                                                                 |
+| `GET /respond/responses/{responseId}`    |                                          | 200 `{ response, version, editable }`                                                          |
+| `PUT /respond/responses/{responseId}`    | `{ expectedRevision, answers }`          | 200 `{ responseId, revision, editedAt }`                                                       |
 
 ### 1. Load, then send the version back
 
@@ -190,29 +206,29 @@ Load with `GET /respond/forms/{formId}`, and send `version.id` back as `versionI
 
 `answers` maps each question's `id` to an untagged value. An unanswered optional question has no key, and there are no nulls. Unknown keys are refused.
 
-| Question type     | Value                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| `text`            | A string, sent trimmed: not blank, at most `config.maxLength` (default 10,000) code points |
-| `email`           | An email address string, at most 254 characters                                        |
-| `number`          | A number, an integer when `config.integer`, within `config.min` and `config.max`       |
-| `date`            | An ISO calendar date, `YYYY-MM-DD`, within `config.min` and `config.max`               |
-| `boolean`         | `true` or `false`                                                                      |
-| `single_choice`   | One option's `value`                                                                   |
+| Question type     | Value                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `text`            | A string, sent trimmed: not blank, at most `config.maxLength` (default 10,000) code points          |
+| `email`           | An email address string, at most 254 characters                                                     |
+| `number`          | A number, an integer when `config.integer`, within `config.min` and `config.max`                    |
+| `date`            | An ISO calendar date, `YYYY-MM-DD`, within `config.min` and `config.max`                            |
+| `boolean`         | `true` or `false`                                                                                   |
+| `single_choice`   | One option's `value`                                                                                |
 | `multiple_choice` | An array of distinct option `value`s, from `minSelected` (default 1) to `maxSelected` (default all) |
 
 ### 4. Errors
 
-| Status | `_tag`              | Do                                                                                         |
-| ------ | ------------------- | ------------------------------------------------------------------------------------------ |
-| 409    | `VersionSuperseded` | Reload an empty form (`currentVersionId` names the new version)                            |
-| 409    | `AlreadyResponded`  | Offer to edit `responseId`, the respondent's most recent response                          |
+| Status | `_tag`              | Do                                                                                                                                                             |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 409    | `VersionSuperseded` | Reload an empty form (`currentVersionId` names the new version)                                                                                                |
+| 409    | `AlreadyResponded`  | Offer to edit `responseId`, the respondent's most recent response                                                                                              |
 | 422    | `ValidationFailed`  | Show each of `issues: [{ path, message }]`. An answer's `path` starts with the question's `id`; a malformed body names its field, such as `["idempotencyKey"]` |
-| 409    | `RevisionConflict`  | On an edit: reload or stay, never overwrite                                                |
-| 409    | `FormClosed`        | Show the form as closed                                                                    |
-| 409    | `FormNotPublished`  | On load: show the form as unavailable                                                      |
-| 413    | `PayloadTooLarge`   | Tell the respondent the answers are too long to send (`limit` is in bytes)                 |
-| 401    | `Unauthenticated`   | "Sign in" for `missing` and `identityRequired`, "session expired" for `invalid`            |
-| 404    | `NotFound`          | The form or response doesn't exist for this token                                          |
+| 409    | `RevisionConflict`  | On an edit: reload or stay, never overwrite                                                                                                                    |
+| 409    | `FormClosed`        | Show the form as closed                                                                                                                                        |
+| 409    | `FormNotPublished`  | On load: show the form as unavailable                                                                                                                          |
+| 413    | `PayloadTooLarge`   | Tell the respondent the answers are too long to send (`limit` is in bytes)                                                                                     |
+| 401    | `Unauthenticated`   | "Sign in" for `missing` and `identityRequired`, "session expired" for `invalid`                                                                                |
+| 404    | `NotFound`          | The form or response doesn't exist for this token                                                                                                              |
 
 On submit the module checks `FormClosed`, then `VersionSuperseded`, then `AlreadyResponded`. An edit checks `FormClosed`, then `RevisionConflict`.
 
