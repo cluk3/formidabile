@@ -1,7 +1,8 @@
+import { type FormDefinition, parseDefinition } from "@fb/core/definition";
 import { and, desc, eq, max } from "drizzle-orm";
 import { Effect, type Schema } from "effect";
 import type { TenantId } from "../authorization/actor.ts";
-import type { FormVersion, VersionSummary } from "../envelopes.ts";
+import type { Form, FormVersion, VersionSummary } from "../envelopes.ts";
 import type { Database } from "./database.ts";
 import { type LockedForm, toForm, versionSummaryColumns } from "./forms.ts";
 import { currentInstant, newId } from "./ids.ts";
@@ -54,6 +55,25 @@ export const findVersion = (db: Db, tenant: TenantId, formId: string, versionId:
           },
       ),
     );
+
+/** A version the caller already holds the form of, so no tenant filter. */
+export const findVersionContent = (db: Db, form: Form, versionId: string) =>
+  db
+    .select({
+      id: formVersions.id,
+      number: formVersions.number,
+      definition: formVersions.definition,
+    })
+    .from(formVersions)
+    .where(and(eq(formVersions.formId, form.id), eq(formVersions.id, versionId)))
+    .pipe(Effect.map(([row]) => row));
+
+/** Published definitions passed core's parse when they were stored. */
+export const storedDefinition = (json: Schema.Json): FormDefinition => {
+  const parsed = parseDefinition(json);
+  if (!parsed.ok) throw new Error("A published definition no longer parses");
+  return parsed.value;
+};
 
 export const versionDefinitions = (db: Db, form: LockedForm) =>
   db

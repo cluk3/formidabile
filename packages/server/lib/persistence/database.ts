@@ -1,6 +1,8 @@
 import { PgClient } from "@effect/sql-pg";
 import * as PgDrizzle from "drizzle-orm/effect-postgres";
-import { Context, Effect, Layer, Redacted } from "effect";
+import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
+import { Cause, Context, Effect, Layer, Option, Redacted } from "effect";
+import { SqlError } from "effect/sql";
 
 export class Database extends Context.Service<Database, PgDrizzle.EffectPgDatabase>()(
   "@fb/server/Database",
@@ -16,6 +18,19 @@ export const dieOnDatabaseError = <A, E extends { readonly _tag: string }, R>(
       error._tag === "SqlError" || error._tag === "EffectDrizzleQueryError",
     Effect.die,
   );
+
+/** Whether a query failed on the unique constraint or index named `constraint`, on either driver. */
+export const isUniqueViolation = (error: unknown, constraint: string) => {
+  const failure =
+    error instanceof EffectDrizzleQueryError && Cause.isCause(error.cause)
+      ? Option.getOrUndefined(Cause.findErrorOption(error.cause))
+      : error;
+  return (
+    SqlError.isSqlError(failure) &&
+    failure.reason._tag === "UniqueViolation" &&
+    failure.reason.constraint === constraint
+  );
+};
 
 export const DatabaseLive = (databaseUrl: string) =>
   Layer.effect(Database, PgDrizzle.makeWithDefaults()).pipe(

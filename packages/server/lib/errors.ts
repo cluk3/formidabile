@@ -30,6 +30,27 @@ export class FormNotPublished extends Schema.TaggedError<FormNotPublished>()(
   { httpApiStatus: 409 },
 ) {}
 
+/** The form accepts no responses or edits. */
+export class FormClosed extends Schema.TaggedError<FormClosed>()(
+  "FormClosed",
+  {},
+  { httpApiStatus: 409 },
+) {}
+
+/** The submit named a version that is no longer current: reload onto `currentVersionId` (ADR 0002). */
+export class VersionSuperseded extends Schema.TaggedError<VersionSuperseded>()(
+  "VersionSuperseded",
+  { currentVersionId: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
+/** The form takes one response per respondent, and `responseId` is this respondent's most recent. */
+export class AlreadyResponded extends Schema.TaggedError<AlreadyResponded>()(
+  "AlreadyResponded",
+  { responseId: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
 /** A form with any published version is permanent: close it instead (ADR 0014). */
 export class FormPublished extends Schema.TaggedError<FormPublished>()(
   "FormPublished",
