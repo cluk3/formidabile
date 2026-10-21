@@ -245,6 +245,111 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
     });
   });
 
+  describe("a response's fixed columns", () => {
+    const changes: ReadonlyArray<
+      readonly [
+        column: string,
+        change: (
+          sql: SqlClient.SqlClient,
+          response: { readonly responseId: string; readonly otherVersionId: string },
+        ) => Effect.Effect<unknown, SqlError.SqlError>,
+      ]
+    > = [
+      [
+        "id",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET id = ${crypto.randomUUID()} WHERE id = ${responseId}`,
+      ],
+      [
+        "form_id",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET form_id = ${crypto.randomUUID()} WHERE id = ${responseId}`,
+      ],
+      [
+        "version_id",
+        (sql, { responseId, otherVersionId }) =>
+          sql`UPDATE form_management.responses SET version_id = ${otherVersionId} WHERE id = ${responseId}`,
+      ],
+      [
+        "respondent_id",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET respondent_id = 'bob' WHERE id = ${responseId}`,
+      ],
+      [
+        "limited",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET limited = true WHERE id = ${responseId}`,
+      ],
+      [
+        "idempotency_key",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET idempotency_key = ${crypto.randomUUID()} WHERE id = ${responseId}`,
+      ],
+      [
+        "submitted_at",
+        (sql, { responseId }) =>
+          sql`UPDATE form_management.responses SET submitted_at = now() + interval '1 day' WHERE id = ${responseId}`,
+      ],
+    ];
+
+    test.each(changes)("a trigger rejects changing %s", async (column, change) => {
+      const error = await run(
+        Effect.gen(function* () {
+          const { formId, versionId } = yield* publishedForm;
+          // Version 2 of the same form, so only the trigger stands in the way of moving to it.
+          const otherVersionId = crypto.randomUUID();
+          yield* insertVersion(formId, otherVersionId, 2);
+          const responseId = yield* insertResponse({ formId, versionId });
+          const sql = yield* SqlClient.SqlClient;
+          return yield* rejection(change(sql, { responseId, otherVersionId }));
+        }),
+      );
+
+      expect(error).toEqual({ code: "23001", message: `responses.${column} never changes` });
+    });
+
+    test("an edit can change the revision and the edit time, and rewrite the answers", async () => {
+      const edited = await run(
+        Effect.gen(function* () {
+          const { formId, versionId, questionId } = yield* publishedForm;
+          const responseId = yield* insertResponse({ formId, versionId });
+          yield* insertAnswer(responseId, versionId, questionId);
+          const sql = yield* SqlClient.SqlClient;
+          yield* sql`DELETE FROM form_management.answers WHERE response_id = ${responseId}`;
+          yield* insertAnswer(responseId, versionId, questionId);
+          const [row] = yield* sql<{ revision: number; edited: boolean }>`
+            UPDATE form_management.responses
+            SET revision = revision + 1, edited_at = now(), form_id = form_id, version_id = version_id
+            WHERE id = ${responseId}
+            RETURNING revision, edited_at IS NOT NULL AS edited
+          `;
+          return row;
+        }),
+      );
+
+      expect(edited).toEqual({ revision: 2, edited: true });
+    });
+
+    test("a trigger rejects changing a response's stored references", async () => {
+      const error = await run(
+        Effect.gen(function* () {
+          const { formId, versionId } = yield* publishedForm;
+          const responseId = yield* insertResponse({ formId, versionId });
+          yield* insertResponseRef(responseId, "project", "p-1");
+          const sql = yield* SqlClient.SqlClient;
+          return yield* rejection(
+            sql`UPDATE form_management.response_external_refs SET ref_id = 'p-2' WHERE response_id = ${responseId}`,
+          );
+        }),
+      );
+
+      expect(error).toEqual({
+        code: "23001",
+        message: "UPDATE on form_management.response_external_refs is not allowed",
+      });
+    });
+  });
+
   describe("external references", () => {
     test("deleting a never-published form removes its references by cascade", async () => {
       const { remaining, kept } = await run(
