@@ -7,11 +7,6 @@ export type Capability = typeof Capability.Type;
 export const TenantId = Schema.String.pipe(Schema.brand("TenantId"));
 export type TenantId = typeof TenantId.Type;
 
-export interface ExternalRef {
-  readonly namespace: string;
-  readonly refId: string;
-}
-
 export type Actor = Data.TaggedEnum<{
   Identified: {
     readonly subject: string;
@@ -62,13 +57,14 @@ const Identifier = Schema.String.check(codePoints(1, 255));
 
 const FormId = Schema.String.check(Schema.isUUID());
 
-// The persistence model's reference shape (the `*_external_refs` check constraints).
-const Refs = Schema.Array(
-  Schema.Struct({
-    namespace: Schema.String.check(codePoints(1, 64), Schema.isPattern(/^[a-z][a-z0-9_.-]*$/)),
-    refId: Identifier,
-  }),
-).check(Schema.isMaxLength(20), Schema.isUnique());
+/** An opaque host reference, in the persistence model's shape (the `*_external_refs` check constraints). */
+export const ExternalRef = Schema.Struct({
+  namespace: Schema.String.check(codePoints(1, 64), Schema.isPattern(/^[a-z][a-z0-9_.-]*$/)),
+  refId: Identifier,
+}).annotate({ identifier: "ExternalRef" });
+export type ExternalRef = typeof ExternalRef.Type;
+
+const Refs = Schema.Array(ExternalRef).check(Schema.isMaxLength(20), Schema.isUnique());
 
 const ValidActor = Schema.Union([
   Schema.Struct({

@@ -1,6 +1,7 @@
 import { FormDefinition } from "@fb/core/definition";
 import {
   Draft,
+  ExternalRefLimitReached,
   Forbidden,
   Form,
   FormDefinitionJson,
@@ -16,7 +17,7 @@ import {
   ValidationFailed,
   VersionSummary,
 } from "@fb/server";
-import { type Actor, Unauthenticated } from "@fb/server/actor";
+import { type Actor, ExternalRef, Unauthenticated } from "@fb/server/actor";
 import { Context, Schema } from "effect";
 import {
   HttpApi,
@@ -48,10 +49,50 @@ export class EdgeValidation extends HttpApiMiddleware.Service<EdgeValidation>()(
   { error: ValidationFailed },
 ) {}
 
+export class LengthRequired extends Schema.TaggedError<LengthRequired>()(
+  "LengthRequired",
+  {},
+  { httpApiStatus: 411 },
+) {}
+
+export class PayloadTooLarge extends Schema.TaggedError<PayloadTooLarge>()(
+  "PayloadTooLarge",
+  { limit: Schema.Int },
+  { httpApiStatus: 413 },
+) {}
+
+/** The most bytes an endpoint's request body may declare (ADR 0015): 16 KiB unless the endpoint says more. */
+export const BodyLimit = Context.Reference<number>("@fb/http-api/BodyLimit", {
+  defaultValue: () => 16 * 1024,
+});
+
+/** Bodies that carry a form definition or answers. */
+const largeBody = 1024 * 1024;
+
+/**
+ * Refuses a body with no `Content-Length` (411) or one declaring more than the endpoint's `BodyLimit` (413),
+ * before any of it is read. Effect's `MaxBodySize` is ignored by Fetch handlers and resets the socket on Node.
+ */
+export class BodyLimits extends HttpApiMiddleware.Service<BodyLimits>()("@fb/http-api/BodyLimits", {
+  error: [LengthRequired, PayloadTooLarge],
+}) {}
+
 const FormIdParams = { formId: Schema.String.check(Schema.isUUID()) };
 
 /** Revisions travel as opaque strings in the body, or the query for a discard or a delete (ADR 0010). */
 const Revision = Schema.String;
+
+/** A lookup by reference names both halves, or neither. */
+const FormListQuery = Schema.Struct({
+  refNamespace: Schema.optionalKey(ExternalRef.fields.namespace),
+  refId: Schema.optionalKey(ExternalRef.fields.refId),
+}).check(
+  Schema.makeFilter((query) => (query.refNamespace === undefined) === (query.refId === undefined), {
+    expected: "refNamespace and refId together",
+  }),
+);
+
+const ExternalRefs = Schema.Struct({ externalRefs: Schema.Array(ExternalRef) });
 
 export class FormsGroup extends HttpApiGroup.make("forms")
   .add(
@@ -59,8 +100,9 @@ export class FormsGroup extends HttpApiGroup.make("forms")
       payload: Schema.Struct({ definition: FormDefinitionJson }),
       success: Schema.Struct({ form: Form, draft: Draft }).pipe(HttpApiSchema.status(201)),
       error: [Forbidden, ValidationFailed],
-    }),
+    }).annotate(BodyLimit, largeBody),
     HttpApiEndpoint.get("list", "/forms", {
+      query: FormListQuery,
       success: Schema.Struct({ forms: Schema.Array(FormSummary) }),
       error: Forbidden,
     }),
@@ -80,9 +122,22 @@ export class FormsGroup extends HttpApiGroup.make("forms")
       query: { expectedRevision: Revision },
       error: [Forbidden, NotFound, FormPublished, RevisionConflict],
     }),
+    HttpApiEndpoint.post("addExternalRef", "/forms/:formId/external-refs", {
+      params: FormIdParams,
+      payload: ExternalRef,
+      success: ExternalRefs,
+      error: [Forbidden, NotFound, ExternalRefLimitReached],
+    }),
+    HttpApiEndpoint.delete("removeExternalRef", "/forms/:formId/external-refs", {
+      params: FormIdParams,
+      query: ExternalRef,
+      success: ExternalRefs,
+      error: [Forbidden, NotFound],
+    }),
   )
   .middleware(EdgeValidation)
-  .middleware(Authentication) {}
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
 
 export class DraftsGroup extends HttpApiGroup.make("drafts")
   .add(
@@ -99,7 +154,7 @@ export class DraftsGroup extends HttpApiGroup.make("drafts")
       }),
       success: Draft,
       error: [Forbidden, NotFound, ValidationFailed, RevisionConflict, NoDraft],
-    }),
+    }).annotate(BodyLimit, largeBody),
     HttpApiEndpoint.delete("discard", "/forms/:formId/draft", {
       params: FormIdParams,
       query: { expectedRevision: Revision },
@@ -115,7 +170,8 @@ export class DraftsGroup extends HttpApiGroup.make("drafts")
     }),
   )
   .middleware(EdgeValidation)
-  .middleware(Authentication) {}
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
 
 export class VersionsGroup extends HttpApiGroup.make("versions")
   .add(
@@ -131,7 +187,8 @@ export class VersionsGroup extends HttpApiGroup.make("versions")
     }),
   )
   .middleware(EdgeValidation)
-  .middleware(Authentication) {}
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
 
 export class FormApi extends HttpApi.make("FormApi")
   .add(FormsGroup)

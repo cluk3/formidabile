@@ -92,7 +92,7 @@ Points the spike left unverified, settled in phase 0:
 
 ## The demo seed
 
-`apps/reference-host/seed/` is the host's demo data, for manual demos and as e2e's background. It needs no running server: it builds its own `createFormModuleHandler` on `DATABASE_URL` (else the compose database), migrates it, and creates and publishes one form in `acme` and one in `globex` through `@fb/api-client`, signed as each tenant's dev admin with `server/dev-users.ts`. It never inserts rows directly, so it can't break an invariant.
+`apps/reference-host/seed/` is the host's demo data, for manual demos and as e2e's background. It needs no running server: it builds its own `createFormModuleHandler` on `DATABASE_URL` (else the compose database), migrates it, and creates and publishes one form in `acme` and one in `globex` through `@fb/api-client`, signed as each tenant's dev admin with `server/dev-users.ts`. It never inserts rows directly, so it can't break an invariant. No transport sits between it and the handler, so it passes each request through `declareLength` from `@fb/http-api/web`: the module answers a body with no `Content-Length` with 411 (ADR 0015).
 
 `vp run @fb/reference-host#seed:reset` drops the `form_management` schema through `docker compose exec -T postgres psql`, then runs the seed, which migrates it again. Published forms can't be deleted, so a reset is the only way back to a clean demo. `vp run e2e` depends on it, so every Playwright run starts from the demo seed; no test may rely on the seed's data.
 

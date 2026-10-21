@@ -1,9 +1,17 @@
 import { ValidationFailed } from "@fb/server";
 import { ActorResolver, authenticate } from "@fb/server/actor";
-import { Effect, Layer, SchemaIssue } from "effect";
+import { Context, Effect, Layer, SchemaIssue } from "effect";
 import { HttpServerRequest } from "effect/http";
 import { HttpApiMiddleware } from "effect/http-api";
-import { Authentication, CurrentActor, EdgeValidation } from "./api.ts";
+import {
+  Authentication,
+  BodyLimit,
+  BodyLimits,
+  CurrentActor,
+  EdgeValidation,
+  LengthRequired,
+  PayloadTooLarge,
+} from "./api.ts";
 
 export const AuthenticationLive = Layer.effect(
   Authentication,
@@ -16,6 +24,26 @@ export const AuthenticationLive = Layer.effect(
           Effect.flatMap((actor) => Effect.provideService(httpEffect, CurrentActor, actor)),
         ),
     });
+  }),
+);
+
+const decimal = /^\d+$/;
+
+export const BodyLimitsLive = Layer.succeed(BodyLimits, (httpEffect, { endpoint }) =>
+  Effect.gen(function* () {
+    const { headers } = yield* HttpServerRequest.HttpServerRequest;
+    const length = headers["content-length"];
+    // A request carries a body if its endpoint takes one or its framing headers announce one.
+    if (
+      endpoint.payload.size > 0 ||
+      length !== undefined ||
+      headers["transfer-encoding"] !== undefined
+    ) {
+      if (length === undefined || !decimal.test(length)) return yield* new LengthRequired();
+      const limit = Context.get(endpoint.annotations, BodyLimit);
+      if (Number(length) > limit) return yield* new PayloadTooLarge({ limit });
+    }
+    return yield* httpEffect;
   }),
 );
 

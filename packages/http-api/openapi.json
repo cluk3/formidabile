@@ -61,6 +61,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -97,7 +117,24 @@
           "forms"
         ],
         "operationId": "forms.list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "refNamespace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "refId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
         "security": [
           {
             "bearer": []
@@ -142,6 +179,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -219,6 +276,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -304,6 +381,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FormNotPublishedEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -411,6 +508,278 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forms/{formId}/external-refs": {
+      "post": {
+        "tags": [
+          "forms"
+        ],
+        "operationId": "forms.addExternalRef",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "externalRefs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExternalRef"
+                      }
+                    }
+                  },
+                  "required": [
+                    "externalRefs"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ExternalRefLimitReached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalRefLimitReachedEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalRef"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": [
+          "forms"
+        ],
+        "operationId": "forms.removeExternalRef",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "refId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "externalRefs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExternalRef"
+                      }
+                    }
+                  },
+                  "required": [
+                    "externalRefs"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -504,6 +873,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -592,6 +981,26 @@
                       "$ref": "#/components/schemas/NoDraftEncoded"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -722,6 +1131,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -825,6 +1254,26 @@
                       "$ref": "#/components/schemas/RevisionConflictEncoded"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -937,6 +1386,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -1024,6 +1493,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -1040,6 +1529,42 @@
   },
   "components": {
     "schemas": {
+      "PayloadTooLargeEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "PayloadTooLarge"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "_tag",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "LengthRequiredEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "LengthRequired"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
+        ],
+        "additionalProperties": false
+      },
       "UnauthenticatedEncoded": {
         "type": "object",
         "properties": {
@@ -1782,6 +2307,43 @@
         ],
         "additionalProperties": false
       },
+      "ExternalRef": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "refId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespace",
+          "refId"
+        ],
+        "additionalProperties": false
+      },
+      "ExternalRefLimitReachedEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "ExternalRefLimitReached"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "_tag",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
       "FormPublishedEncoded": {
         "type": "object",
         "properties": {
@@ -1871,6 +2433,12 @@
               }
             ]
           },
+          "externalRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalRef"
+            }
+          },
           "createdAt": {
             "type": "string"
           },
@@ -1884,6 +2452,7 @@
           "responseLimit",
           "currentVersion",
           "draft",
+          "externalRefs",
           "createdAt",
           "updatedAt"
         ],

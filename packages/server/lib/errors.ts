@@ -37,6 +37,13 @@ export class FormPublished extends Schema.TaggedError<FormPublished>()(
   { httpApiStatus: 409 },
 ) {}
 
+/** A form holds at most `limit` external references. */
+export class ExternalRefLimitReached extends Schema.TaggedError<ExternalRefLimitReached>()(
+  "ExternalRefLimitReached",
+  { limit: Schema.Int },
+  { httpApiStatus: 409 },
+) {}
+
 export const Issue = Schema.Struct({
   path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
   message: Schema.String,

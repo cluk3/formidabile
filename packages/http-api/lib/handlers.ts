@@ -2,7 +2,7 @@ import { Drafts, FormModuleLive, Forms, Publication } from "@fb/server";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { CurrentActor, FormApi } from "./api.ts";
-import { AuthenticationLive, EdgeValidationLive } from "./middleware.ts";
+import { AuthenticationLive, BodyLimitsLive, EdgeValidationLive } from "./middleware.ts";
 
 const FormsHandlers = HttpApiBuilder.group(
   FormApi,
@@ -13,8 +13,18 @@ const FormsHandlers = HttpApiBuilder.group(
       .handle("create", ({ payload }) =>
         CurrentActor.use((actor) => forms.create(actor, payload.definition)),
       )
-      .handle("list", () =>
-        CurrentActor.use((actor) => Effect.map(forms.list(actor), (list) => ({ forms: list }))),
+      .handle("list", ({ query: { refNamespace, refId } }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(
+            forms.list(
+              actor,
+              refNamespace === undefined || refId === undefined
+                ? undefined
+                : { namespace: refNamespace, refId },
+            ),
+            (list) => ({ forms: list }),
+          ),
+        ),
       )
       .handle("detail", ({ params }) =>
         CurrentActor.use((actor) => forms.detail(actor, params.formId)),
@@ -24,6 +34,20 @@ const FormsHandlers = HttpApiBuilder.group(
       )
       .handle("delete", ({ params, query }) =>
         CurrentActor.use((actor) => forms.delete(actor, params.formId, query.expectedRevision)),
+      )
+      .handle("addExternalRef", ({ params, payload }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(forms.addExternalRef(actor, params.formId, payload), (externalRefs) => ({
+            externalRefs,
+          })),
+        ),
+      )
+      .handle("removeExternalRef", ({ params, query }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(forms.removeExternalRef(actor, params.formId, query), (externalRefs) => ({
+            externalRefs,
+          })),
+        ),
       );
   }),
 );
@@ -74,5 +98,5 @@ const VersionsHandlers = HttpApiBuilder.group(
 /** The whole API, given a `Database` and an `ActorResolver`. */
 export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
   Layer.provide([FormsHandlers, DraftsHandlers, VersionsHandlers]),
-  Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive]),
+  Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive, BodyLimitsLive]),
 );
