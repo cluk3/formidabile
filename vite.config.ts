@@ -24,6 +24,14 @@ const testPostgres = process.env.TEST_POSTGRES === "1";
 // The docker-compose.yml service. CI and local runs use it unless DATABASE_URL says otherwise.
 const composeDatabaseUrl = "postgres://formidabile:formidabile@localhost:5432/formidabile";
 
+// Both previews in one shell, with the URLs up front. The trap stops the other server when one exits or on Ctrl+C.
+const demoServers = [
+  `echo "Reference host: http://localhost:4173  (sign in at /login, project form at /projects/acme-spring-orders, admin at /admin)"`,
+  `echo "Builder:        http://localhost:4174  (sign in as acme-admin first)"`,
+  `trap 'kill $(jobs -p) 2>/dev/null' EXIT INT TERM`,
+  `vp run @fb/reference-host#preview & vp run @fb/builder#preview & wait`,
+].join("; ");
+
 export default defineConfig({
   staged: {
     "*": "vp check --fix",
@@ -126,6 +134,23 @@ export default defineConfig({
       },
       postgres: {
         command: "docker compose up --wait postgres",
+        cache: false,
+      },
+      // Manual testing: the reference host (4173) and the builder (4174), previewed together so the strict CSP applies.
+      // `demo` starts from a fresh schema plus the demo seed. `demo:keep` keeps whatever data is already there.
+      // Ctrl+C stops both. `e2e` starts the same servers and reuses any already listening, so stop the demo first.
+      demo: {
+        command: demoServers,
+        dependsOn: [
+          "@fb/reference-host#seed:reset",
+          "@fb/reference-host#build",
+          "@fb/builder#build",
+        ],
+        cache: false,
+      },
+      "demo:keep": {
+        command: demoServers,
+        dependsOn: ["postgres", "@fb/reference-host#build", "@fb/builder#build"],
         cache: false,
       },
       "test:pg": {
