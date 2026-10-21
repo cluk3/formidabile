@@ -1525,6 +1525,248 @@
           }
         }
       }
+    },
+    "/respond/forms/{formId}": {
+      "get": {
+        "tags": [
+          "respond"
+        ],
+        "operationId": "respond.load",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RespondentForm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespondentForm"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "FormNotPublished | FormClosed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FormNotPublishedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FormClosedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/respond/forms/{formId}/responses": {
+      "post": {
+        "tags": [
+          "respond"
+        ],
+        "operationId": "respond.submit",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "SubmittedResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmittedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "FormClosed | VersionSuperseded | AlreadyResponded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FormClosedEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/VersionSupersededEncoded"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AlreadyRespondedEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "versionId": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  },
+                  "answers": {
+                    "$ref": "#/components/schemas/AnyAnswers"
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "versionId",
+                  "answers",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
   },
   "components": {
@@ -1565,27 +1807,56 @@
         ],
         "additionalProperties": false
       },
-      "UnauthenticatedEncoded": {
+      "AlreadyRespondedEncoded": {
         "type": "object",
         "properties": {
           "_tag": {
             "type": "string",
             "enum": [
-              "Unauthenticated"
+              "AlreadyResponded"
             ]
           },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "missing",
-              "invalid",
-              "identityRequired"
-            ]
+          "responseId": {
+            "type": "string"
           }
         },
         "required": [
           "_tag",
-          "reason"
+          "responseId"
+        ],
+        "additionalProperties": false
+      },
+      "VersionSupersededEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "VersionSuperseded"
+            ]
+          },
+          "currentVersionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "_tag",
+          "currentVersionId"
+        ],
+        "additionalProperties": false
+      },
+      "FormClosedEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "FormClosed"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
         ],
         "additionalProperties": false
       },
@@ -1646,6 +1917,30 @@
         ],
         "additionalProperties": false
       },
+      "UnauthenticatedEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Unauthenticated"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "invalid",
+              "identityRequired"
+            ]
+          }
+        },
+        "required": [
+          "_tag",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
       "NotFoundEncoded": {
         "type": "object",
         "properties": {
@@ -1661,48 +1956,107 @@
         ],
         "additionalProperties": false
       },
-      "ForbiddenEncoded": {
+      "SubmittedResponse": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "responseId",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "AnyAnswers": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "FormNotPublishedEncoded": {
         "type": "object",
         "properties": {
           "_tag": {
             "type": "string",
             "enum": [
-              "Forbidden"
-            ]
-          },
-          "capability": {
-            "type": "string",
-            "enum": [
-              "forms:manage",
-              "responses:read",
-              "responses:delete"
+              "FormNotPublished"
             ]
           }
         },
         "required": [
-          "_tag",
-          "capability"
+          "_tag"
         ],
         "additionalProperties": false
       },
-      "FormVersion": {
+      "RespondentForm": {
         "type": "object",
         "properties": {
-          "id": {
+          "formId": {
             "type": "string"
           },
-          "number": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+          "responseLimit": {
+            "type": "string",
+            "enum": [
+              "unlimited",
+              "one_per_respondent"
+            ]
           },
-          "publishedAt": {
-            "type": "string"
+          "respondent": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "anonymous"
+            ]
           },
-          "publishedBy": {
-            "type": "string"
+          "version": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "definition": {
+                "$ref": "#/components/schemas/FormDefinition"
+              }
+            },
+            "required": [
+              "id",
+              "number",
+              "definition"
+            ],
+            "additionalProperties": false
           },
-          "derivedFromVersionId": {
+          "myResponseId": {
             "anyOf": [
               {
                 "type": "string"
@@ -1711,22 +2065,14 @@
                 "type": "null"
               }
             ]
-          },
-          "isCurrent": {
-            "type": "boolean"
-          },
-          "definition": {
-            "$ref": "#/components/schemas/FormDefinition"
           }
         },
         "required": [
-          "id",
-          "number",
-          "publishedAt",
-          "publishedBy",
-          "derivedFromVersionId",
-          "isCurrent",
-          "definition"
+          "formId",
+          "responseLimit",
+          "respondent",
+          "version",
+          "myResponseId"
         ],
         "additionalProperties": false
       },
@@ -2139,6 +2485,75 @@
         ],
         "additionalProperties": false
       },
+      "ForbiddenEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Forbidden"
+            ]
+          },
+          "capability": {
+            "type": "string",
+            "enum": [
+              "forms:manage",
+              "responses:read",
+              "responses:delete"
+            ]
+          }
+        },
+        "required": [
+          "_tag",
+          "capability"
+        ],
+        "additionalProperties": false
+      },
+      "FormVersion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "publishedBy": {
+            "type": "string"
+          },
+          "derivedFromVersionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/FormDefinition"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "publishedAt",
+          "publishedBy",
+          "derivedFromVersionId",
+          "isCurrent",
+          "definition"
+        ],
+        "additionalProperties": false
+      },
       "VersionSummary": {
         "type": "object",
         "properties": {
@@ -2254,21 +2669,6 @@
           "currentVersionId",
           "createdAt",
           "updatedAt"
-        ],
-        "additionalProperties": false
-      },
-      "FormNotPublishedEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "FormNotPublished"
-            ]
-          }
-        },
-        "required": [
-          "_tag"
         ],
         "additionalProperties": false
       },
@@ -2554,6 +2954,9 @@
     },
     {
       "name": "versions"
+    },
+    {
+      "name": "respond"
     }
   ]
 }
