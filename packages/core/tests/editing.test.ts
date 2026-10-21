@@ -5,7 +5,7 @@ import {
   type FormDefinition,
   type QuestionTypeName,
 } from "@fb/core/definition";
-import { addQuestion } from "@fb/core/editing";
+import { addQuestion, reidentifyQuestion } from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -35,6 +35,38 @@ const parsed = (input: unknown): FormDefinition => {
 };
 
 const empty = parsed({ format: 1, title: "Feedback", questions: [] });
+
+const name = {
+  id: uuid(1),
+  type: "text",
+  label: "Name",
+  description: "As it appears on your badge",
+  required: true,
+  config: { display: "multi_line", maxLength: 80 },
+} as const;
+const colour = {
+  id: uuid(2),
+  type: "single_choice",
+  label: "Favourite colour",
+  required: false,
+  config: {
+    options: [
+      { value: "r", label: "Red" },
+      { value: "g", label: "Green" },
+      { value: "b", label: "Blue" },
+    ],
+    display: "dropdown",
+  },
+} as const;
+const age = {
+  id: uuid(3),
+  type: "number",
+  label: "Age",
+  required: true,
+  config: { integer: true, min: 0, max: 120 },
+} as const;
+
+const survey = parsed({ format: 1, title: "Survey", questions: [name, colour, age] });
 
 describe("addQuestion", () => {
   test("appends a blank question with a minted identity", () => {
@@ -83,5 +115,17 @@ describe("addQuestion", () => {
     );
     expect(parsed(full).questions).toHaveLength(200);
     expect(() => addQuestion(full, "email", ids)).toThrow("A form has at most 200 questions");
+  });
+});
+
+describe("reidentifyQuestion", () => {
+  test("mints a new question identity and keeps the content, position and option values", () => {
+    const edited = reidentifyQuestion(survey, colour.id, idSource());
+    expect(edited).toEqual({ ...survey, questions: [name, { ...colour, id: uuid(101) }, age] });
+    expect(parsed(edited)).toEqual(edited);
+  });
+
+  test("refuses an identity the definition doesn't have", () => {
+    expect(() => reidentifyQuestion(survey, uuid(9), idSource())).toThrow(`No question ${uuid(9)}`);
   });
 });

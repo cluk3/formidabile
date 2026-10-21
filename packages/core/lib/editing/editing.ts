@@ -56,3 +56,32 @@ export const addQuestion = (
     ],
   };
 };
+
+const indexOf = (definition: FormDefinition, questionId: string) => {
+  const index = definition.questions.findIndex((q) => q.id === questionId);
+  if (index === -1) throw new RangeError(`No question ${questionId}`);
+  return index;
+};
+
+const replaceQuestion = (
+  definition: FormDefinition,
+  questionId: string,
+  replace: (q: QuestionSnapshot) => QuestionSnapshot,
+): FormDefinition => {
+  const index = indexOf(definition, questionId);
+  return {
+    ...definition,
+    questions: definition.questions.with(index, replace(definition.questions[index]!)),
+  };
+};
+
+/**
+ * "Treat as a new question" (ADR 0009): the same content, position and option values under a new
+ * question identity, so analytics stop combining it with the old one.
+ */
+export const reidentifyQuestion = (
+  definition: FormDefinition,
+  questionId: string,
+  ids: IdSource,
+): FormDefinition =>
+  replaceQuestion(definition, questionId, (q) => ({ ...q, id: ids.questionId() }));
