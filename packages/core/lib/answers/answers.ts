@@ -1,5 +1,9 @@
 import * as z from "zod/mini";
-import { moduleOf, type FormDefinition } from "../definition/form-definition.ts";
+import {
+  moduleOf,
+  type FormDefinition,
+  type QuestionSnapshot,
+} from "../definition/form-definition.ts";
 import { toIssues, type Result } from "../definition/question-type.ts";
 
 /**
@@ -32,3 +36,24 @@ export const validateAnswers = (definition: FormDefinition, input: unknown): Res
     ? { ok: true, value: result.data }
     : { ok: false, issues: toIssues(result.error) };
 };
+
+export type InterpretedAnswer = {
+  question: QuestionSnapshot;
+  /** Absent when the respondent skipped the question. */
+  answer?: { value: Answers[string]; display: string };
+};
+
+/**
+ * Historical view (ADR 0001 §8.1): a response read through its own version's snapshots, in that
+ * version's order. `answers` must have passed that version's schema.
+ */
+export const interpretAnswers = (
+  definition: FormDefinition,
+  answers: Answers,
+): InterpretedAnswer[] =>
+  definition.questions.map((question) => {
+    const value = answers[question.id];
+    return value === undefined
+      ? { question }
+      : { question, answer: { value, display: moduleOf(question).display(question, value) } };
+  });

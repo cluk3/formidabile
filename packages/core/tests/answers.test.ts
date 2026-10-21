@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
-import { buildAnswerSchema, validateAnswers } from "@fb/core/answers";
+import {
+  buildAnswerSchema,
+  interpretAnswers,
+  validateAnswers,
+  type Answers,
+} from "@fb/core/answers";
 import {
   parseDefinition,
   questionTypes,
@@ -211,5 +216,97 @@ describe("buildAnswerSchema", () => {
   test("is built afresh on every call", () => {
     const form = define([text(id, true)]);
     expect(buildAnswerSchema(form)).not.toBe(buildAnswerSchema(form));
+  });
+});
+
+describe("interpretAnswers", () => {
+  const q = {
+    text: "00000000-0000-4000-8000-000000000011",
+    email: "00000000-0000-4000-8000-000000000012",
+    number: "00000000-0000-4000-8000-000000000013",
+    date: "00000000-0000-4000-8000-000000000014",
+    single: "00000000-0000-4000-8000-000000000015",
+    multiple: "00000000-0000-4000-8000-000000000016",
+    yes: "00000000-0000-4000-8000-000000000017",
+    no: "00000000-0000-4000-8000-000000000018",
+  };
+  const question = (id: string, type: string, label: string, config: object) => ({
+    id,
+    type,
+    label,
+    required: false,
+    config,
+  });
+  const questions = [
+    question(q.text, "text", "Name", { display: "single_line" }),
+    question(q.email, "email", "Email", {}),
+    question(q.number, "number", "Age", { integer: true }),
+    question(q.date, "date", "Start", {}),
+    question(q.single, "single_choice", "Colour", { options, display: "radio" }),
+    question(q.multiple, "multiple_choice", "Colours", { options }),
+    question(q.yes, "boolean", "Subscribe", {}),
+    question(q.no, "boolean", "Share", {}),
+  ];
+  const form = define(questions);
+  const answers = {
+    [q.text]: "Ada",
+    [q.email]: "ada@example.com",
+    [q.number]: 36,
+    [q.date]: "1843-07-01",
+    [q.single]: "o-green",
+    [q.multiple]: ["o-blue", "o-red"],
+    [q.yes]: true,
+    [q.no]: false,
+  };
+
+  const displayed = (definition: FormDefinition, input: Answers) =>
+    interpretAnswers(definition, input).map(({ question, answer }) => [
+      question.label,
+      answer?.display,
+    ]);
+
+  test("shows every type's answer in the version's order", () => {
+    expect(displayed(form, answers)).toEqual([
+      ["Name", "Ada"],
+      ["Email", "ada@example.com"],
+      ["Age", "36"],
+      ["Start", "1843-07-01"],
+      ["Colour", "Green"],
+      ["Colours", "Blue, Red"],
+      ["Subscribe", "Yes"],
+      ["Share", "No"],
+    ]);
+  });
+
+  test("pairs each question's snapshot with its raw, untagged value", () => {
+    const [first, , , , , multiple] = interpretAnswers(form, answers);
+    expect(first).toEqual({
+      question: form.questions[0],
+      answer: { value: "Ada", display: "Ada" },
+    });
+    expect(multiple?.answer?.value).toEqual(["o-blue", "o-red"]);
+  });
+
+  test("a missing key reads as skipped", () => {
+    const { [q.email]: _skipped, ...rest } = answers;
+    const [, email] = interpretAnswers(form, rest);
+    expect(email).toEqual({ question: form.questions[1] });
+  });
+
+  test("questions absent from the response's version don't appear", () => {
+    const v2 = define([...questions.slice(0, 1), question(q.no, "boolean", "Share", {})]);
+    expect(displayed(v2, { [q.text]: "Ada", [q.yes]: true })).toEqual([
+      ["Name", "Ada"],
+      ["Share", undefined],
+    ]);
+  });
+
+  test("reads answers through the given version's snapshots", () => {
+    const v2Options = [{ value: "o-green", label: "Lime" }, ...options.slice(0, 1)];
+    const v2 = define([
+      question(q.single, "single_choice", "Colour", { options: v2Options, display: "radio" }),
+    ]);
+    expect(displayed(form, { [q.single]: "o-green" })[4]).toEqual(["Colour", "Green"]);
+    expect(displayed(v2, { [q.single]: "o-green" })).toEqual([["Colour", "Lime"]]);
   });
 });
