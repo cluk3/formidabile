@@ -25,7 +25,7 @@ export const seedProject = async (
   const projectId = `acme-e2e-${randomUUID()}`;
   await request.post("/login", { form: { user: "acme-admin" } });
   const { token } = (await (await request.get("/token")).json()) as { token: string };
-  const api = async (method: "GET" | "POST" | "PATCH", path: string, data?: unknown) => {
+  const api = async (method: "GET" | "POST" | "PUT" | "PATCH", path: string, data?: unknown) => {
     const response = await request.fetch(`/api${path}`, {
       method,
       data,

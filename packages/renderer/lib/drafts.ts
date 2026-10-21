@@ -30,6 +30,32 @@ const answerOf = {
   boolean: (draft) => draft,
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
+const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
+
+/** The draft that shows a stored answer, or `undefined` if the answer doesn't fit the question's type. */
+const draftOf = {
+  text: stringDraft,
+  email: stringDraft,
+  number: (answer) => (typeof answer === "number" ? String(answer) : undefined),
+  date: stringDraft,
+  single_choice: stringDraft,
+  multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
+  boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+} satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
+
+/** The drafts that show a response's stored answers, for editing it. */
+export const draftsOf = (
+  definition: FormDefinition,
+  answers: Readonly<Record<string, Answer>>,
+): Record<string, Draft> => {
+  const drafts: Record<string, Draft> = {};
+  for (const question of definition.questions) {
+    const answer = answers[question.id];
+    if (answer !== undefined) drafts[question.id] = draftOf[question.type](answer);
+  }
+  return drafts;
+};
+
 export const unanswered = "Answer this question";
 
 /** Each question's first problem, keyed by question identity. Issues about the whole body are dropped. */

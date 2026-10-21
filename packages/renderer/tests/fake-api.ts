@@ -15,12 +15,18 @@ export type Recorded = {
 type Reply = Response | (() => Response | Promise<Response>);
 
 /**
- * Stands in for the form module behind `fetch`: answers the respondent load with `definition`, and each submit
- * with the next of `submits` (a 201 when they run out). Every request is recorded.
+ * Stands in for the form module behind `fetch`: answers the respondent load with `definition`, each submit with
+ * the next of `submits` (a 201 when they run out), a response read with its entry in `reads`, and each edit with
+ * the next of `edits` (a 200 when they run out). Every request is recorded.
  */
 export const fakeApi = (
   definition: unknown,
-  { submits = [] as Reply[], load }: { submits?: Reply[]; load?: Reply } = {},
+  {
+    submits = [] as Reply[],
+    load,
+    reads = {},
+    edits = [] as Reply[],
+  }: { submits?: Reply[]; load?: Reply; reads?: Record<string, Reply>; edits?: Reply[] } = {},
 ) => {
   const requests: Recorded[] = [];
   let responses = 0;
@@ -56,6 +62,14 @@ export const fakeApi = (
         },
         { status: 201 },
       );
+    }
+    const responseId = path.match(/^\/api\/respond\/responses\/([^/]+)$/)?.[1];
+    const read = responseId === undefined ? undefined : reads[responseId];
+    if (request.method === "GET" && read !== undefined) return reply(read);
+    if (request.method === "PUT" && responseId !== undefined) {
+      const next = edits.shift();
+      if (next !== undefined) return reply(next);
+      return Response.json({ responseId, revision: "2", editedAt: "2026-10-21T10:00:00.000Z" });
     }
     return Response.json({ _tag: "NotFound" }, { status: 404 });
   });
@@ -139,6 +153,27 @@ export const questions = {
   },
   parking: { id: id(9), type: "boolean", label: "Need parking?", required: true, config: {} },
 } satisfies Record<string, FormDefinition["questions"][number]>;
+
+/** The respondent's read of their own response `id` to `definition`, on version `versionId`. */
+export const responseRead = (
+  id: string,
+  definition: FormDefinition,
+  answers: Record<string, unknown>,
+  { editable = true, revision = "1" }: { editable?: boolean; revision?: string } = {},
+) =>
+  Response.json({
+    response: {
+      id,
+      formId,
+      versionId,
+      revision,
+      answers,
+      submittedAt: "2026-10-20T10:00:00.000Z",
+      editedAt: null,
+    },
+    version: { id: versionId, number: 1, definition },
+    editable,
+  });
 
 export const definitionOf = (
   questions: FormDefinition["questions"],
