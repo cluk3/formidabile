@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type APIRequestContext, expect } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
 
 const readyQuestion = () => ({
   id: randomUUID(),
@@ -48,4 +48,20 @@ export const seedProject = async (
     ids.push(form.id);
   }
   return { projectId, ids, api };
+};
+
+/**
+ * Signs the page in as a dev admin through the host's sign-in page and opens the admin page for a project. Returns
+ * the project's section once its forms have loaded.
+ */
+export const openAdminPage = async (
+  page: Page,
+  projectId: string,
+  user: "acme-admin" | "globex-admin" = "acme-admin",
+) => {
+  await page.goto(`/login?return=${encodeURIComponent(`/admin?project=${projectId}`)}`);
+  await page.getByRole("button", { name: user }).click();
+  const section = page.getByRole("region", { name: `Project ${projectId}` });
+  await expect(section.getByRole("heading", { name: "Forms with this project" })).toBeVisible();
+  return section;
 };

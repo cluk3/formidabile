@@ -145,10 +145,12 @@ const isAdmin = (user: DevUser) => {
 const demoProjectOf: Readonly<Record<string, string>> = demoProjects;
 
 // Each section names the reference it manages; the page's script fills it in with the admin's token.
-const projectSection = (projectId: string) => {
+const projectSection = (projectId: string, index: number) => {
   const id = escapeHtml(projectId);
+  const heading = `project-${index}`;
   return (
-    `<section data-ref-namespace="${projectNamespace}" data-ref-id="${id}"><h2>Project ${id}</h2>` +
+    `<section data-ref-namespace="${projectNamespace}" data-ref-id="${id}" aria-labelledby="${heading}">` +
+    `<h2 id="${heading}">Project ${id}</h2>` +
     `<p><a href="${projectsPrefix}${escapeHtml(encodeURIComponent(projectId))}">The project's form page</a></p></section>`
   );
 };

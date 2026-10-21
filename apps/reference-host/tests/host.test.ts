@@ -262,8 +262,8 @@ describe("/admin", () => {
     return { status: response.status, html: await response.text() };
   };
   const section = (projectId: string, escaped = projectId) =>
-    `<section data-ref-namespace="project" data-ref-id="${escaped}">` +
-    `<h2>Project ${escaped}</h2>` +
+    `<section data-ref-namespace="project" data-ref-id="${escaped}" aria-labelledby="project-0">` +
+    `<h2 id="project-0">Project ${escaped}</h2>` +
     `<p><a href="/projects/${encodeURIComponent(projectId)}">The project's form page</a></p></section>`;
 
   test.each([

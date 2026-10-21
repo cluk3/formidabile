@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { seedProject } from "./projects.ts";
+import { openAdminPage, seedProject } from "./projects.ts";
 
 test("a submit whose reply is dropped is retried into the response the server stored the first time", async ({
   page,
@@ -64,4 +64,10 @@ test("a submit whose reply is dropped is retried into the response the server st
   expect(await confirmed).toBe(stored?.responseId);
   const { response } = await api("GET", `/responses/${stored?.responseId}`);
   expect(response.answers).toEqual({ [name.id]: "Ada" });
+
+  // The project has only this form, so its responses under the project are the form's.
+  const section = await openAdminPage(page, projectId);
+  const responses = section.getByRole("list", { name: "Responses under this project" });
+  await expect(responses.getByRole("listitem")).toHaveCount(1);
+  await expect(responses.getByRole("listitem")).toContainText(stored!.responseId);
 });
