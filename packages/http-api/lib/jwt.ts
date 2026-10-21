@@ -8,13 +8,44 @@ export type JwtOptions = { readonly issuer: string; readonly audience: string } 
   | { readonly jwksUrl: string }
 );
 
-const IdentifiedClaims = Schema.Struct({
-  sub: Schema.String,
-  tenant: Schema.String,
-  capabilities: Schema.Array(Capability),
+// Registered claims (`iss`, `exp`, ...) and any the host adds pass through the index signature.
+const OtherClaims = [Schema.Record(Schema.String, Schema.Unknown)] as const;
+
+const IdentifiedClaims = Schema.StructWithRest(
+  Schema.Struct({
+    sub: Schema.String,
+    tenant: Schema.String,
+    capabilities: Schema.Array(Capability),
+    anonymous: Schema.optionalKey(Schema.Never),
+  }),
+  OtherClaims,
+);
+
+const AnonymousClaims = Schema.StructWithRest(
+  Schema.Struct({
+    anonymous: Schema.Literal(true),
+    tenant: Schema.String,
+    form: Schema.String,
+    sub: Schema.optionalKey(Schema.Never),
+    capabilities: Schema.optionalKey(Schema.Never),
+  }),
+  OtherClaims,
+);
+
+const decodeClaims = Schema.decodeUnknownEffect(Schema.Union([IdentifiedClaims, AnonymousClaims]), {
+  onExcessProperty: "error",
 });
 
-const decodeIdentifiedClaims = Schema.decodeUnknownEffect(IdentifiedClaims);
+const toActor = (claims: typeof IdentifiedClaims.Type | typeof AnonymousClaims.Type): Actor =>
+  claims.anonymous === true
+    ? Actor.Anonymous({ tenant: TenantId.make(claims.tenant), formId: claims.form, refs: [] })
+    : Actor.Identified({
+        subject: claims.sub,
+        tenant: TenantId.make(claims.tenant),
+        capabilities: claims.capabilities,
+        formId: Option.none(),
+        refs: [],
+      });
 
 const bearerToken = /^Bearer +([^ ]+) *$/i;
 
@@ -39,17 +70,9 @@ export const JwtActorResolver = (options: JwtOptions) => {
       const token = bearerToken.exec(authorization)?.[1];
       if (token === undefined) return Effect.fail(invalid());
       return Effect.tryPromise({ try: () => verify(token), catch: invalid }).pipe(
-        Effect.flatMap(({ payload }) => decodeIdentifiedClaims(payload)),
+        Effect.flatMap(({ payload }) => decodeClaims(payload)),
         Effect.mapError(invalid),
-        Effect.map((claims) =>
-          Actor.Identified({
-            subject: claims.sub,
-            tenant: TenantId.make(claims.tenant),
-            capabilities: claims.capabilities,
-            formId: Option.none(),
-            refs: [],
-          }),
-        ),
+        Effect.map(toActor),
       );
     },
   });
