@@ -16,7 +16,7 @@ import { AuthenticationLive, BodyLimitsLive, EdgeValidationLive } from "./middle
 const FormsHandlers = HttpApiBuilder.group(
   FormApi,
   "forms",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const forms = yield* Forms;
     return handlers
       .handle("create", ({ payload }) =>
@@ -64,7 +64,7 @@ const FormsHandlers = HttpApiBuilder.group(
 const DraftsHandlers = HttpApiBuilder.group(
   FormApi,
   "drafts",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const drafts = yield* Drafts;
     const publication = yield* Publication;
     return handlers
@@ -90,7 +90,7 @@ const DraftsHandlers = HttpApiBuilder.group(
 const VersionsHandlers = HttpApiBuilder.group(
   FormApi,
   "versions",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const publication = yield* Publication;
     return handlers
       .handle("list", ({ params }) =>
@@ -107,7 +107,7 @@ const VersionsHandlers = HttpApiBuilder.group(
 const RespondHandlers = HttpApiBuilder.group(
   FormApi,
   "respond",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const submission = yield* Submission;
     return handlers
       .handle("load", ({ params }) =>
@@ -133,7 +133,7 @@ const RespondHandlers = HttpApiBuilder.group(
 const ResponsesHandlers = HttpApiBuilder.group(
   FormApi,
   "responses",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const responses = yield* Responses;
     return handlers
       .handle("list", ({ query: { refNamespace, refId, ...query } }) =>
@@ -162,7 +162,7 @@ const ResponsesHandlers = HttpApiBuilder.group(
 const AnalyticsHandlers = HttpApiBuilder.group(
   FormApi,
   "analytics",
-  Effect.fn(function* (handlers) {
+  Effect.fnUntraced(function* (handlers) {
     const analytics = yield* Analytics;
     return handlers.handle("form", ({ params }) =>
       CurrentActor.use((actor) => analytics.form(actor, params.formId)),
