@@ -8,10 +8,17 @@ export class Database extends Context.Service<Database, PgDrizzle.EffectPgDataba
   "@fb/server/Database",
 ) {}
 
+/** Transaction options for a read whose queries must all see one snapshot. */
+export const readOnlySnapshot = {
+  isolationLevel: "repeatable read",
+  accessMode: "read only",
+} as const;
+
 /** A use case's own failures stay typed; a database failure inside its transaction is a defect. */
 export const dieOnDatabaseError = <A, E extends { readonly _tag: string }, R>(
   effect: Effect.Effect<A, E, R>,
 ) =>
+  // `Effect.catchTag` can't check a tag list against a generic `E`, so the guard is written out.
   Effect.catchIf(
     effect,
     (error): error is Extract<E, { readonly _tag: "SqlError" | "EffectDrizzleQueryError" }> =>

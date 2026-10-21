@@ -3,7 +3,7 @@ import type { Actor } from "../authorization/actor.ts";
 import { requireCapability } from "../authorization/authorization.ts";
 import type { DeletedResponses, ResponseDetail, ResponsePage } from "../envelopes.ts";
 import { type Forbidden, NotFound } from "../errors.ts";
-import { Database, dieOnDatabaseError } from "../persistence/database.ts";
+import { Database, dieOnDatabaseError, readOnlySnapshot } from "../persistence/database.ts";
 import {
   deleteRespondentResponses,
   deleteResponse,
@@ -22,9 +22,6 @@ export interface ListResponses extends ResponseFilter {
   readonly cursor?: string | undefined;
   readonly limit?: number | undefined;
 }
-
-/** One snapshot per call, so a page's references and a read's answers belong to the rows beside them. */
-const readOnly = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 
 export class Responses extends Context.Service<
   Responses,
@@ -83,7 +80,8 @@ export class Responses extends Context.Service<
                     nextCursor: rows.length > limit ? page.at(-1)!.id : null,
                   } satisfies ResponsePage;
                 }),
-              readOnly,
+              // One snapshot, so a page's references belong to the rows beside them.
+              readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);
         }),
@@ -106,7 +104,8 @@ export class Responses extends Context.Service<
                     version: { id: response.versionId, number: response.versionNumber, definition },
                   } satisfies ResponseDetail;
                 }),
-              readOnly,
+              // One snapshot, so the answers and references belong to the response read.
+              readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);
         }),
