@@ -2,7 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
 import FormsPage from "#lib/FormsPage.svelte";
-import { config, fakeHost, json } from "./fake-host.ts";
+import { analyst, config, fakeHost, json } from "./fake-host.ts";
 
 const summary = (title: string) => ({
   id: crypto.randomUUID(),
@@ -52,4 +52,33 @@ test("each listed form links to its editor", async () => {
   await expect
     .element(screen.getByRole("link", { name: "Customer survey" }))
     .toHaveAttribute("href", `/forms/${form.id}`);
+});
+
+test("a published form links to its responses, and an analyst isn't offered a create", async () => {
+  const published = {
+    ...summary("Published survey"),
+    currentVersion: { id: crypto.randomUUID(), number: 1 },
+  };
+  const draft = summary("Draft survey");
+  const fetch = fakeHost(
+    (route) =>
+      route === "GET /forms"
+        ? json(200, { forms: [published, draft] })
+        : json(404, { _tag: "NotFound" }),
+    analyst,
+  );
+  const screen = await render(FormsPage, {
+    client: createBuilderClient(config, fetch),
+    signInHref: config.loginUrl,
+  });
+
+  const item = screen.getByRole("listitem").filter({ hasText: "Published survey" });
+  await expect
+    .element(item.getByRole("link", { name: "Responses" }))
+    .toHaveAttribute("href", `/forms/${published.id}/responses`);
+  const unpublished = screen.getByRole("listitem").filter({ hasText: "Draft survey" });
+  await expect
+    .element(unpublished.getByRole("link", { name: "Responses" }))
+    .not.toBeInTheDocument();
+  await expect.element(screen.getByRole("button", { name: "Create form" })).not.toBeInTheDocument();
 });
