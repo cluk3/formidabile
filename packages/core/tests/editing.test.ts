@@ -339,3 +339,14 @@ describe("removeOption", () => {
     expect(() => removeOption(survey, name.id, "r")).toThrow(`Question ${name.id} has no options`);
   });
 });
+
+test("the editing entry exports the six editing functions and nothing else", async () => {
+  expect(Object.keys(await import("@fb/core/editing")).sort()).toEqual([
+    "addOption",
+    "addQuestion",
+    "changeQuestionType",
+    "moveQuestion",
+    "reidentifyQuestion",
+    "removeOption",
+  ]);
+});
