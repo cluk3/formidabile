@@ -1,25 +1,32 @@
 import { type Actor, ActorResolver, Unauthenticated } from "@fb/server/actor";
-import { DatabaseLive } from "@fb/server/database";
+import { type Database, DatabaseLive } from "@fb/server/database";
 import { migrate } from "@fb/server/migrate";
 import { Effect, Layer, ManagedRuntime } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
 import { FormApiLive, JwtActorResolver, type JwtOptions } from "./index.ts";
 
 export type FormModuleHandlerOptions = {
-  readonly databaseUrl: string;
   /** Browser origins allowed to call the API, with credentials. */
   readonly cors?: ReadonlyArray<string>;
 } & (
-  | { readonly jwt: JwtOptions; readonly resolveActor?: undefined }
+  | { readonly databaseUrl: string; readonly database?: undefined }
   | {
-      /**
-       * The host's own resolver, for example one reading its session cookie. `null` means no credentials.
-       * Its actor is held to the same limits as a token's: otherwise 401 `invalid`.
-       */
-      readonly resolveActor: (request: Request) => Promise<Actor | null>;
-      readonly jwt?: undefined;
+      /** The database as a layer instead, for tests on PGlite. */
+      readonly database: Layer.Layer<Database>;
+      readonly databaseUrl?: undefined;
     }
-);
+) &
+  (
+    | { readonly jwt: JwtOptions; readonly resolveActor?: undefined }
+    | {
+        /**
+         * The host's own resolver, for example one reading its session cookie. `null` means no credentials.
+         * Its actor is held to the same limits as a token's: otherwise 401 `invalid`.
+         */
+        readonly resolveActor: (request: Request) => Promise<Actor | null>;
+        readonly jwt?: undefined;
+      }
+  );
 
 export interface FormModuleHandler {
   /**
@@ -56,7 +63,7 @@ const hostResolver = (resolveActor: (request: Request) => Promise<Actor | null>)
 export const createFormModuleHandler = (options: FormModuleHandlerOptions): FormModuleHandler => {
   // One memo map, so `migrate()` and the handler share one connection pool.
   const memoMap = Layer.makeMemoMapUnsafe();
-  const database = DatabaseLive(options.databaseUrl);
+  const database = options.database ?? DatabaseLive(options.databaseUrl);
   const runtime = ManagedRuntime.make(database, { memoMap });
   const resolver =
     options.resolveActor === undefined
