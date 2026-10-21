@@ -399,6 +399,9 @@ importers:
       '@fb/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@fb/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@fb/http-api':
         specifier: workspace:*
         version: link:../../packages/http-api

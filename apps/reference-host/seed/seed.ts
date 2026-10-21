@@ -1,4 +1,5 @@
 import { createFormApiClient, type Schemas } from "@fb/api-client";
+import { reidentifyQuestion } from "@fb/core/editing";
 import { declareLength } from "@fb/http-api/web";
 import { type DevUser, devUsers, mintDevToken, mintFormToken } from "../server/dev-users.ts";
 import { demoProjects, projectNamespace } from "../server/projects.ts";
@@ -115,8 +116,8 @@ const seedVersions = async (
 
 /**
  * The acme form for analytics: version 2 drops a question; version 3 adds an option, relabels another and widens a
- * number range; version 4 replaces a text question with a number question under the same label, which is a new
- * question identity (ADR 0009).
+ * number range; version 4 reidentifies the text question, which keeps its type and label but is a new question
+ * identity (ADR 0009).
  */
 const seedOnboardingSurvey = async (fetch: Fetch) => {
   const ease = crypto.randomUUID();
@@ -124,7 +125,7 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
   const channel = crypto.randomUUID();
   const recommend = crypto.randomUUID();
   const teamText = crypto.randomUUID();
-  const teamSize = crypto.randomUUID();
+  const teamTextAgain = crypto.randomUUID();
 
   const easeQuestion = (options: ReadonlyArray<{ value: string; label: string }>) => ({
     id: ease,
@@ -167,13 +168,6 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
     required: false,
     config: { display: "single_line" as const, maxLength: 100 },
   };
-  const teamSizeQuestion = {
-    id: teamSize,
-    type: "number" as const,
-    label: "How big is your team?",
-    required: false,
-    config: { integer: true, min: 1, max: 10000 },
-  };
   const firstOptions = [
     { value: "easy", label: "Easy" },
     { value: "manageable", label: "OK" },
@@ -190,6 +184,18 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
     title: "Onboarding survey",
     description: "Tell us how setting up went.",
     questions,
+  });
+
+  const third = definition([
+    easeQuestion(laterOptions),
+    hoursQuestion(24),
+    recommendQuestion,
+    teamTextQuestion,
+  ]);
+  // The builder's "treat as a new question": same type and content, a new identity.
+  const fourth = reidentifyQuestion(third, teamText, {
+    questionId: () => teamTextAgain,
+    optionValue: () => crypto.randomUUID(),
   });
 
   await seedVersions(fetch, "acme-admin", [
@@ -228,27 +234,17 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
       ],
     },
     {
-      definition: definition([
-        easeQuestion(laterOptions),
-        hoursQuestion(24),
-        recommendQuestion,
-        teamTextQuestion,
-      ]),
+      definition: third,
       responses: [
         ["alice", { [ease]: "very_easy", [hours]: 1, [recommend]: true }],
         [null, { [ease]: "manageable", [hours]: 20, [recommend]: true, [teamText]: "Forty" }],
       ],
     },
     {
-      definition: definition([
-        easeQuestion(laterOptions),
-        hoursQuestion(24),
-        recommendQuestion,
-        teamSizeQuestion,
-      ]),
+      definition: fourth,
       responses: [
-        ["bob", { [ease]: "very_easy", [hours]: 2, [recommend]: true, [teamSize]: 12 }],
-        [null, { [ease]: "easy", [recommend]: true, [teamSize]: 40 }],
+        ["bob", { [ease]: "very_easy", [hours]: 2, [recommend]: true, [teamTextAgain]: "Twelve" }],
+        [null, { [ease]: "easy", [recommend]: true, [teamTextAgain]: "About forty" }],
         [null, { [ease]: "hard", [hours]: 16, [recommend]: false }],
       ],
     },

@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@fb/api-client": "workspace:*",
+    "@fb/core": "workspace:*",
     "@fb/http-api": "workspace:*",
     "@fb/renderer": "workspace:*",
     "@remix-run/node-fetch-server": "catalog:",
