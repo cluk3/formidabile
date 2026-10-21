@@ -6,7 +6,7 @@
   import type { RendererProps } from "./props.ts";
   import QuestionCard from "./QuestionCard.svelte";
 
-  let props: RendererProps = $props();
+  const { preview, apiBaseUrl, formId, getToken, onsubmitted }: RendererProps = $props();
 
   type Loaded = { readonly versionId: string; readonly definition: FormDefinition };
   type View =
@@ -17,8 +17,7 @@
     | { readonly state: "submitted" };
 
   const live = $derived.by(() => {
-    if (props.preview !== undefined) return undefined;
-    const { apiBaseUrl, formId, getToken, onsubmitted } = props;
+    if (preview !== undefined) return undefined;
     const client = createFormApiClient({
       baseUrl: apiBaseUrl,
       getToken: () => getToken({ formId }),
@@ -28,9 +27,9 @@
 
   let loaded = $state<View>({ state: "loading" });
   const view: View = $derived(
-    props.preview === undefined
+    preview === undefined
       ? loaded
-      : { state: "answering", form: { versionId: "", definition: props.preview } },
+      : { state: "answering", form: { versionId: "", definition: preview } },
   );
 
   let drafts = $state<Record<string, Draft>>({});

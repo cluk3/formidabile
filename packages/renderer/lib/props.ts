@@ -2,9 +2,11 @@ import type { FormDefinition } from "@fb/core/definition";
 
 /**
  * The host's credentials hook (ADR 0011). The renderer calls it before every request, with the form it is about
- * to reach, and sends the token it returns as a bearer token.
+ * to reach, and sends the token it returns as a bearer token. `null` sends the request with no token.
  */
-export type GetToken = (request: { readonly formId: string }) => string | Promise<string>;
+export type GetToken = (request: {
+  readonly formId: string;
+}) => string | null | Promise<string | null>;
 
 /** The renderer loads and submits the form by itself. */
 type LiveProps = {

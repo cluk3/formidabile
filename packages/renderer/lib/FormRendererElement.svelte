@@ -3,7 +3,8 @@
     tag: "form-renderer",
     shadow: "open",
     props: {
-      title: { attribute: "title", type: "String" },
+      apiBaseUrl: { attribute: "api-base-url", type: "String" },
+      formId: { attribute: "form-id", type: "String" },
     },
     extend: (ce) =>
       class extends ce {
@@ -34,8 +35,22 @@
 
 <script lang="ts">
   import FormRenderer from "./FormRenderer.svelte";
+  import type { GetToken } from "./props.ts";
 
-  let { title = "Placeholder form" }: { title?: string } = $props();
+  let {
+    apiBaseUrl,
+    formId,
+    getToken,
+  }: { apiBaseUrl?: string; formId?: string; getToken?: GetToken } = $props();
+
+  const element = $host();
+  const onsubmitted = (detail: { readonly responseId: string }) =>
+    element.dispatchEvent(new CustomEvent("submitted", { detail }));
 </script>
 
-<FormRenderer {title} />
+<!-- Nothing renders until the host has given all three inputs. -->
+{#if apiBaseUrl && formId && getToken}
+  {#key formId}
+    <FormRenderer {apiBaseUrl} {formId} {getToken} {onsubmitted} />
+  {/key}
+{/if}
