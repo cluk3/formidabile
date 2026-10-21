@@ -12,6 +12,8 @@ const api = startApi();
 let migrations = 0;
 // The built `project.html`'s stand-in: the page's shell around the element the host fills in.
 const projectPage = `<!doctype html><title>Project form</title><main><form-renderer></form-renderer></main>`;
+// The built `admin.html`'s stand-in, around the slot the host fills with the admin's projects.
+const adminPage = `<!doctype html><title>Admin</title><main><div id="projects"></div></main>`;
 const host = createReferenceHost(
   {
     fetch: (request) => api.handler(request),
@@ -20,7 +22,7 @@ const host = createReferenceHost(
     },
     dispose: api.dispose,
   },
-  { projectPage: async () => projectPage },
+  { projectPage: async () => projectPage, adminPage: async () => adminPage },
 );
 
 afterAll(() => host.dispose());
@@ -249,5 +251,74 @@ describe("/projects/<id>", () => {
 
     expect(status).toBe(404);
     expect(html).toContain("No open form for this project");
+  });
+});
+
+describe("/admin", () => {
+  const page = async (cookie: string, query = "") => {
+    const response = await host.fetch(
+      new Request(`${origin}/admin${query}`, { headers: { cookie } }),
+    );
+    return { status: response.status, html: await response.text() };
+  };
+  const section = (projectId: string, escaped = projectId) =>
+    `<section data-ref-namespace="project" data-ref-id="${escaped}" aria-labelledby="project-0">` +
+    `<h2 id="project-0">Project ${escaped}</h2>` +
+    `<p><a href="/projects/${encodeURIComponent(projectId)}">The project's form page</a></p></section>`;
+
+  test.each([
+    ["acme-admin", "acme-spring-orders"],
+    ["globex-admin", "globex-partner-summit"],
+  ])("shows %s their tenant's demo project, in the page's shell", async (user, projectId) => {
+    const { status, html } = await page(await signIn(user));
+
+    expect(status).toBe(200);
+    expect(html).toBe(
+      `<!doctype html><title>Admin</title><main><div id="projects">${section(projectId)}</div></main>`,
+    );
+  });
+
+  test("shows only the project it's asked for, in the admin's tenant", async () => {
+    const projectId = `acme-${crypto.randomUUID()}&"more"`;
+
+    const { status, html } = await page(
+      await signIn("acme-admin"),
+      `?project=${encodeURIComponent(projectId)}`,
+    );
+
+    expect(status).toBe(200);
+    expect(html).toContain(
+      `<div id="projects">${section(projectId, projectId.replace('&"more"', "&#38;&#34;more&#34;"))}</div>`,
+    );
+  });
+
+  test.each([
+    ["in another tenant", "globex-partner-summit"],
+    ["that names no dev tenant", "initech-launch"],
+  ])("shows a static page for a project %s", async (_, projectId) => {
+    const { status, html } = await page(await signIn("acme-admin"), `?project=${projectId}`);
+
+    expect(status).toBe(404);
+    expect(html).toContain("No such project in your tenant");
+    expect(html).not.toContain("<section");
+    expect(html).not.toContain("<script");
+  });
+
+  test("asks the anonymous user to sign in as an admin", async () => {
+    const { status, html } = await page(await signIn("anonymous"));
+
+    expect(status).toBe(401);
+    expect(html).toContain(`<a href="/login?return=%2Fadmin">Sign in as an admin</a>`);
+    expect(html).not.toContain("<script");
+  });
+
+  test.each([["acme-analyst"], ["alice"]])("refuses %s, who can't manage forms", async (user) => {
+    const { status, html } = await page(await signIn(user), "?project=acme-spring-orders");
+
+    expect(status).toBe(403);
+    expect(html).toContain(
+      `<a href="/login?return=%2Fadmin%3Fproject%3Dacme-spring-orders">Sign in as an admin</a>`,
+    );
+    expect(html).not.toContain("<section");
   });
 });

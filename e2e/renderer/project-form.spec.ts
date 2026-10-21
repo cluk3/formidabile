@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { seedProject } from "./projects.ts";
+import { openAdminPage, seedProject } from "./projects.ts";
 
-test("the form for project X mounts the element for the project's one open form", async ({
+test("the form for project X mounts the element for the project's one open form, and its response is listed under the project", async ({
   page,
   request,
 }) => {
@@ -17,6 +17,25 @@ test("the form for project X mounts the element for the project's one open form"
   const element = page.locator("form-renderer");
   await expect(element).toHaveAttribute("form-id", ids[0]!);
   await expect(element.locator(".title")).toHaveText(title);
+
+  await element.getByRole("radio", { name: "Yes" }).check();
+  const [submitted] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith(`/api/respond/forms/${ids[0]}/responses`),
+    ),
+    element.getByRole("button", { name: "Submit" }).click(),
+  ]);
+  await expect(element.getByText("Thank you, your response was received.")).toBeVisible();
+  const { responseId } = (await submitted.json()) as { responseId: string };
+
+  const section = await openAdminPage(page, projectId);
+  const responses = section.getByRole("list", { name: "Responses under this project" });
+  await expect(responses.getByRole("listitem")).toHaveCount(1);
+  await expect(responses.getByRole("listitem")).toContainText(`${title}, version 1: submitted`);
+  await expect(responses.getByRole("listitem")).toContainText("by an anonymous respondent");
+  await expect(responses.getByRole("listitem")).toContainText(responseId);
 });
 
 test("a project with no open form shows a static page and mounts no element", async ({
