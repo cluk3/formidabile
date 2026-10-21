@@ -24,6 +24,16 @@ export const otherLabelsText = (others: Schemas["QuestionAnalytics"]["otherLabel
     .map(({ label, versions }) => `“${label}” in ${versionsText(versions).toLowerCase()}`)
     .join(", ");
 
+const responses = (count: number) => `${count} ${count === 1 ? "response" : "responses"}`;
+
+/** A question's counts over every version, and the responses to versions that didn't ask it. */
+export const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
+  const counts = `${responses(combined.responses)}: ${combined.answered} answered, ${combined.skipped} skipped.`;
+  return combined.absentResponses === 0
+    ? counts
+    : `${counts} Not asked in ${responses(combined.absentResponses)}, to versions without it.`;
+};
+
 /** Whether every option was offered in the same versions, so their shares share one base. */
 export const offeredEverywhere = (options: ReadonlyArray<{ offeredIn: ReadonlyArray<number> }>) =>
   options.every(({ offeredIn }) => offeredIn.join() === options[0]?.offeredIn.join());

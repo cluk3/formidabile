@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import {
     constraintsText,
+    countsText,
     numberText,
     offeredEverywhere,
     otherLabelsText,
@@ -44,15 +45,6 @@
   };
 
   onMount(load);
-
-  const responses = (count: number) => `${count} ${count === 1 ? "response" : "responses"}`;
-
-  const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
-    const counts = `${responses(combined.responses)}: ${combined.answered} answered, ${combined.skipped} skipped.`;
-    return combined.absentResponses === 0
-      ? counts
-      : `${counts} Not asked in ${responses(combined.absentResponses)}, to versions without it.`;
-  };
 
   const tableClass = "w-full text-left text-sm [&_td]:p-2 [&_th]:p-2 [&_tr]:border-b";
   const captionClass = "mb-1 text-left font-medium";
