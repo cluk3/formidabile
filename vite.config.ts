@@ -76,8 +76,10 @@ export default defineConfig({
         extends: true,
         test: {
           name: "workspace",
-          // Each PGlite test database is built by running every migration, which takes seconds on CI runners.
+          // Each PGlite test database is built by running every migration, which takes seconds on CI runners, in
+          // a test or in a hook that builds a shared one.
           testTimeout: 30_000,
+          hookTimeout: 30_000,
           include: testPostgres ? [postgresTests] : configDefaults.include,
           // The renderer's and the builder's tests need their own configs (Svelte, and a browser), so each is a
           // project of its own.
