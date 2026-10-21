@@ -36,6 +36,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forms/{formId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["drafts.read"];
+        put: operations["drafts.save"];
+        post?: never;
+        delete: operations["drafts.discard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forms/{formId}/draft/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["drafts.publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forms/{formId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["versions.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forms/{formId}/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["versions.read"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -64,47 +128,14 @@ export interface components {
             /** @enum {string} */
             capability: "forms:manage" | "responses:read" | "responses:delete";
         };
-        FormDetail: {
-            id: string;
-            /** @enum {string} */
-            availability: "open" | "closed";
-            /** @enum {string} */
-            responseLimit: "unlimited" | "one_per_respondent";
-            currentVersion: components["schemas"]["VersionSummary"] | null;
-            draft: components["schemas"]["DraftSummary"] | null;
-            createdAt: string;
-            updatedAt: string;
-        };
-        DraftSummary: {
-            revision: string;
-            basedOnVersionId: string | null;
-            updatedAt: string;
-        };
-        VersionSummary: {
+        FormVersion: {
             id: string;
             number: number;
             publishedAt: string;
             publishedBy: string;
             derivedFromVersionId: string | null;
             isCurrent: boolean;
-        };
-        FormSummary: {
-            id: string;
-            title: string;
-            /** @enum {string} */
-            availability: "open" | "closed";
-            /** @enum {string} */
-            responseLimit: "unlimited" | "one_per_respondent";
-            currentVersion: components["schemas"]["VersionSummary"] | null;
-            hasDraft: boolean;
-            updatedAt: string;
-        };
-        Draft: {
-            formId: string;
-            revision: string;
-            basedOnVersionId: string | null;
             definition: components["schemas"]["FormDefinition"];
-            updatedAt: string;
         };
         FormDefinition: {
             /** @constant */
@@ -203,6 +234,22 @@ export interface components {
                 config: Record<string, never>;
             })[];
         };
+        VersionSummary: {
+            id: string;
+            number: number;
+            publishedAt: string;
+            publishedBy: string;
+            derivedFromVersionId: string | null;
+            isCurrent: boolean;
+        };
+        RevisionConflictEncoded: {
+            /** @enum {string} */
+            _tag: "RevisionConflict";
+        };
+        NoDraftEncoded: {
+            /** @enum {string} */
+            _tag: "NoDraft";
+        };
         Form: {
             id: string;
             /** @enum {string} */
@@ -211,6 +258,44 @@ export interface components {
             responseLimit: "unlimited" | "one_per_respondent";
             currentVersionId: string | null;
             createdAt: string;
+            updatedAt: string;
+        };
+        FormNotPublishedEncoded: {
+            /** @enum {string} */
+            _tag: "FormNotPublished";
+        };
+        Draft: {
+            formId: string;
+            revision: string;
+            basedOnVersionId: string | null;
+            definition: components["schemas"]["FormDefinition"];
+            updatedAt: string;
+        };
+        FormDetail: {
+            id: string;
+            /** @enum {string} */
+            availability: "open" | "closed";
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            currentVersion: components["schemas"]["VersionSummary"] | null;
+            draft: components["schemas"]["DraftSummary"] | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DraftSummary: {
+            revision: string;
+            basedOnVersionId: string | null;
+            updatedAt: string;
+        };
+        FormSummary: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            availability: "open" | "closed";
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            currentVersion: components["schemas"]["VersionSummary"] | null;
+            hasDraft: boolean;
             updatedAt: string;
         };
     };
@@ -345,6 +430,402 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FormDetail"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "drafts.read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        draft: components["schemas"]["Draft"] | null;
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "drafts.save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expectedRevision: string | null;
+                    definition: components["schemas"]["FormDefinition"];
+                };
+            };
+        };
+        responses: {
+            /** @description Draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Draft"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RevisionConflict | NoDraft */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevisionConflictEncoded"] | components["schemas"]["NoDraftEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "drafts.discard": {
+        parameters: {
+            query: {
+                expectedRevision: string;
+            };
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description <No Content> */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description FormNotPublished | NoDraft | RevisionConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormNotPublishedEncoded"] | components["schemas"]["NoDraftEncoded"] | components["schemas"]["RevisionConflictEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "drafts.publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expectedRevision: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        form: components["schemas"]["Form"];
+                        version: components["schemas"]["VersionSummary"];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description NoDraft | RevisionConflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoDraftEncoded"] | components["schemas"]["RevisionConflictEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "versions.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        versions: components["schemas"]["VersionSummary"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "versions.read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description FormVersion */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormVersion"];
                 };
             };
             /** @description Unauthenticated */

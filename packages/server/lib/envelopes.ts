@@ -32,6 +32,12 @@ export const VersionSummary = Schema.Struct({
 }).annotate({ identifier: "VersionSummary" });
 export type VersionSummary = typeof VersionSummary.Type;
 
+export const FormVersion = Schema.Struct({
+  ...VersionSummary.fields,
+  definition: FormDefinitionJson,
+}).annotate({ identifier: "FormVersion" });
+export type FormVersion = typeof FormVersion.Type;
+
 export const Draft = Schema.Struct({
   formId: Schema.String,
   revision: Revision,

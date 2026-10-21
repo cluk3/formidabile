@@ -5,9 +5,14 @@ import {
   Form,
   FormDefinitionJson,
   FormDetail,
+  FormNotPublished,
   FormSummary,
+  FormVersion,
+  NoDraft,
   NotFound,
+  RevisionConflict,
   ValidationFailed,
+  VersionSummary,
 } from "@fb/server";
 import { type Actor, Unauthenticated } from "@fb/server/actor";
 import { Context, Schema } from "effect";
@@ -63,8 +68,62 @@ export class FormsGroup extends HttpApiGroup.make("forms")
   .middleware(EdgeValidation)
   .middleware(Authentication) {}
 
+/** Revisions travel as opaque strings in the body, or the query for a discard (ADR 0010). */
+const Revision = Schema.String;
+
+export class DraftsGroup extends HttpApiGroup.make("drafts")
+  .add(
+    HttpApiEndpoint.get("read", "/forms/:formId/draft", {
+      params: FormIdParams,
+      success: Schema.Struct({ draft: Schema.NullOr(Draft) }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.put("save", "/forms/:formId/draft", {
+      params: FormIdParams,
+      payload: Schema.Struct({
+        expectedRevision: Schema.NullOr(Revision),
+        definition: FormDefinitionJson,
+      }),
+      success: Draft,
+      error: [Forbidden, NotFound, ValidationFailed, RevisionConflict, NoDraft],
+    }),
+    HttpApiEndpoint.delete("discard", "/forms/:formId/draft", {
+      params: FormIdParams,
+      query: { expectedRevision: Revision },
+      error: [Forbidden, NotFound, FormNotPublished, NoDraft, RevisionConflict],
+    }),
+    HttpApiEndpoint.post("publish", "/forms/:formId/draft/publish", {
+      params: FormIdParams,
+      payload: Schema.Struct({ expectedRevision: Revision }),
+      success: Schema.Struct({ form: Form, version: VersionSummary }).pipe(
+        HttpApiSchema.status(201),
+      ),
+      error: [Forbidden, NotFound, NoDraft, RevisionConflict, ValidationFailed],
+    }),
+  )
+  .middleware(EdgeValidation)
+  .middleware(Authentication) {}
+
+export class VersionsGroup extends HttpApiGroup.make("versions")
+  .add(
+    HttpApiEndpoint.get("list", "/forms/:formId/versions", {
+      params: FormIdParams,
+      success: Schema.Struct({ versions: Schema.Array(VersionSummary) }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("read", "/forms/:formId/versions/:versionId", {
+      params: { ...FormIdParams, versionId: Schema.String.check(Schema.isUUID()) },
+      success: FormVersion,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(EdgeValidation)
+  .middleware(Authentication) {}
+
 export class FormApi extends HttpApi.make("FormApi")
   .add(FormsGroup)
+  .add(DraftsGroup)
+  .add(VersionsGroup)
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",

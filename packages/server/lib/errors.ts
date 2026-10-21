@@ -14,6 +14,22 @@ export class NotFound extends Schema.TaggedError<NotFound>()(
   { httpApiStatus: 404 },
 ) {}
 
+/** The draft changed since the caller read it: reload or stay, never overwrite. */
+export class RevisionConflict extends Schema.TaggedError<RevisionConflict>()(
+  "RevisionConflict",
+  {},
+  { httpApiStatus: 409 },
+) {}
+
+/** A save with a non-null `expectedRevision`, a discard or a publish found no draft. */
+export class NoDraft extends Schema.TaggedError<NoDraft>()("NoDraft", {}, { httpApiStatus: 409 }) {}
+
+export class FormNotPublished extends Schema.TaggedError<FormNotPublished>()(
+  "FormNotPublished",
+  {},
+  { httpApiStatus: 409 },
+) {}
+
 export const Issue = Schema.Struct({
   path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
   message: Schema.String,

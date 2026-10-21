@@ -1,5 +1,5 @@
 import { desc, and, eq, sql } from "drizzle-orm";
-import { Effect, type Schema } from "effect";
+import { type Brand, Effect, type Schema } from "effect";
 import type { TenantId } from "../authorization/actor.ts";
 import type {
   Draft,
@@ -15,7 +15,7 @@ import { drafts, forms, formVersions } from "./schema.ts";
 
 type Db = Database["Service"];
 
-const toForm = (row: typeof forms.$inferSelect): Form => ({
+export const toForm = (row: typeof forms.$inferSelect): Form => ({
   id: row.id,
   availability: row.availability,
   responseLimit: row.responseLimit,
@@ -24,7 +24,7 @@ const toForm = (row: typeof forms.$inferSelect): Form => ({
   updatedAt: row.updatedAt,
 });
 
-const toDraft = (row: typeof drafts.$inferSelect): Draft => ({
+export const toDraft = (row: typeof drafts.$inferSelect): Draft => ({
   formId: row.formId,
   revision: String(row.revision),
   basedOnVersionId: row.basedOnVersionId,
@@ -46,7 +46,7 @@ const toDraftSummary = (
   updatedAt: row.updatedAt,
 });
 
-const versionSummaryColumns = {
+export const versionSummaryColumns = {
   id: formVersions.id,
   number: formVersions.number,
   publishedAt: formVersions.publishedAt,
@@ -91,6 +91,18 @@ export const insertFormWithDraft = (db: Db, tenant: TenantId, definition: Schema
       }),
     );
   });
+
+/** A form row locked `FOR UPDATE` in the actor's tenant, which every draft write takes first. */
+export type LockedForm = Form & Brand.Brand<"LockedForm">;
+
+/** Must run inside the write's transaction, which holds the lock until it ends. */
+export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
+  db
+    .select()
+    .from(forms)
+    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
+    .for("update")
+    .pipe(Effect.map(([row]) => row && (toForm(row) as LockedForm)));
 
 const currentVersion = and(
   eq(formVersions.id, forms.currentVersionId),
