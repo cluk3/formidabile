@@ -11,7 +11,7 @@ export type FormModuleHandlerOptions = {
 } & (
   | { readonly databaseUrl: string; readonly database?: undefined }
   | {
-      /** The database as a layer instead, for tests on PGlite. The handler doesn't own it. */
+      /** The database as a layer instead, for tests on PGlite. */
       readonly database: Layer.Layer<Database>;
       readonly databaseUrl?: undefined;
     }
