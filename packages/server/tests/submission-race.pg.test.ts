@@ -113,3 +113,40 @@ test("two submits racing with the same key leave one response, and both get it",
     expect(outcome[1]).toEqual(outcome[0]);
   }
 }, 60_000);
+
+/** Stores a response, then fires two edits from its first revision at once. */
+const editRace = Effect.gen(function* () {
+  const forms = yield* Forms;
+  const publication = yield* Publication;
+  const submission = yield* Submission;
+  const { form, draft } = yield* forms.create(admin, definition);
+  const { version } = yield* publication.publish(admin, form.id, draft.revision);
+  yield* forms.updateSettings(admin, form.id, { availability: "open" });
+  const { responseId, revision } = yield* submission.submit(alice, form.id, {
+    versionId: version.id,
+    answers: { [questionId]: true },
+    idempotencyKey: crypto.randomUUID(),
+  });
+  const edit = (answer: boolean) =>
+    Effect.result(
+      submission.edit(alice, responseId, {
+        expectedRevision: revision,
+        answers: { [questionId]: answer },
+      }),
+    );
+  const outcome = yield* Effect.all([edit(false), edit(true)], { concurrency: "unbounded" });
+  const stored = yield* submission.read(alice, responseId);
+  return { outcome, stored };
+});
+
+test("two edits racing from one revision: one wins, and the other gets RevisionConflict", async () => {
+  const races = await run(Effect.forEach(Array.from({ length: rounds }), () => editRace));
+
+  for (const { outcome, stored } of races) {
+    const winner = outcome.findIndex((result) => result._tag === "Success");
+    expect(winner).not.toBe(-1);
+    expect(outcome[1 - winner]).toMatchObject({ failure: { _tag: "RevisionConflict" } });
+    expect(stored.response.revision).toBe("2");
+    expect(stored.response.answers).toEqual({ [questionId]: winner === 1 });
+  }
+}, 60_000);
