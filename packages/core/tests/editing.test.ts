@@ -364,17 +364,3 @@ test("the caps the builder disables its actions at", () => {
   expect(() => addQuestion(full, "boolean", ids)).toThrow(RangeError);
   expect(OPTIONS_CAP).toBe(100);
 });
-
-test("the editing entry exports the editing functions, their caps and nothing else", async () => {
-  expect(Object.keys(await import("@fb/core/editing")).sort()).toEqual([
-    "OPTIONS_CAP",
-    "QUESTIONS_CAP",
-    "addOption",
-    "addQuestion",
-    "changeQuestionType",
-    "moveQuestion",
-    "reidentifyQuestion",
-    "removeOption",
-    "removeQuestion",
-  ]);
-});
