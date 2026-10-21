@@ -162,6 +162,117 @@ export const describeAuthoringTables = (database: Layer.Layer<Services, unknown>
     expect(remaining).toEqual({ forms: 0, drafts: 0 });
   });
 
+  describe("published versions, their question keys and question identities never change", () => {
+    type Published = Effect.Success<typeof publishedForm>;
+    const forbidden: ReadonlyArray<
+      [
+        string,
+        (sql: SqlClient.SqlClient, form: Published) => Effect.Effect<unknown, SqlError.SqlError>,
+      ]
+    > = [
+      [
+        "UPDATE on form_management.form_versions",
+        (sql, { versionId }) =>
+          sql`UPDATE form_management.form_versions SET published_by = 'someone-else' WHERE id = ${versionId}`,
+      ],
+      [
+        "DELETE on form_management.form_versions",
+        (sql, { versionId }) =>
+          sql`DELETE FROM form_management.form_versions WHERE id = ${versionId}`,
+      ],
+      [
+        "TRUNCATE on form_management.form_versions",
+        (sql) => sql`TRUNCATE form_management.form_versions CASCADE`,
+      ],
+      [
+        "UPDATE on form_management.form_version_questions",
+        (sql, { versionId }) =>
+          sql`UPDATE form_management.form_version_questions SET position = 1 WHERE version_id = ${versionId}`,
+      ],
+      [
+        "DELETE on form_management.form_version_questions",
+        (sql, { versionId }) =>
+          sql`DELETE FROM form_management.form_version_questions WHERE version_id = ${versionId}`,
+      ],
+      [
+        "TRUNCATE on form_management.form_version_questions",
+        (sql) => sql`TRUNCATE form_management.form_version_questions`,
+      ],
+      [
+        "UPDATE on form_management.question_identities",
+        (sql, { questionId }) =>
+          sql`UPDATE form_management.question_identities SET type = 'email' WHERE question_id = ${questionId}`,
+      ],
+      [
+        "DELETE on form_management.question_identities",
+        (sql, { questionId }) =>
+          sql`DELETE FROM form_management.question_identities WHERE question_id = ${questionId}`,
+      ],
+      [
+        "TRUNCATE on form_management.question_identities",
+        (sql) => sql`TRUNCATE form_management.question_identities CASCADE`,
+      ],
+      ["TRUNCATE on form_management.forms", (sql) => sql`TRUNCATE form_management.forms CASCADE`],
+    ];
+
+    test.each(forbidden)("a trigger rejects %s", async (operation, statement) => {
+      const error = await run(
+        Effect.gen(function* () {
+          const form = yield* publishedForm;
+          const sql = yield* SqlClient.SqlClient;
+          return yield* rejection(statement(sql, form));
+        }),
+      );
+
+      expect(error).toEqual({ code: "23001", message: `${operation} is not allowed` });
+    });
+  });
+
+  test("a raw DELETE of a published form fails even as the table owner", async () => {
+    const { owner, error, remaining } = await run(
+      Effect.gen(function* () {
+        const { formId } = yield* publishedForm;
+        yield* insertDraft(formId);
+        const sql = yield* SqlClient.SqlClient;
+        const [owner] = yield* sql<{ isOwner: boolean }>`
+          SELECT pg_get_userbyid(relowner) = current_user AS "isOwner"
+          FROM pg_class WHERE oid = 'form_management.forms'::regclass
+        `;
+        const error = yield* rejection(sql`DELETE FROM form_management.forms WHERE id = ${formId}`);
+        return {
+          owner,
+          error,
+          remaining: { forms: yield* count("forms"), drafts: yield* count("drafts") },
+        };
+      }),
+    );
+
+    expect(owner).toEqual({ isOwner: true });
+    expect(error.code).toBe("23001");
+    expect(error.message).toMatch(/has a published version and can't be deleted$/);
+    expect(remaining).toEqual({ forms: 1, drafts: 1 });
+  });
+
+  test("a form's tenant never changes, while its other settings can", async () => {
+    const { error, availability } = await run(
+      Effect.gen(function* () {
+        const { formId, versionId } = yield* publishedForm;
+        const sql = yield* SqlClient.SqlClient;
+        const error = yield* rejection(
+          sql`UPDATE form_management.forms SET tenant = 'globex' WHERE id = ${formId}`,
+        );
+        const [row] = yield* sql<{ availability: string }>`
+          UPDATE form_management.forms SET availability = 'open', current_version_id = ${versionId}
+          WHERE id = ${formId} RETURNING availability
+        `;
+        return { error, availability: row?.availability };
+      }),
+    );
+
+    expect(error).toEqual({ code: "23001", message: "a form's tenant never changes" });
+    expect(availability).toBe("open");
+  });
+
   describe("one question type per question identity", () => {
     test("an identity can't be inserted again with another type", async () => {
       const error = await run(
