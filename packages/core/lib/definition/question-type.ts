@@ -36,6 +36,16 @@ export const base = {
   required: z.boolean(),
 };
 
+/** A `min` above `max` leaves no answer in between. */
+export const rangeIssues = <T extends number | string>(
+  min: T | undefined,
+  max: T | undefined,
+  maxKey = "max",
+): Issue[] =>
+  min !== undefined && max !== undefined && min > max
+    ? [{ path: ["config", maxKey], message: "The minimum is greater than the maximum" }]
+    : [];
+
 export const nonEmptyLabel = (q: { label: string }): Issue[] =>
   q.label === ""
     ? [{ path: ["label"], message: "A question needs a label before publishing" }]

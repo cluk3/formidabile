@@ -7,9 +7,18 @@ import {
   type Result,
 } from "./question-type.ts";
 import { boolean } from "./types/boolean.ts";
+import { date } from "./types/date.ts";
+import { email } from "./types/email.ts";
+import { number } from "./types/number.ts";
 import { text } from "./types/text.ts";
 
-export const QuestionSnapshot = z.discriminatedUnion("type", [text.snapshot, boolean.snapshot]);
+export const QuestionSnapshot = z.discriminatedUnion("type", [
+  text.snapshot,
+  email.snapshot,
+  number.snapshot,
+  date.snapshot,
+  boolean.snapshot,
+]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
 
@@ -54,7 +63,7 @@ export const parseDefinition = (input: unknown): Result<FormDefinition> => {
 export type QuestionSnapshotOf<T extends QuestionTypeName> = Extract<QuestionSnapshot, { type: T }>;
 
 /** Every question type's module, keyed by its type name. */
-export const questionTypes = { text, boolean } satisfies {
+export const questionTypes = { text, email, number, date, boolean } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };
 
