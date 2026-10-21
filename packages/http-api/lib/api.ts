@@ -245,6 +245,12 @@ export class ResponsesGroup extends HttpApiGroup.make("responses")
   .middleware(Authentication)
   .middleware(BodyLimits) {}
 
+const AnswerSchema = Schema.JsonObject.annotate({
+  identifier: "AnswerSchema",
+  description:
+    "A version's answer schema, as JSON Schema 2020-12. Advisory: the server's check is final.",
+});
+
 /** Respondents' operations, under the respondent rules rather than capabilities (ADR 0010). */
 export class RespondGroup extends HttpApiGroup.make("respond")
   .add(
@@ -253,6 +259,15 @@ export class RespondGroup extends HttpApiGroup.make("respond")
       success: RespondentForm,
       error: [NotFound, FormNotPublished, FormClosed],
     }),
+    HttpApiEndpoint.get(
+      "answerSchema",
+      "/respond/forms/:formId/versions/:versionId/answer-schema",
+      {
+        params: { ...FormIdParams, versionId: Schema.String.check(Schema.isUUID()) },
+        success: AnswerSchema,
+        error: [NotFound, FormClosed],
+      },
+    ),
     HttpApiEndpoint.post("submit", "/respond/forms/:formId/responses", {
       params: FormIdParams,
       // References come only from the token, so `externalRefs` in the body is refused (ADR 0012).

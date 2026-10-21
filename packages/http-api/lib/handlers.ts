@@ -1,6 +1,7 @@
 import { Drafts, FormModuleLive, Forms, Publication, Responses, Submission } from "@fb/server";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
+import { answerJsonSchema } from "./answer-schema.ts";
 import { CurrentActor, FormApi } from "./api.ts";
 import { AuthenticationLive, BodyLimitsLive, EdgeValidationLive } from "./middleware.ts";
 
@@ -103,6 +104,11 @@ const RespondHandlers = HttpApiBuilder.group(
     return handlers
       .handle("load", ({ params }) =>
         CurrentActor.use((actor) => submission.load(actor, params.formId)),
+      )
+      .handle("answerSchema", ({ params }) =>
+        CurrentActor.use((actor) =>
+          Effect.map(submission.version(actor, params.formId, params.versionId), answerJsonSchema),
+        ),
       )
       .handle("submit", ({ params, payload }) =>
         CurrentActor.use((actor) => submission.submit(actor, params.formId, payload)),
