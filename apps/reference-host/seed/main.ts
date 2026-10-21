@@ -8,7 +8,7 @@ const handler = createFormModuleHandler({ databaseUrl, jwt: devJwt });
 try {
   await handler.migrate();
   await seed(handler.fetch);
-  console.log("Seeded the demo forms in acme and globex.");
+  console.log("Seeded the demo projects in acme and globex.");
 } finally {
   await handler.dispose();
 }
