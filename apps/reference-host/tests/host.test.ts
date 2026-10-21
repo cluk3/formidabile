@@ -10,13 +10,18 @@ const origin = "http://localhost:4173";
 const api = startApi();
 // `DatabaseTest` is already migrated; the count shows the host asks once, before the API's first request.
 let migrations = 0;
-const host = createReferenceHost({
-  fetch: (request) => api.handler(request),
-  migrate: async () => {
-    migrations += 1;
+// The built `project.html`'s stand-in: the page's shell around the element the host fills in.
+const projectPage = `<!doctype html><title>Project form</title><main><form-renderer></form-renderer></main>`;
+const host = createReferenceHost(
+  {
+    fetch: (request) => api.handler(request),
+    migrate: async () => {
+      migrations += 1;
+    },
+    dispose: api.dispose,
   },
-  dispose: api.dispose,
-});
+  { projectPage: async () => projectPage },
+);
 
 afterAll(() => host.dispose());
 
@@ -182,7 +187,66 @@ describe("/token?project=", () => {
     expect((await projectToken(await signIn("globex-admin"), projectId)).status).toBe(403);
   });
 
-  test("gives 404 for an id that names no dev tenant", async () => {
+  test("gives 404 for an id that names no dev tenant or is longer than a reference holds", async () => {
     expect((await projectToken(await signIn("alice"), "initech-launch")).status).toBe(404);
+    expect((await projectToken("", `acme-${"x".repeat(251)}`)).status).toBe(404);
+  });
+});
+
+describe("/projects/<id>", () => {
+  const admin = clientFor("acme-admin", (request) => api.handler(request));
+  const page = async (projectId: string) => {
+    const response = await host.fetch(
+      new Request(`${origin}/projects/${encodeURIComponent(projectId)}`),
+    );
+    return { status: response.status, html: await response.text() };
+  };
+
+  test("mounts the element for the project's one open form, in the page's shell", async () => {
+    const projectId = `acme-${crypto.randomUUID()}`;
+    const form = await projectForm(admin, projectId, "open", `Feedback & "more"`);
+    await projectForm(admin, projectId, "closed");
+
+    const { status, html } = await page(projectId);
+
+    expect(status).toBe(200);
+    expect(html).toBe(
+      `<!doctype html><title>Project form</title><main>` +
+        `<form-renderer title="Feedback &#38; &#34;more&#34;" form-id="${form.id}" data-project="${projectId}">` +
+        `</form-renderer></main>`,
+    );
+  });
+
+  test("shows a static page with no element when the project has no open form", async () => {
+    const projectId = `acme-${crypto.randomUUID()}`;
+    await projectForm(admin, projectId, "closed");
+
+    const { status, html } = await page(projectId);
+
+    expect(status).toBe(404);
+    expect(html).toContain("No open form for this project");
+    expect(html).not.toContain("form-renderer");
+    expect(html).not.toContain("<script");
+  });
+
+  test("lists the candidates' titles with no element when several forms are open", async () => {
+    const projectId = `acme-${crypto.randomUUID()}`;
+    await projectForm(admin, projectId, "open", "First <open> form");
+    await projectForm(admin, projectId, "open", "Second open form");
+
+    const { status, html } = await page(projectId);
+
+    expect(status).toBe(409);
+    expect(html).toContain("<li>First &#60;open&#62; form</li>");
+    expect(html).toContain("<li>Second open form</li>");
+    expect(html).not.toContain("form-renderer");
+    expect(html).not.toContain("<script");
+  });
+
+  test("shows the no-form page for an id that names no dev tenant", async () => {
+    const { status, html } = await page("initech-launch");
+
+    expect(status).toBe(404);
+    expect(html).toContain("No open form for this project");
   });
 });

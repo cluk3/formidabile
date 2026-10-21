@@ -17,7 +17,7 @@ export const demoProjects = {
  * at the 255 code points a reference's `refId` may hold.
  */
 export const projectTenant = (projectId: string): string | null =>
-  [...projectId].length <= 255
+  Array.from(projectId).length <= 255
     ? (devTenants.find((tenant) => projectId.startsWith(`${tenant}-`)) ?? null)
     : null;
 

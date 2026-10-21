@@ -2,6 +2,7 @@ import type { FormModuleHandler } from "@fb/http-api/web";
 import { type DevUser, devUsers, isDevUser, mintDevToken, mintFormToken } from "./dev-users.ts";
 import {
   type ProjectForm,
+  type ProjectFormCandidate,
   projectNamespace,
   projectTenant,
   resolveProjectForm,
@@ -82,6 +83,54 @@ const signIn = async (request: Request) => {
 
 const json = (status: number, body: unknown) => Response.json(body, { status });
 
+const html = (status: number, body: string) =>
+  new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } });
+
+const projectsPrefix = "/projects/";
+
+// Like the sign-in page, the pages with no form are plain HTML with no inline style or script.
+const staticPage = (status: number, heading: string, body: string) =>
+  html(
+    status,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${heading}</title></head><body>` +
+      `<main><h1>${heading}</h1>${body}</main></body></html>`,
+  );
+
+const noFormPage = () =>
+  staticPage(404, "No open form for this project", "<p>Ask an admin to open one.</p>");
+
+const ambiguousPage = (titles: ReadonlyArray<string>) =>
+  staticPage(
+    409,
+    "This project has several open forms",
+    `<p>Ask an admin to close or detach all but one:</p>` +
+      `<ul>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join("")}</ul>`,
+  );
+
+// The element in the page's shell, which the page's script hands `/token?project=` as its `getToken`.
+const element = `<form-renderer></form-renderer>`;
+
+const formPage = (shell: string, form: ProjectFormCandidate, projectId: string) => {
+  if (!shell.includes(element)) throw new Error(`The project page has no empty ${element}`);
+  return html(
+    200,
+    shell.replace(
+      element,
+      `<form-renderer title="${escapeHtml(form.title)}" form-id="${escapeHtml(form.id)}" ` +
+        `data-project="${escapeHtml(projectId)}"></form-renderer>`,
+    ),
+  );
+};
+
+const projectPage = async (projectId: string, resolve: Resolve, shell: () => Promise<string>) => {
+  const tenant = projectTenant(projectId);
+  if (tenant === null) return noFormPage();
+  const resolved = await resolve(tenant, projectId);
+  if (resolved.kind === "none") return noFormPage();
+  if (resolved.kind === "ambiguous") return ambiguousPage(resolved.forms.map(({ title }) => title));
+  return formPage(await shell(), resolved.form, projectId);
+};
+
 // Without a project, a dev user gets a tenant-wide token; the anonymous user's grant needs the project's form.
 const token = async (request: Request, project: string | null, resolve: Resolve) => {
   const user = signedInUser(request);
@@ -112,8 +161,27 @@ const withCors = (request: Request, response: Response) => {
   return response;
 };
 
-/** The reference host's server routes: the module's API at `/api`, and dev sign-in at `/login` and `/token`. */
-export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
+const projectIdOf = (pathname: string) => {
+  try {
+    return decodeURIComponent(pathname.slice(projectsPrefix.length));
+  } catch {
+    return "";
+  }
+};
+
+export interface ReferenceHostOptions {
+  /** The project page's HTML shell (`project.html`, as Vite serves it), holding an empty `<form-renderer>`. */
+  readonly projectPage: () => Promise<string>;
+}
+
+/**
+ * The reference host's server routes: the module's API at `/api`, dev sign-in at `/login` and `/token`, and
+ * "the form for project X" at `/projects/<id>`.
+ */
+export const createReferenceHost = (
+  api: FormModuleHandler,
+  options: ReferenceHostOptions,
+): ReferenceHost => {
   // Migrated before the first API request rather than at startup, so `vp build` never opens the pool.
   let migrated: Promise<void> | undefined;
   const migrateOnce = () =>
@@ -126,7 +194,11 @@ export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
     return resolveProjectForm(api.fetch, tenant, projectId);
   };
   return {
-    serves: (pathname) => isApiPath(pathname) || pathname === "/login" || pathname === "/token",
+    serves: (pathname) =>
+      isApiPath(pathname) ||
+      pathname === "/login" ||
+      pathname === "/token" ||
+      (pathname.startsWith(projectsPrefix) && pathname.length > projectsPrefix.length),
     fetch: async (request) => {
       const url = new URL(request.url);
       if (isApiPath(url.pathname)) {
@@ -139,6 +211,8 @@ export const createReferenceHost = (api: FormModuleHandler): ReferenceHost => {
       if (route === "POST /login") return signIn(request);
       if (route === "GET /token")
         return withCors(request, await token(request, url.searchParams.get("project"), resolve));
+      if (request.method === "GET" && url.pathname.startsWith(projectsPrefix))
+        return projectPage(projectIdOf(url.pathname), resolve, options.projectPage);
       return new Response(null, { status: 404 });
     },
     dispose: () => api.dispose(),
