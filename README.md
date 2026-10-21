@@ -37,10 +37,14 @@ A reusable, host-agnostic module for defining forms, publishing immutable versio
 ## Run the API server
 
 ```bash
-DATABASE_URL=postgres://formidabile:formidabile@localhost:5432/formidabile vp run @fb/api-server#dev
+DATABASE_URL=postgres://formidabile:formidabile@localhost:5432/formidabile \
+JWT_ISSUER=http://localhost JWT_AUDIENCE=form-module JWT_SECRET=dev-secret \
+vp run @fb/api-server#dev
 ```
 
-It starts Postgres if it isn't running, applies migrations, listens on `PORT` (default 3000), and restarts when files change.
+It starts Postgres if it isn't running, applies migrations, listens on `PORT` (default 3000), and restarts when files change. It accepts bearer tokens signed for `JWT_ISSUER` and `JWT_AUDIENCE`, with the HS256 secret `JWT_SECRET`, or with the keys at `JWT_JWKS_URL` when there's no secret.
+
+It serves the same API as `createFormModuleHandler` from `@fb/http-api/web`, the Fetch handler a host mounts. `apps/api-server/tests/parity.test.ts` holds both to that: it sends one table of requests through the server on an ephemeral port and through the handler, on one PGlite database, and expects equal status, `content-type` and body. When behaviour lands that either mode could serve differently, add a row.
 
 ## Check and test
 
@@ -54,6 +58,18 @@ It starts Postgres if it isn't running, applies migrations, listens on `PORT` (d
 
 `test:pg` uses the compose database unless you set `DATABASE_URL`.
 
+## Demo data
+
+```bash
+vp run @fb/reference-host#seed:reset
+```
+
+It wipes the module's schema in the compose database (or `DATABASE_URL`'s) and seeds a demo project each for the `acme` and `globex` dev tenants: one open form carrying the project's reference, with a response from a dev user and one from the anonymous user. `acme` also gets the "Onboarding survey", whose four versions drop a question, add and relabel options, widen a number range and replace a question with a new one, with responses from `alice`, `bob` and anonymous respondents: open its analytics in the builder to see the per-version breakdown. `vp run e2e` runs it first.
+
+The reference host shows "the form for project X" at `http://localhost:4173/projects/<id>`, for the demo projects `acme-spring-orders` and `globex-partner-summit`. A project's id starts with its tenant and a `-`, so any `acme-…` id is an `acme` project: attach one to forms as the `project` reference to try the "no open form" and "ambiguous" pages.
+
+Signed in as `acme-admin` or `globex-admin`, `http://localhost:4173/admin` manages your tenant's demo project: add the project's reference to a form or remove it, and list the responses submitted under the project. `/admin?project=<id>` does the same for any project in your tenant.
+
 ## Without the global `vp`
 
 The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`, so `pnpm vp <command>` works too.
@@ -62,4 +78,5 @@ The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`,
 
 - [packages/README.md](./packages/README.md): how the packages are laid out, and the database and migration rules.
 - [AGENTS.md](./AGENTS.md): instructions for coding agents.
+- [docs/embedding.md](./docs/embedding.md): the host-facing contract for embedding the renderer or writing your own.
 - [docs/adr/](./docs/adr/): architecture decisions.

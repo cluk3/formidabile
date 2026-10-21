@@ -1,0 +1,175 @@
+import { parseDefinition } from "@fb/core/definition";
+import { Context, Effect, Layer, type Schema } from "effect";
+import type { Actor, ExternalRef } from "../authorization/actor.ts";
+import { requireAdminRead, requireCapability } from "../authorization/authorization.ts";
+import type { Draft, Form, FormDetail, FormSettings, FormSummary } from "../envelopes.ts";
+import {
+  ExternalRefLimitReached,
+  type Forbidden,
+  FormNotPublished,
+  FormPublished,
+  NotFound,
+  RevisionConflict,
+  ValidationFailed,
+} from "../errors.ts";
+import { Database, dieOnDatabaseError } from "../persistence/database.ts";
+import { findLockedDraft } from "../persistence/drafts.ts";
+import {
+  deleteForm,
+  deleteFormExternalRef,
+  findFormDetail,
+  findFormExternalRefs,
+  insertFormExternalRef,
+  insertFormWithDraft,
+  listForms,
+  lockForm,
+  updateFormSettings,
+} from "../persistence/forms.ts";
+
+const externalRefLimit = 100;
+
+export class Forms extends Context.Service<
+  Forms,
+  {
+    /** Creates a form with its first draft, in the actor's tenant. */
+    readonly create: (
+      actor: Actor,
+      definition: unknown,
+    ) => Effect.Effect<
+      { readonly form: Form; readonly draft: Draft },
+      Forbidden | ValidationFailed
+    >;
+    /** The tenant's forms, most recently updated first; with `ref`, every one carrying it. */
+    readonly list: (
+      actor: Actor,
+      ref?: ExternalRef,
+    ) => Effect.Effect<ReadonlyArray<FormSummary>, Forbidden>;
+    readonly detail: (
+      actor: Actor,
+      formId: string,
+    ) => Effect.Effect<FormDetail, Forbidden | NotFound>;
+    /** Deletes a never-published form with its draft, if the draft is still at `expectedRevision`. */
+    readonly delete: (
+      actor: Actor,
+      formId: string,
+      expectedRevision: string,
+    ) => Effect.Effect<void, Forbidden | NotFound | FormPublished | RevisionConflict>;
+    /** Sets at least one of availability and the response limit; only a published form opens. */
+    readonly updateSettings: (
+      actor: Actor,
+      formId: string,
+      settings: FormSettings,
+    ) => Effect.Effect<Form, Forbidden | ValidationFailed | NotFound | FormNotPublished>;
+    /** Attaches `ref` if it isn't already, and returns the form's whole set. */
+    readonly addExternalRef: (
+      actor: Actor,
+      formId: string,
+      ref: ExternalRef,
+    ) => Effect.Effect<ReadonlyArray<ExternalRef>, Forbidden | NotFound | ExternalRefLimitReached>;
+    /** Detaches `ref` if it's there, and returns the form's whole set. */
+    readonly removeExternalRef: (
+      actor: Actor,
+      formId: string,
+      ref: ExternalRef,
+    ) => Effect.Effect<ReadonlyArray<ExternalRef>, Forbidden | NotFound>;
+  }
+>()("@fb/server/Forms") {
+  static readonly layer = Layer.effect(
+    Forms,
+    Effect.gen(function* () {
+      const db = yield* Database;
+      return Forms.of({
+        create: Effect.fn("Forms.create")(function* (actor, definition) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          const parsed = parseDefinition(definition);
+          if (!parsed.ok) return yield* new ValidationFailed({ issues: parsed.issues });
+          return yield* insertFormWithDraft(db, tenant, parsed.value as Schema.Json).pipe(
+            Effect.orDie,
+          );
+        }),
+        list: Effect.fn("Forms.list")(function* (actor, ref) {
+          const { tenant } = yield* requireAdminRead(actor);
+          return yield* listForms(db, tenant, ref).pipe(Effect.orDie);
+        }),
+        detail: Effect.fn("Forms.detail")(function* (actor, formId) {
+          const { tenant } = yield* requireAdminRead(actor);
+          const detail = yield* findFormDetail(db, tenant, formId).pipe(Effect.orDie);
+          if (detail === undefined) return yield* new NotFound();
+          return detail;
+        }),
+        delete: Effect.fn("Forms.delete")(function* (actor, formId, expectedRevision) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          yield* db
+            .transaction(
+              (tx) =>
+                Effect.gen(function* () {
+                  const form = yield* lockForm(tx, tenant, formId);
+                  if (form === undefined) return yield* new NotFound();
+                  // Once someone else has published, "it's published now" is the useful answer.
+                  if (form.currentVersionId !== null) return yield* new FormPublished();
+                  const draft = yield* findLockedDraft(tx, form);
+                  if (draft?.revision !== expectedRevision) return yield* new RevisionConflict();
+                  yield* deleteForm(tx, form);
+                }),
+              { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        updateSettings: Effect.fn("Forms.updateSettings")(function* (actor, formId, settings) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          if (settings.availability == null && settings.responseLimit == null) {
+            return yield* new ValidationFailed({
+              issues: [{ path: [], message: "Set availability, responseLimit or both" }],
+            });
+          }
+          return yield* db
+            .transaction((tx) =>
+              Effect.gen(function* () {
+                const form = yield* lockForm(tx, tenant, formId);
+                if (form === undefined) return yield* new NotFound();
+                if (settings.availability === "open" && form.currentVersionId === null) {
+                  return yield* new FormNotPublished();
+                }
+                return yield* updateFormSettings(tx, form, settings);
+              }),
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        addExternalRef: Effect.fn("Forms.addExternalRef")(function* (actor, formId, ref) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          return yield* db
+            .transaction((tx) =>
+              Effect.gen(function* () {
+                const form = yield* lockForm(tx, tenant, formId);
+                if (form === undefined) return yield* new NotFound();
+                const refs = yield* findFormExternalRefs(tx, form.id);
+                if (
+                  refs.some((held) => held.namespace === ref.namespace && held.refId === ref.refId)
+                )
+                  return refs;
+                if (refs.length >= externalRefLimit) {
+                  return yield* new ExternalRefLimitReached({ limit: externalRefLimit });
+                }
+                yield* insertFormExternalRef(tx, form, ref);
+                return yield* findFormExternalRefs(tx, form.id);
+              }),
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        removeExternalRef: Effect.fn("Forms.removeExternalRef")(function* (actor, formId, ref) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          return yield* db
+            .transaction((tx) =>
+              Effect.gen(function* () {
+                const form = yield* lockForm(tx, tenant, formId);
+                if (form === undefined) return yield* new NotFound();
+                yield* deleteFormExternalRef(tx, form, ref);
+                return yield* findFormExternalRefs(tx, form.id);
+              }),
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+      });
+    }),
+  );
+}

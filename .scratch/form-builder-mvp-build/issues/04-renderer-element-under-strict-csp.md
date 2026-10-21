@@ -17,7 +17,7 @@
 - [x] The three-browser strict-CSP Playwright test passes on the placeholder.
 - [x] The packages README records the outcome of the unverified points: svelte-check and `vp check` on the per-file config, `:global()` styles in inner components, and CSS hot reload in dev.
 - [x] The `e2e` CI job runs with the Playwright browser cache.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

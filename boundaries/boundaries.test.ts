@@ -133,6 +133,16 @@ const expected: Violation[] = [
     from: "apps/reference-host/server/uses-http-api-index.ts",
     to: "packages/http-api/index.ts",
   },
+  {
+    rule: "dependency-matrix-reference-host-seed",
+    from: "apps/reference-host/seed/uses-server.ts",
+    to: "packages/server/index.ts",
+  },
+  {
+    rule: "dependency-matrix-reference-host-seed",
+    from: "apps/reference-host/seed/uses-src.ts",
+    to: "apps/reference-host/src/main.ts",
+  },
   // Nothing imports from `apps/`.
   {
     rule: "no-import-of-apps-from-outside",

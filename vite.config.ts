@@ -76,18 +76,24 @@ export default defineConfig({
         extends: true,
         test: {
           name: "workspace",
+          // Each PGlite test database is built by running every migration, which takes seconds on CI runners, in
+          // a test or in a hook that builds a shared one.
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
           include: testPostgres ? [postgresTests] : configDefaults.include,
-          // The renderer's tests need its own config (Svelte, and a browser), so it is a project of its own.
+          // The renderer's and the builder's tests need their own configs (Svelte, and a browser), so each is a
+          // project of its own.
           exclude: [
             ...configDefaults.exclude,
             "e2e/**",
             "packages/renderer/**",
+            "apps/builder/**",
             ...(testPostgres ? [] : [postgresTests]),
           ],
         },
       },
       // Browser tests need no Docker, so they stay out of the Postgres run.
-      ...(testPostgres ? [] : ["packages/renderer"]),
+      ...(testPostgres ? [] : ["packages/renderer", "apps/builder"]),
     ],
   },
   run: {
@@ -108,9 +114,14 @@ export default defineConfig({
         dependsOn: ["@fb/renderer#check:svelte", "@fb/builder#check:svelte"],
       },
       // Runs Playwright against `vp preview` of the reference host and the builder, which `playwright.config.ts` starts.
+      // Every run starts from a fresh schema plus the demo seed, which no spec may rely on.
       e2e: {
         command: "playwright test --config e2e/playwright.config.ts",
-        dependsOn: ["@fb/reference-host#build", "@fb/builder#build"],
+        dependsOn: [
+          "@fb/reference-host#build",
+          "@fb/builder#build",
+          "@fb/reference-host#seed:reset",
+        ],
         cache: false,
       },
       postgres: {

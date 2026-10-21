@@ -1,15 +1,15 @@
 import { createFormApiClient, type FormApiClientOptions } from "@fb/api-client";
 import { createFormModuleHandler } from "@fb/http-api/web";
 import { afterAll, afterEach, expect, test } from "vite-plus/test";
+import { baseUrl, jwt } from "./api.ts";
 
-const handler = createFormModuleHandler({
-  databaseUrl: "postgres://localhost/unused",
-});
+// Every request here is refused before the handler reaches the database.
+const handler = createFormModuleHandler({ databaseUrl: "postgres://localhost/unused", jwt });
 const authorizationHeaders: Array<string | null> = [];
 
 const clientWith = (getToken: FormApiClientOptions["getToken"]) =>
   createFormApiClient({
-    baseUrl: "http://localhost/api",
+    baseUrl,
     getToken,
     fetch: (request) => {
       authorizationHeaders.push(request.headers.get("authorization"));

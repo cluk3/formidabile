@@ -8,8 +8,18 @@
 
 **Status:** ready-for-agent
 
-- [ ] Every editing function is unit-tested with a deterministic id source.
-- [ ] `reidentifyQuestion` gives a question a new question identity, as ADR 0009 describes.
-- [ ] Every function's output passes `parseDefinition`.
-- [ ] Core still has no envelope types and no `draftFrom`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] Every editing function is unit-tested with a deterministic id source.
+- [x] `reidentifyQuestion` gives a question a new question identity, as ADR 0009 describes.
+- [x] Every function's output passes `parseDefinition`.
+- [x] Core still has no envelope types and no `draftFrom`.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
+
+## Comments
+
+**2026-10-21, implementing agent:** Built on branch `t08-draft-editing`. Notes for later tickets (32 especially):
+
+- `@fb/core/editing` exports `addQuestion(def, type, ids)`, `changeQuestionType(def, id, type, ids)`, `moveQuestion(def, id, to)`, `addOption(def, id, ids)`, `removeOption(def, id, value)`, `reidentifyQuestion(def, id, ids)` and the `IdSource` type. Each returns a new definition and never mutates its input. Labels, descriptions, the required flag, the title and type-specific config aren't editing functions: the builder sets those fields directly.
+- New questions are blank (empty label, not required). Choice questions start with as many blank options as publish needs: two for single choice, one for multiple choice. `changeQuestionType` keeps the label, description, required flag and position, keeps the options between the two choice types (topped up to that minimum with minted values), and resets the rest of the config. Changing to the same type returns the definition unchanged, identity kept.
+- `moveQuestion` takes a target index, so move up and move down are `index - 1` and `index + 1`.
+- Caller errors throw a `RangeError`: an unknown question identity or option value, a position outside the form, options on a non-choice question, or going past the question cap (200) or the option cap (100). The builder disables those actions instead of catching.
+- The 200-question cap is now `QUESTIONS_CAP` in `lib/definition/form-definition.ts`, next to the existing `OPTIONS_CAP`. Neither is exported from an entry point.

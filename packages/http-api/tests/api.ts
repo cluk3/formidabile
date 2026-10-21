@@ -1,0 +1,65 @@
+import { createFormApiClient, type FormApiClient } from "@fb/api-client";
+import { JwtActorResolver, toFormApiWebHandler } from "@fb/http-api";
+import { type JWTPayload, signHs256 } from "@fb/http-api/sign";
+import { declareLength } from "@fb/http-api/web";
+import { DatabaseTest } from "@fb/server/testing";
+import { Layer } from "effect";
+
+export const jwt = {
+  issuer: "https://host.test",
+  audience: "form-module",
+  secret: "a test secret that is long enough for HS256",
+};
+
+/** The reference host's dev users that sign in to admin endpoints. */
+export const devUsers = {
+  "acme-admin": {
+    sub: "acme-admin",
+    tenant: "acme",
+    capabilities: ["forms:manage", "responses:read", "responses:delete"],
+  },
+  "acme-analyst": { sub: "acme-analyst", tenant: "acme", capabilities: ["responses:read"] },
+  "globex-admin": {
+    sub: "globex-admin",
+    tenant: "globex",
+    capabilities: ["forms:manage", "responses:read", "responses:delete"],
+  },
+} satisfies Record<string, JWTPayload>;
+
+export type DevUser = keyof typeof devUsers;
+
+export interface TokenOptions {
+  readonly secret?: string;
+  readonly audience?: string;
+  readonly expiresAt?: Date;
+}
+
+export const signToken = (claims: JWTPayload, options: TokenOptions = {}) =>
+  signHs256(claims, {
+    secret: options.secret ?? jwt.secret,
+    issuer: jwt.issuer,
+    audience: options.audience ?? jwt.audience,
+    expiresAt: options.expiresAt,
+  });
+
+export const baseUrl = "http://localhost";
+
+/** The API on a fresh PGlite database, served through a Fetch handler with the JWT resolver. */
+export const startApi = () => {
+  const { handler, dispose } = toFormApiWebHandler(
+    Layer.merge(JwtActorResolver(jwt), DatabaseTest),
+  );
+  const fetch = (request: Request) => handler(request);
+  const clientWithToken = (getToken: () => string | null | Promise<string | null>): FormApiClient =>
+    createFormApiClient({
+      baseUrl,
+      getToken,
+      fetch: async (request) => fetch(await declareLength(request)),
+    });
+  return {
+    fetch,
+    dispose,
+    clientWithToken,
+    clientAs: (user: DevUser) => clientWithToken(() => signToken(devUsers[user])),
+  };
+};

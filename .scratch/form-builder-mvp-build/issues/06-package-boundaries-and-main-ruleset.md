@@ -8,10 +8,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] The dependency-cruiser config has the full browser-safe list, the full dependency matrix, the deep-import rule, the `*.config.ts` import ban, and `no-circular` scoped to exclude `components/ui/`.
-- [ ] A committed fixture tree holds one violation per rule family, and a test asserts each fails with its rule name.
-- [ ] Oxlint's `no-restricted-imports` backstops type-only deep imports in `.svelte` files, which dependency-cruiser misses. shadcn-svelte's `components/ui/**` is ignored in lint.
-- [ ] The manual pass, fail, pass sequence from `setup-ts-deep-modules` is done once and noted on the PR.
-- [ ] The packages README states the final layout and the browser-safe list.
-- [ ] Once all four jobs (`static`, `test`, `test-pg`, `e2e`) have reported on this PR, the `main` ruleset is created with `gh api`. It requires a PR and all four jobs, forbids force-pushes and deleting `main`, and has no bypass list.
-- [ ] `vp run ready` is green locally, and all four CI jobs are green on the PR.
+- [x] The dependency-cruiser config has the full browser-safe list, the full dependency matrix, the deep-import rule, the `*.config.ts` import ban, and `no-circular` scoped to exclude `components/ui/`.
+- [x] A committed fixture tree holds one violation per rule family, and a test asserts each fails with its rule name.
+- [x] Oxlint's `no-restricted-imports` backstops type-only deep imports in `.svelte` files, which dependency-cruiser misses. shadcn-svelte's `components/ui/**` is ignored in lint.
+- [x] The manual pass, fail, pass sequence from `setup-ts-deep-modules` is done once and noted on the PR.
+- [x] The packages README states the final layout and the browser-safe list.
+- [x] Once all four jobs (`static`, `test`, `test-pg`, `e2e`) have reported on this PR, the `main` ruleset is created with `gh api`. It requires a PR and all four jobs, forbids force-pushes and deleting `main`, and has no bypass list.
+- [x] `vp run ready` is green locally, and all four CI jobs are green on the PR.
