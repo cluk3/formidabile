@@ -61,13 +61,26 @@ const run = <A, E>(
   );
 
 /** Publishes the form's draft as its next version. */
-const publish = (formId: string, title: string) =>
+const publish = (formId: string, title: string, ...addedBooleans: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const drafts = yield* Drafts;
     const publication = yield* Publication;
+    const { questions, ...rest } = definition(title);
     const draft = yield* drafts.save(admin, formId, {
       expectedRevision: (yield* drafts.read(admin, formId))?.revision ?? null,
-      definition: definition(title),
+      definition: {
+        ...rest,
+        questions: [
+          ...questions,
+          ...addedBooleans.map((id) => ({
+            id,
+            type: "boolean",
+            label: "Added",
+            required: true,
+            config: {},
+          })),
+        ],
+      },
     });
     return (yield* publication.publish(admin, formId, draft.revision)).version;
   });
@@ -90,6 +103,14 @@ const submit = (actor: Actor, formId: string, versionId: string, given: unknown 
       idempotencyKey: crypto.randomUUID(),
     }),
   );
+
+const edit = (actor: Actor, responseId: string, expectedRevision: string, given: unknown) =>
+  Submission.use((submission) =>
+    submission.edit(actor, responseId, { expectedRevision, answers: given }),
+  );
+
+const read = (actor: Actor, responseId: string) =>
+  Submission.use((submission) => submission.read(actor, responseId));
 
 const storedResponse = (responseId: string) =>
   SqlClient.SqlClient.use(
@@ -367,6 +388,205 @@ describe("submit", () => {
   });
 });
 
+const outsider = (subject: string) =>
+  Actor.Identified({
+    subject,
+    tenant: TenantId.make("globex"),
+    capabilities: [],
+    formId: Option.none(),
+    refs: [],
+  });
+
+describe("read", () => {
+  test("gives the respondent their answers and revision, the response's version, and whether it's editable", async () => {
+    const { open, closed, formId, v1, responseId } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId } = yield* submit(alice, formId, v1.id, {
+          [nameId]: "Alice",
+          [readyId]: true,
+        });
+        yield* publish(formId, "Survey, revised");
+        const open = yield* read(alice, responseId);
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { availability: "closed" }),
+        );
+        return { open, closed: yield* read(alice, responseId), formId, v1, responseId };
+      }),
+    );
+
+    expect(open).toEqual({
+      response: {
+        id: responseId,
+        formId,
+        versionId: v1.id,
+        revision: "1",
+        answers: { [nameId]: "Alice", [readyId]: true },
+        submittedAt: expect.any(Date),
+        editedAt: null,
+      },
+      version: { id: v1.id, number: 1, definition: definition("Survey") },
+      editable: true,
+    });
+    expect(closed).toEqual({ ...open, editable: false });
+  });
+
+  test("another respondent's response, another tenant's and an unknown one give NotFound", async () => {
+    const tags = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        const attempt = (actor: Actor, id: string) =>
+          Effect.flip(read(actor, id)).pipe(Effect.map((e) => e._tag));
+        return [
+          yield* attempt(respondent("bob"), responseId),
+          yield* attempt(outsider("alice"), responseId),
+          yield* attempt(alice, crypto.randomUUID()),
+        ];
+      }),
+    );
+
+    expect(tags).toEqual(["NotFound", "NotFound", "NotFound"]);
+  });
+});
+
+describe("edit", () => {
+  test("overwrites the answers and moves the revision", async () => {
+    const { responseId, edited, reread, storedAnswerRows } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId, revision } = yield* submit(alice, formId, v1.id, {
+          [nameId]: "Alice",
+          [readyId]: true,
+        });
+        return {
+          responseId,
+          edited: yield* edit(alice, responseId, revision, { [readyId]: false }),
+          reread: yield* read(alice, responseId),
+          storedAnswerRows: yield* storedAnswers(responseId),
+        };
+      }),
+    );
+
+    expect(edited).toEqual({ responseId, revision: "2", editedAt: expect.any(Date) });
+    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: false }]);
+    expect(reread.response).toMatchObject({
+      revision: "2",
+      answers: { [readyId]: false },
+      editedAt: edited.editedAt,
+    });
+  });
+
+  test("a v1 response edited after v2 is published stays on v1 and is validated against it", async () => {
+    const { edited, stored, reread, v1 } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId, revision } = yield* submit(alice, formId, v1.id);
+        yield* publish(formId, "Survey, revised", "0192f5a0-7c3e-7b1a-9d2e-000000000003");
+        const edited = yield* edit(alice, responseId, revision, { [readyId]: false });
+        return {
+          edited,
+          v1,
+          stored: yield* storedResponse(responseId),
+          reread: yield* read(alice, responseId),
+        };
+      }),
+    );
+
+    expect(edited.revision).toBe("2");
+    expect(stored?.versionId).toBe(v1.id);
+    expect(reread.version).toEqual({ id: v1.id, number: 1, definition: definition("Survey") });
+  });
+
+  test("an edit with different refs leaves the stored references unchanged", async () => {
+    const { before, after } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const refs = [{ namespace: "project", refId: "apollo" }];
+        const { responseId, revision } = yield* submit(
+          respondent("alice", { formId, refs }),
+          formId,
+          v1.id,
+        );
+        const before = yield* storedRefs(responseId);
+        yield* edit(
+          respondent("alice", { formId, refs: [{ namespace: "project", refId: "gemini" }] }),
+          responseId,
+          revision,
+          answers,
+        );
+        yield* edit(alice, responseId, "2", answers);
+        return { before, after: yield* storedRefs(responseId) };
+      }),
+    );
+
+    expect(before).toEqual([{ namespace: "project", refId: "apollo" }]);
+    expect(after).toEqual(before);
+  });
+
+  test("a stale expectedRevision gives RevisionConflict and changes nothing", async () => {
+    const { error, storedAnswerRows } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId, revision } = yield* submit(alice, formId, v1.id);
+        yield* edit(alice, responseId, revision, { [readyId]: false });
+        const error = yield* Effect.flip(
+          edit(alice, responseId, revision, { [nameId]: "Stale", [readyId]: true }),
+        );
+        return { error, storedAnswerRows: yield* storedAnswers(responseId) };
+      }),
+    );
+
+    expect(error._tag).toBe("RevisionConflict");
+    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: false }]);
+  });
+
+  test("checks FormClosed, then RevisionConflict, then the answers", async () => {
+    const tags = await run(
+      Effect.gen(function* () {
+        const forms = yield* Forms;
+        const { formId, v1 } = yield* openForm;
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        const attempt = (expectedRevision: string) =>
+          Effect.flip(edit(alice, responseId, expectedRevision, { [nameId]: 42 })).pipe(
+            Effect.map((e) => e._tag),
+          );
+
+        yield* forms.updateSettings(admin, formId, { availability: "closed" });
+        const closed = yield* attempt("7");
+        yield* forms.updateSettings(admin, formId, { availability: "open" });
+        const conflict = yield* attempt("7");
+        const invalidAnswers = yield* attempt("1");
+        return [closed, conflict, invalidAnswers];
+      }),
+    );
+
+    expect(tags).toEqual(["FormClosed", "RevisionConflict", "ValidationFailed"]);
+  });
+
+  test("another respondent's response, another tenant's and an unknown one give NotFound", async () => {
+    const { tags, storedAnswerRows } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        const attempt = (actor: Actor, id: string) =>
+          Effect.flip(edit(actor, id, "1", { [readyId]: false })).pipe(Effect.map((e) => e._tag));
+        return {
+          tags: [
+            yield* attempt(respondent("bob"), responseId),
+            yield* attempt(outsider("alice"), responseId),
+            yield* attempt(alice, crypto.randomUUID()),
+          ],
+          storedAnswerRows: yield* storedAnswers(responseId),
+        };
+      }),
+    );
+
+    expect(tags).toEqual(["NotFound", "NotFound", "NotFound"]);
+    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: true }]);
+  });
+});
+
 describe("a replay", () => {
   const submitWithKey = (actor: Actor, formId: string, versionId: string, idempotencyKey: string) =>
     Submission.use((submission) =>
@@ -396,17 +616,13 @@ describe("a replay", () => {
     expect(count).toBe(1);
   });
 
-  test("doesn't compare bodies, and carries the response's current revision", async () => {
+  test("after an edit returns the same response with the current revision, without comparing bodies", async () => {
     const { original, replayed, storedAnswerRows } = await run(
       Effect.gen(function* () {
         const { formId, v1 } = yield* openForm;
         const key = crypto.randomUUID();
         const original = yield* submitWithKey(alice, formId, v1.id, key);
-        yield* SqlClient.SqlClient.use(
-          (sql) => sql`
-            UPDATE form_management.responses SET revision = 2 WHERE id = ${original.responseId}
-          `,
-        );
+        yield* edit(alice, original.responseId, original.revision, { [readyId]: false });
         const replayed = yield* Submission.use((submission) =>
           submission.submit(alice, formId, {
             versionId: v1.id,
@@ -419,7 +635,7 @@ describe("a replay", () => {
     );
 
     expect(replayed).toEqual({ responseId: original.responseId, revision: "2" });
-    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: true }]);
+    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: false }]);
   });
 
   test("on a one-per-respondent form returns the response, not AlreadyResponded", async () => {
@@ -480,5 +696,27 @@ describe("a form-bound actor", () => {
     expect(submitted._tag).toBe("NotFound");
     expect(count).toBe(0);
     expect(own).toBe(true);
+  });
+
+  test("gives NotFound on reading or editing its respondent's response to another form", async () => {
+    const { tags, own, responseId } = await run(
+      Effect.gen(function* () {
+        const a = yield* openForm;
+        const b = yield* openForm;
+        const { responseId, revision } = yield* submit(alice, b.formId, b.v1.id);
+        const boundToA = respondent("alice", { formId: a.formId });
+        return {
+          responseId,
+          tags: [
+            (yield* Effect.flip(read(boundToA, responseId)))._tag,
+            (yield* Effect.flip(edit(boundToA, responseId, revision, answers)))._tag,
+          ],
+          own: (yield* read(respondent("alice", { formId: b.formId }), responseId)).response.id,
+        };
+      }),
+    );
+
+    expect(tags).toEqual(["NotFound", "NotFound"]);
+    expect(own).toBe(responseId);
   });
 });

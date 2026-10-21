@@ -14,7 +14,7 @@ export class NotFound extends Schema.TaggedError<NotFound>()(
   { httpApiStatus: 404 },
 ) {}
 
-/** The draft changed since the caller read it: reload or stay, never overwrite. */
+/** The draft or response changed since the caller read it: reload or stay, never overwrite. */
 export class RevisionConflict extends Schema.TaggedError<RevisionConflict>()(
   "RevisionConflict",
   {},
