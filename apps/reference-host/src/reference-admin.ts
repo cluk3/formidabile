@@ -26,15 +26,19 @@ const ok = <T>(action: string, result: { data?: T; error?: unknown; response: Re
 
 const refQuery = ({ namespace, refId }: ExternalRef) => ({ refNamespace: namespace, refId });
 
-/** Loads the forms and responses for a reference, as the signed-in admin. */
+const listResponses = (client: FormApiClient, ref: ExternalRef, limit?: number, cursor?: string) =>
+  client.GET("/responses", { params: { query: { ...refQuery(ref), limit, cursor } } });
+
+/** Loads the forms and the first page of responses for a reference, as the signed-in admin. */
 export const loadReference = async (
   client: FormApiClient,
   ref: ExternalRef,
+  limit?: number,
 ): Promise<ReferenceAdmin> => {
   const [all, carrying, page] = await Promise.all([
     client.GET("/forms"),
     client.GET("/forms", { params: { query: refQuery(ref) } }),
-    client.GET("/responses", { params: { query: refQuery(ref) } }),
+    listResponses(client, ref, limit),
   ]);
   const { forms } = ok("Listing the forms carrying the reference", carrying);
   const held = new Set(forms.map(({ id }) => id));
@@ -45,4 +49,31 @@ export const loadReference = async (
     responses,
     nextCursor,
   };
+};
+
+/** The reference's next page of responses, from a `nextCursor`. */
+export const moreResponses = async (
+  client: FormApiClient,
+  ref: ExternalRef,
+  cursor: string,
+  limit?: number,
+): Promise<Pick<ReferenceAdmin, "responses" | "nextCursor">> =>
+  ok("Listing the reference's responses", await listResponses(client, ref, limit, cursor));
+
+const formPath = (formId: string) => ({ path: { formId } });
+
+export const addReference = async (client: FormApiClient, formId: string, ref: ExternalRef) => {
+  ok(
+    "Adding the reference",
+    await client.POST("/forms/{formId}/external-refs", { params: formPath(formId), body: ref }),
+  );
+};
+
+export const removeReference = async (client: FormApiClient, formId: string, ref: ExternalRef) => {
+  ok(
+    "Removing the reference",
+    await client.DELETE("/forms/{formId}/external-refs", {
+      params: { ...formPath(formId), query: ref },
+    }),
+  );
 };
