@@ -10,6 +10,10 @@
 
 <main class="mx-auto max-w-3xl p-8">
   <a class="text-sm text-muted-foreground hover:underline" href="/">All forms</a>
+  <a
+    class="ml-4 text-sm text-muted-foreground hover:underline"
+    href={`/forms/${params.formId}/analytics`}>Analytics</a
+  >
   <h1 class="mt-2 mb-6 text-2xl font-semibold">Edit form</h1>
   {#key params.formId}
     <DraftEditor
