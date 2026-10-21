@@ -1,5 +1,6 @@
 import type { FormDefinition, QuestionSnapshot } from "@fb/core/definition";
 import { expect, test } from "vite-plus/test";
+import type { LocatorSelectors } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
 import ResponsesPage from "#lib/ResponsesPage.svelte";
@@ -316,7 +317,7 @@ test("an opened response reads as its own version's questions and answers, not t
   expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);
 });
 
-const openResponseFrom = async (screen: Awaited<ReturnType<typeof renderPage>>, who: string) => {
+const openResponseFrom = async (screen: LocatorSelectors, who: string) => {
   const list = screen.getByRole("list", { name: "Responses" });
   await list.getByRole("listitem").filter({ hasText: who }).first().getByRole("button").click();
   const detail = screen.getByRole("region", { name: `Response from ${who}` });
