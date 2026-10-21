@@ -71,6 +71,7 @@ let handler: ReturnType<typeof createFormModuleHandler>;
 let publishedFormId = "";
 /** Open and unlimited, so every submit to it is a new response. */
 let openForm = { id: "", versionId: "" };
+const replayKey = crypto.randomUUID();
 
 beforeAll(async () => {
   const context = await server.context();
@@ -150,6 +151,19 @@ const rows: Record<string, Row> = {
           versionId: openForm.versionId,
           answers: { [questionId]: true },
           idempotencyKey: crypto.randomUUID(),
+        },
+      }),
+  },
+  // The first send stores the response and the second replays it, so the bodies match exactly.
+  "a respondent replays a submit": {
+    status: 201,
+    request: () =>
+      request("POST", `/respond/forms/${openForm.id}/responses`, {
+        claims: respondent,
+        body: {
+          versionId: openForm.versionId,
+          answers: { [questionId]: true },
+          idempotencyKey: replayKey,
         },
       }),
   },
