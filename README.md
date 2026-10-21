@@ -44,6 +44,8 @@ vp run @fb/api-server#dev
 
 It starts Postgres if it isn't running, applies migrations, listens on `PORT` (default 3000), and restarts when files change. It accepts bearer tokens signed for `JWT_ISSUER` and `JWT_AUDIENCE`, with the HS256 secret `JWT_SECRET`, or with the keys at `JWT_JWKS_URL` when there's no secret.
 
+It serves the same API as `createFormModuleHandler` from `@fb/http-api/web`, the Fetch handler a host mounts. `apps/api-server/tests/parity.test.ts` holds both to that: it sends one table of requests through the server on an ephemeral port and through the handler, on one PGlite database, and expects equal status, `content-type` and body. When behaviour lands that either mode could serve differently, add a row.
+
 ## Check and test
 
 | Command             | What it runs                                                                  |
