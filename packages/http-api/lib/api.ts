@@ -20,13 +20,15 @@ import {
   NotFound,
   RespondentForm,
   RespondentResponse,
+  ResponseDetail,
+  ResponsePage,
   RevisionConflict,
   SubmittedResponse,
   ValidationFailed,
   VersionSummary,
   VersionSuperseded,
 } from "@fb/server";
-import { type Actor, ExternalRef, Unauthenticated } from "@fb/server/actor";
+import { type Actor, ExternalRef, RespondentId, Unauthenticated } from "@fb/server/actor";
 import { Context, Schema } from "effect";
 import {
   HttpApi,
@@ -93,14 +95,17 @@ const ResponseIdParams = { responseId: Schema.String.check(Schema.isUUID()) };
 const Revision = Schema.String;
 
 /** A lookup by reference names both halves, or neither. */
-const FormListQuery = Schema.Struct({
+const RefQuery = {
   refNamespace: Schema.optionalKey(ExternalRef.fields.namespace),
   refId: Schema.optionalKey(ExternalRef.fields.refId),
-}).check(
-  Schema.makeFilter((query) => (query.refNamespace === undefined) === (query.refId === undefined), {
-    expected: "refNamespace and refId together",
-  }),
+};
+const refHalvesTogether = Schema.makeFilter(
+  (query: { readonly refNamespace?: string; readonly refId?: string }) =>
+    (query.refNamespace === undefined) === (query.refId === undefined),
+  { expected: "refNamespace and refId together" },
 );
+
+const FormListQuery = Schema.Struct(RefQuery).check(refHalvesTogether);
 
 const ExternalRefs = Schema.Struct({ externalRefs: Schema.Array(ExternalRef) });
 
@@ -200,6 +205,46 @@ export class VersionsGroup extends HttpApiGroup.make("versions")
   .middleware(Authentication)
   .middleware(BodyLimits) {}
 
+const listLimit = { minimum: 1, maximum: 200 };
+
+/** Every filter is optional; `cursor` is the previous page's `nextCursor` (ADR 0013, ADR 0015). */
+const ResponseListQuery = Schema.Struct({
+  formId: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+  versionId: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+  ...RefQuery,
+  respondentId: Schema.optionalKey(RespondentId),
+  cursor: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+  limit: Schema.optionalKey(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween(listLimit)),
+  ),
+}).check(refHalvesTogether);
+
+export class ResponsesGroup extends HttpApiGroup.make("responses")
+  .add(
+    HttpApiEndpoint.get("list", "/responses", {
+      query: ResponseListQuery,
+      success: ResponsePage,
+      error: Forbidden,
+    })
+      // Effect documents a query parameter by its text encoding, which would type `limit` as a string.
+      .annotate(OpenApi.Transform, (operation) => ({
+        ...operation,
+        parameters: operation.parameters.map((parameter: OpenApi.OpenAPISpecParameter) =>
+          parameter.name === "limit"
+            ? { ...parameter, schema: { type: "integer", ...listLimit } }
+            : parameter,
+        ),
+      })),
+    HttpApiEndpoint.get("read", "/responses/:responseId", {
+      params: ResponseIdParams,
+      success: ResponseDetail,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(EdgeValidation)
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
+
 /** Respondents' operations, under the respondent rules rather than capabilities (ADR 0010). */
 export class RespondGroup extends HttpApiGroup.make("respond")
   .add(
@@ -257,6 +302,7 @@ export class FormApi extends HttpApi.make("FormApi")
   .add(DraftsGroup)
   .add(VersionsGroup)
   .add(RespondGroup)
+  .add(ResponsesGroup)
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",

@@ -55,6 +55,9 @@ const codePoints = (min: number, max: number) =>
 
 const Identifier = Schema.String.check(codePoints(1, 255));
 
+/** An identified respondent's subject, as response filters and erasure name it. */
+export const RespondentId = Identifier;
+
 const FormId = Schema.String.check(Schema.isUUID());
 
 /** An opaque host reference, in the persistence model's shape (the `*_external_refs` check constraints). */

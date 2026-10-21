@@ -80,7 +80,7 @@ export const FormSummary = Schema.Struct({
 }).annotate({ identifier: "FormSummary" });
 export type FormSummary = typeof FormSummary.Type;
 
-/** A version as a respondent answers it. */
+/** A version as a respondent answers it, and as both response reads embed it. */
 const RespondentVersion = Schema.Struct({
   id: Schema.String,
   number: Schema.Int,
@@ -127,6 +127,35 @@ export const EditedResponse = Schema.Struct({
   editedAt: Schema.Date,
 }).annotate({ identifier: "EditedResponse" });
 export type EditedResponse = typeof EditedResponse.Type;
+
+/** A response as an admin lists it, with no answers. */
+export const ResponseSummary = Schema.Struct({
+  id: Schema.String,
+  formId: Schema.String,
+  versionId: Schema.String,
+  versionNumber: Schema.Int,
+  /** Null when anonymous. */
+  respondentId: Schema.NullOr(Schema.String),
+  submittedAt: Schema.Date,
+  editedAt: Schema.NullOr(Schema.Date),
+  /** The references its token asserted, sorted by namespace, then `refId`. */
+  externalRefs: Schema.Array(ExternalRef),
+}).annotate({ identifier: "ResponseSummary" });
+export type ResponseSummary = typeof ResponseSummary.Type;
+
+/** Newest first; `nextCursor` is null on the last page. */
+export const ResponsePage = Schema.Struct({
+  responses: Schema.Array(ResponseSummary),
+  nextCursor: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "ResponsePage" });
+export type ResponsePage = typeof ResponsePage.Type;
+
+/** A response as an admin reads it: raw answers, with the version it was submitted under. */
+export const ResponseDetail = Schema.Struct({
+  response: Schema.Struct({ ...ResponseSummary.fields, answers: AnswersJson }),
+  version: RespondentVersion,
+}).annotate({ identifier: "ResponseDetail" });
+export type ResponseDetail = typeof ResponseDetail.Type;
 
 export const FormDetail = Schema.Struct({
   id: Schema.String,
