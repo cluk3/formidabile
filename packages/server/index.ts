@@ -1,11 +1,15 @@
 import { Layer } from "effect";
+import { Analytics } from "./lib/analytics/analytics.ts";
 import { Drafts } from "./lib/drafts/drafts.ts";
 import { Forms } from "./lib/forms/forms.ts";
 import { Publication } from "./lib/publication/publication.ts";
 import { Responses } from "./lib/responses/responses.ts";
 import { Submission } from "./lib/submission/submission.ts";
 
+export { mergeAnalytics, type AnalyticsCounts } from "./lib/analytics/merge.ts";
 export {
+  AnalyticsConstraints,
+  AnalyticsSummary,
   AnswersJson,
   Availability,
   DeletedResponses,
@@ -13,11 +17,13 @@ export {
   DraftSummary,
   EditedResponse,
   Form,
+  FormAnalytics,
   FormDefinitionJson,
   FormDetail,
   FormSettings,
   FormSummary,
   FormVersion,
+  QuestionAnalytics,
   RespondentForm,
   RespondentResponse,
   ResponseDetail,
@@ -44,7 +50,7 @@ export {
 export type { SaveDraft } from "./lib/drafts/drafts.ts";
 export type { ListResponses } from "./lib/responses/responses.ts";
 export type { EditResponse, SubmitResponse } from "./lib/submission/submission.ts";
-export { Drafts, Forms, Publication, Responses, Submission };
+export { Analytics, Drafts, Forms, Publication, Responses, Submission };
 
 /** Every use case, given a `Database`. */
 export const FormModuleLive = Layer.mergeAll(
@@ -53,4 +59,5 @@ export const FormModuleLive = Layer.mergeAll(
   Publication.layer,
   Submission.layer,
   Responses.layer,
+  Analytics.layer,
 );

@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forms/{formId}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["analytics.form"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -255,18 +271,104 @@ export interface components {
                 message: string;
             }[];
         };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
+        };
         ForbiddenEncoded: {
             /** @enum {string} */
             _tag: "Forbidden";
             /** @enum {string} */
             capability: "forms:manage" | "responses:read" | "responses:delete";
         };
+        FormAnalytics: {
+            formId: string;
+            totalResponses: number;
+            versions: {
+                versionId: string;
+                number: number;
+                publishedAt: string;
+                responses: number;
+            }[];
+            questions: components["schemas"]["QuestionAnalytics"][];
+        };
+        QuestionAnalytics: {
+            questionId: string;
+            /** @enum {string} */
+            type: "text" | "email" | "number" | "date" | "single_choice" | "multiple_choice" | "boolean";
+            label: string;
+            otherLabels: {
+                label: string;
+                versions: number[];
+            }[];
+            inCurrentVersion: boolean;
+            combined: {
+                responses: number;
+                answered: number;
+                skipped: number;
+                absentResponses: number;
+                summary: components["schemas"]["AnalyticsSummary"];
+            };
+            byVersion: ({
+                version: number;
+                /** @enum {boolean} */
+                present: false;
+            } | {
+                version: number;
+                /** @enum {boolean} */
+                present: true;
+                responses: number;
+                answered: number;
+                skipped: number;
+                summary: components["schemas"]["AnalyticsSummary"];
+                constraints: components["schemas"]["AnalyticsConstraints"] | null;
+            })[];
+        };
+        AnalyticsConstraints: {
+            /** @enum {string} */
+            type: "number";
+            integer: boolean;
+            min: number | null;
+            max: number | null;
+        } | {
+            /** @enum {string} */
+            type: "multiple_choice";
+            minSelected: number | null;
+            maxSelected: number | null;
+        };
+        AnalyticsSummary: {
+            /** @enum {string} */
+            type: "single_choice" | "multiple_choice";
+            options: {
+                value: string;
+                label: string;
+                otherLabels: {
+                    label: string;
+                    versions: number[];
+                }[];
+                count: number;
+                base: number;
+                offeredIn: number[];
+            }[];
+        } | {
+            /** @enum {string} */
+            type: "boolean";
+            trueCount: number;
+            falseCount: number;
+        } | {
+            /** @enum {string} */
+            type: "number";
+            count: number;
+            min: number | null;
+            max: number | null;
+            mean: number | null;
+            median: number | null;
+        } | {
+            /** @enum {string} */
+            type: "text" | "email" | "date";
+        };
         DeletedResponses: {
             deleted: number;
-        };
-        NotFoundEncoded: {
-            /** @enum {string} */
-            _tag: "NotFound";
         };
         ResponseDetail: {
             response: {
@@ -2273,6 +2375,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "analytics.form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description FormAnalytics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAnalytics"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description LengthRequired */

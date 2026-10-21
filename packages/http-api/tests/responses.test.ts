@@ -106,6 +106,21 @@ const deleteOne = (responseId: string, client: FormApiClient = api.clientAs("acm
 const erase = (respondentId: string, client: FormApiClient = api.clientAs("acme-admin")) =>
   client.DELETE("/respondents/{respondentId}/responses", { params: { path: { respondentId } } });
 
+const analytics = async (form: { formId: string }) => {
+  const { data, response } = await api
+    .clientAs("acme-admin")
+    .GET("/forms/{formId}/analytics", { params: { path: { formId: form.formId } } });
+  if (data === undefined) throw new Error(`analytics gave ${response.status}`);
+  return data;
+};
+
+/** The form's total and its first question's combined counts. */
+const counted = async (form: { formId: string }) => {
+  const { totalResponses, questions } = await analytics(form);
+  const { responses, answered } = questions[0]!.combined;
+  return { total: totalResponses, responses, answered };
+};
+
 const versionRead = (form: { formId: string; v1: { id: string } }) =>
   api.clientAs("acme-admin").GET("/forms/{formId}/versions/{versionId}", {
     params: { path: { formId: form.formId, versionId: form.v1.id } },
@@ -243,6 +258,7 @@ describe("DELETE /responses/{responseId}", () => {
     const form = await openForm();
     await deleteOne(await submit(newRespondent(), form));
 
+    const emptied = await analytics(form);
     const version = await versionRead(form);
     // An answer row needs its question key in the version.
     const resubmitted = await submit(newRespondent(), form);
@@ -250,6 +266,22 @@ describe("DELETE /responses/{responseId}", () => {
     expect(version.response.status).toBe(200);
     expect(version.data!.definition).toEqual(definition("Survey"));
     expect(resubmitted).toEqual(expect.any(String));
+    expect(emptied.versions).toEqual([
+      { versionId: form.v1.id, number: 1, publishedAt: form.v1.publishedAt, responses: 0 },
+    ]);
+    expect(emptied.questions.map((q) => q.byVersion)).toEqual([
+      [
+        {
+          version: 1,
+          present: true,
+          responses: 0,
+          answered: 0,
+          skipped: 0,
+          summary: { type: "boolean", trueCount: 0, falseCount: 0 },
+          constraints: null,
+        },
+      ],
+    ]);
   });
 });
 
@@ -264,10 +296,20 @@ describe("DELETE /respondents/{respondentId}/responses", () => {
     await submit(alice, b);
     const bobs = await submit(bob, a);
     const inGlobex = await submit({ ...alice, tenant: "globex" }, g);
+    const before = [await counted(a), await counted(b)];
 
     const erased = await erase(alice.sub);
     const again = await erase(alice.sub);
 
+    // Alice gave one of form a's two responses and form b's only one.
+    expect(before).toEqual([
+      { total: 2, responses: 2, answered: 2 },
+      { total: 1, responses: 1, answered: 1 },
+    ]);
+    expect([await counted(a), await counted(b)]).toEqual([
+      { total: 1, responses: 1, answered: 1 },
+      { total: 0, responses: 0, answered: 0 },
+    ]);
     expect(erased.response.status).toBe(200);
     expect(erased.data).toEqual({ deleted: 2 });
     expect(again.data).toEqual({ deleted: 0 });

@@ -1,5 +1,7 @@
 import {
+  Analytics,
   Drafts,
+  type FormAnalytics,
   FormModuleLive,
   Forms,
   type ListResponses,
@@ -58,7 +60,13 @@ const run = <A, E>(
   effect: Effect.Effect<
     A,
     E,
-    Forms | Drafts | Publication | Submission | Responses | Layer.Success<typeof DatabaseTest>
+    | Forms
+    | Drafts
+    | Publication
+    | Submission
+    | Responses
+    | Analytics
+    | Layer.Success<typeof DatabaseTest>
   >,
 ) =>
   Effect.runPromise(
@@ -117,6 +125,19 @@ const erase = (respondentId: string, actor: Actor = admin) =>
 
 const versionRead = (formId: string, versionId: string) =>
   Publication.use((publication) => publication.version(admin, formId, versionId));
+
+const analytics = (formId: string) => Analytics.use((analytics) => analytics.form(admin, formId));
+
+/** The form's total and the one boolean question's combined counts. */
+const readyCounts = ({ totalResponses, questions }: FormAnalytics) => {
+  const { responses, answered, summary } = questions[0]!.combined;
+  return {
+    total: totalResponses,
+    responses,
+    answered,
+    trueCount: summary.type === "boolean" ? summary.trueCount : undefined,
+  };
+};
 
 /** UUIDv7 ids order by time only across milliseconds, so newest-first needs a gap between submits. */
 const tick = Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 2)));
@@ -315,7 +336,7 @@ describe("delete", () => {
   });
 
   test("by respondent covers the whole tenant, and gives { deleted: 0 } when there's nothing to delete", async () => {
-    const { erased, again, left, others, versions } = await run(
+    const { erased, again, left, others, versions, before, after } = await run(
       Effect.gen(function* () {
         const a = yield* openForm();
         const b = yield* openForm();
@@ -325,8 +346,11 @@ describe("delete", () => {
         yield* submit(alice, b.formId, b.v1.id);
         const bobs = yield* submit(bob, a.formId, a.v1.id);
         const globexResponse = yield* submit(globexAlice, g.formId, g.v1.id);
+        const before = [yield* analytics(a.formId), yield* analytics(b.formId)];
         const erased = yield* erase("alice");
         return {
+          before,
+          after: [yield* analytics(a.formId), yield* analytics(b.formId)],
           erased,
           again: yield* erase("alice"),
           left: yield* listedIds({ respondentId: "alice" }),
@@ -350,6 +374,15 @@ describe("delete", () => {
       definition("Survey"),
       definition("Survey"),
     ]);
+    // Alice gave two of form a's three responses and form b's only one.
+    expect(before.map(readyCounts)).toEqual([
+      { total: 3, responses: 3, answered: 3, trueCount: 3 },
+      { total: 1, responses: 1, answered: 1, trueCount: 1 },
+    ]);
+    expect(after.map(readyCounts)).toEqual([
+      { total: 1, responses: 1, answered: 1, trueCount: 1 },
+      { total: 0, responses: 0, answered: 0, trueCount: 0 },
+    ]);
   });
 
   test("another tenant's admin gets NotFound for one response and deletes nothing by respondent", async () => {
@@ -372,11 +405,12 @@ describe("delete", () => {
   });
 
   test("after the last response of a version is deleted, that version and its question keys still read", async () => {
-    const { version, questionKeys, resubmitted } = await run(
+    const { version, questionKeys, resubmitted, emptied } = await run(
       Effect.gen(function* () {
         const { formId, v1 } = yield* openForm();
         const { responseId } = yield* submit(alice, formId, v1.id);
         yield* deleteOne(responseId);
+        const emptied = yield* analytics(formId);
         const questionKeys = yield* SqlClient.SqlClient.use(
           (sql) => sql<{ questionId: string }>`
             SELECT question_id AS "questionId" FROM form_management.form_version_questions
@@ -384,6 +418,7 @@ describe("delete", () => {
           `,
         );
         return {
+          emptied,
           version: yield* versionRead(formId, v1.id),
           questionKeys,
           // An answer row needs its question key in the version.
@@ -395,6 +430,23 @@ describe("delete", () => {
     expect(version.definition).toEqual(definition("Survey"));
     expect(questionKeys).toEqual([{ questionId: readyId }]);
     expect(resubmitted.responseId).toEqual(expect.any(String));
+    expect(emptied.totalResponses).toBe(0);
+    expect(emptied.versions).toEqual([
+      { versionId: version.id, number: 1, publishedAt: version.publishedAt, responses: 0 },
+    ]);
+    expect(emptied.questions.map((q) => q.byVersion)).toEqual([
+      [
+        {
+          version: 1,
+          present: true,
+          responses: 0,
+          answered: 0,
+          skipped: 0,
+          summary: { type: "boolean", trueCount: 0, falseCount: 0 },
+          constraints: null,
+        },
+      ],
+    ]);
   });
 
   test("after erasure, the same idempotency key creates a new response", async () => {

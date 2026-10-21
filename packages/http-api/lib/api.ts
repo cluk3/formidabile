@@ -9,6 +9,7 @@ import {
   ExternalRefLimitReached,
   Forbidden,
   Form,
+  FormAnalytics,
   FormClosed,
   FormDefinitionJson,
   FormDetail,
@@ -256,6 +257,19 @@ export class ResponsesGroup extends HttpApiGroup.make("responses")
   .middleware(Authentication)
   .middleware(BodyLimits) {}
 
+export class AnalyticsGroup extends HttpApiGroup.make("analytics")
+  .add(
+    // A never-published form gives empty analytics, not 404 (ADR 0009).
+    HttpApiEndpoint.get("form", "/forms/:formId/analytics", {
+      params: FormIdParams,
+      success: FormAnalytics,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(EdgeValidation)
+  .middleware(Authentication)
+  .middleware(BodyLimits) {}
+
 const AnswerSchema = Schema.JsonObject.annotate({
   identifier: "AnswerSchema",
   description:
@@ -329,6 +343,7 @@ export class FormApi extends HttpApi.make("FormApi")
   .add(VersionsGroup)
   .add(RespondGroup)
   .add(ResponsesGroup)
+  .add(AnalyticsGroup)
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",
