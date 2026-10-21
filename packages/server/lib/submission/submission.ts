@@ -1,4 +1,5 @@
 import { validateAnswers } from "@fb/core/answers";
+import type { FormDefinition } from "@fb/core/definition";
 import { Context, Effect, Layer, Option } from "effect";
 import { type Actor, Unauthenticated } from "../authorization/actor.ts";
 import type {
@@ -56,6 +57,12 @@ export class Submission extends Context.Service<
       actor: Actor,
       formId: string,
     ) => Effect.Effect<RespondentForm, NotFound | FormNotPublished | FormClosed>;
+    /** Any version of a form the respondent may load, current or not, for its answer schema. */
+    readonly version: (
+      actor: Actor,
+      formId: string,
+      versionId: string,
+    ) => Effect.Effect<FormDefinition, NotFound | FormClosed>;
     /** Stores a response on the current version, with the actor's `refs`. */
     readonly submit: (
       actor: Actor,
@@ -114,6 +121,23 @@ export class Submission extends Context.Service<
                     version: version!,
                     myResponseId: myResponseId ?? null,
                   } satisfies RespondentForm;
+                }),
+              { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        version: Effect.fn("Submission.version")(function* (actor, formId, versionId) {
+          if (!reaches(actor, formId)) return yield* new NotFound();
+          return yield* db
+            .transaction(
+              (tx) =>
+                Effect.gen(function* () {
+                  const form = yield* shareForm(tx, actor.tenant, formId);
+                  if (form === undefined) return yield* new NotFound();
+                  if (form.availability === "closed") return yield* new FormClosed();
+                  const version = yield* findVersionContent(tx, form, versionId);
+                  if (version === undefined) return yield* new NotFound();
+                  return storedDefinition(version.definition);
                 }),
               { isolationLevel: "read committed" },
             )

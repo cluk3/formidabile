@@ -188,12 +188,13 @@ default-src 'self'; base-uri 'none'; object-src 'none'; require-trusted-types-fo
 
 A host may write its own renderer against the `/respond` endpoints ([HTTP API surface](../.scratch/form-builder-mvp/issues/16-http-api-surface.md), [ADR 0010](./adr/0010-respondent-api-split-and-host-owned-lookups.md)). Every error body is JSON told apart by `_tag`.
 
-| Method and path                          | Request                                  | Success                                                                                        |
-| ---------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `GET /respond/forms/{formId}`            |                                          | 200 `{ formId, responseLimit, respondent, version: { id, number, definition }, myResponseId }` |
-| `POST /respond/forms/{formId}/responses` | `{ versionId, answers, idempotencyKey }` | 201 `{ responseId, revision }`                                                                 |
-| `GET /respond/responses/{responseId}`    |                                          | 200 `{ response, version, editable }`                                                          |
-| `PUT /respond/responses/{responseId}`    | `{ expectedRevision, answers }`          | 200 `{ responseId, revision, editedAt }`                                                       |
+| Method and path                                                  | Request                                  | Success                                                                                        |
+| ---------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /respond/forms/{formId}`                                    |                                          | 200 `{ formId, responseLimit, respondent, version: { id, number, definition }, myResponseId }` |
+| `POST /respond/forms/{formId}/responses`                         | `{ versionId, answers, idempotencyKey }` | 201 `{ responseId, revision }`                                                                 |
+| `GET /respond/responses/{responseId}`                            |                                          | 200 `{ response, version, editable }`                                                          |
+| `PUT /respond/responses/{responseId}`                            | `{ expectedRevision, answers }`          | 200 `{ responseId, revision, editedAt }`                                                       |
+| `GET /respond/forms/{formId}/versions/{versionId}/answer-schema` |                                          | 200 JSON Schema 2020-12 for that version's `answers`                                           |
 
 ### 1. Load, then send the version back
 
@@ -215,6 +216,29 @@ Load with `GET /respond/forms/{formId}`, and send `version.id` back as `versionI
 | `boolean`         | `true` or `false`                                                                                   |
 | `single_choice`   | One option's `value`                                                                                |
 | `multiple_choice` | An array of distinct option `value`s, from `minSelected` (default 1) to `maxSelected` (default all) |
+
+### 3. Optional browser validation
+
+`GET /respond/forms/{formId}/versions/{versionId}/answer-schema` returns a version's answer schema as JSON Schema 2020-12, so a renderer can check `answers` before sending them. Using it is optional.
+
+- **Access**: anyone who may load the form, for any of its versions: the current `version.id` for a submit, the response's `versionId` for an edit. A grant reaches only its bound form. Another form, or a version that isn't the form's, gives 404 `NotFound`; a closed form gives 409 `FormClosed`.
+- **The server stays the authority**: the schema carries `x-fb-authoritative: false` and says so in its `description`. A submit or edit that passed it can still get 422 `ValidationFailed`, so handle that as in [4. Errors](#4-errors).
+- **What it holds**: question identities, types, option values and constraints, never labels. It's built on every request; cache it per version id if you like, since a version never changes.
+- **Validating**: use a 2020-12 validator with the `email` and `date` formats, and declare the `x-fb-` keywords as annotations. With ajv:
+
+  ```ts
+  import { Ajv2020 } from "ajv/dist/2020.js";
+  import addFormats from "ajv-formats";
+
+  const ajv = new Ajv2020({ allErrors: true });
+  addFormats(ajv);
+  ajv.addVocabulary(["x-fb-authoritative", "x-fb-minDate", "x-fb-maxDate"]);
+  const validate = ajv.compile(answerSchema);
+  ```
+
+- **The gaps**: on trimmed answers the schema accepts and refuses exactly what the server does, except:
+  - **Date ranges**: standard JSON Schema can't compare dates, so a date question's `config.min` and `config.max` appear only as `x-fb-minDate` and `x-fb-maxDate` on its property, inclusive `YYYY-MM-DD` strings that a generic validator ignores. Check them yourself: ISO dates compare correctly as strings.
+  - **Trimming**: the server trims text before checking its length, while the schema checks the string as given. Trim text before validating, as you must before sending.
 
 ### 4. Errors
 

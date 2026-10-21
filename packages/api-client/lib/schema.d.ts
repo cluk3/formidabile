@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/respond/forms/{formId}/versions/{versionId}/answer-schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["respond.answerSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/respond/forms/{formId}/responses": {
         parameters: {
             query?: never;
@@ -432,6 +448,8 @@ export interface components {
             responseId: string;
             revision: string;
         };
+        /** @description A version's answer schema, as JSON Schema 2020-12. Advisory: the server's check is final. */
+        AnswerSchema: Record<string, never>;
         FormNotPublishedEncoded: {
             /** @enum {string} */
             _tag: "FormNotPublished";
@@ -1652,6 +1670,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FormNotPublishedEncoded"] | components["schemas"]["FormClosedEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "respond.answerSchema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A version's answer schema, as JSON Schema 2020-12. Advisory: the server's check is final. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerSchema"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description FormClosed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormClosedEncoded"];
                 };
             };
             /** @description LengthRequired */

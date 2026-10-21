@@ -73,6 +73,11 @@ const openForm = async (title = "Survey", owner = admin) => {
 const load = (client: FormApiClient, formId: string) =>
   client.GET("/respond/forms/{formId}", { params: { path: { formId } } });
 
+const answerSchema = (client: FormApiClient, form: { formId: string; versionId: string }) =>
+  client.GET("/respond/forms/{formId}/versions/{versionId}/answer-schema", {
+    params: { path: form },
+  });
+
 const submit = (
   client: FormApiClient,
   form: { formId: string; versionId: string },
@@ -360,16 +365,19 @@ describe("references and the form binding", () => {
     expect(await storedRefs(data!.responseId)).toEqual(refs);
   });
 
-  test("an identified token bound to form A gets 404 on form B's load and submit", async () => {
+  test("an identified token bound to form A gets 404 on form B's load, answer schema and submit", async () => {
     const a = await openForm("A");
     const b = await openForm("B");
     const boundToA = as({ ...alice, form: a.formId, refs });
 
     const loaded = await load(boundToA, b.formId);
+    const schema = await answerSchema(boundToA, b);
     const submitted = await submit(boundToA, b);
 
     expect(loaded.response.status).toBe(404);
     expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(schema.response.status).toBe(404);
+    expect(schema.error).toEqual({ _tag: "NotFound" });
     expect(submitted.response.status).toBe(404);
     expect(submitted.error).toEqual({ _tag: "NotFound" });
     expect(await responseCount(b.formId)).toBe(0);
@@ -481,28 +489,43 @@ describe("an anonymous grant", () => {
     expect(await responseCount(form.formId)).toBe(1);
   });
 
-  test("a grant for form A gets 404 on form B's load and submit", async () => {
+  test("reaches its form's answer schema", async () => {
+    const form = await openForm();
+
+    const { data, response } = await answerSchema(grant(form.formId), form);
+
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ required: [readyId], "x-fb-authoritative": false });
+  });
+
+  test("a grant for form A gets 404 on form B's load, answer schema and submit", async () => {
     const a = await openForm("A");
     const b = await openForm("B");
 
     const loaded = await load(grant(a.formId), b.formId);
+    const schema = await answerSchema(grant(a.formId), b);
     const submitted = await submit(grant(a.formId), b);
 
     expect(loaded.response.status).toBe(404);
     expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(schema.response.status).toBe(404);
+    expect(schema.error).toEqual({ _tag: "NotFound" });
     expect(submitted.response.status).toBe(404);
     expect(submitted.error).toEqual({ _tag: "NotFound" });
     expect(await responseCount(b.formId)).toBe(0);
   });
 
-  test("an acme grant naming a globex form gets 404 on its load and submit", async () => {
+  test("an acme grant naming a globex form gets 404 on its load, answer schema and submit", async () => {
     const form = await openForm("Globex", as(devUsers["globex-admin"]));
 
     const loaded = await load(grant(form.formId), form.formId);
+    const schema = await answerSchema(grant(form.formId), form);
     const submitted = await submit(grant(form.formId), form);
 
     expect(loaded.response.status).toBe(404);
     expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(schema.response.status).toBe(404);
+    expect(schema.error).toEqual({ _tag: "NotFound" });
     expect(submitted.response.status).toBe(404);
     expect(submitted.error).toEqual({ _tag: "NotFound" });
     expect(await responseCount(form.formId)).toBe(0);
