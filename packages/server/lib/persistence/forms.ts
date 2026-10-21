@@ -104,6 +104,10 @@ export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
     .for("update")
     .pipe(Effect.map(([row]) => row && (toForm(row) as LockedForm)));
 
+/** Its draft goes by cascade; a trigger refuses the delete once the form has any version. */
+export const deleteForm = (db: Db, form: LockedForm) =>
+  db.delete(forms).where(eq(forms.id, form.id));
+
 const currentVersion = and(
   eq(formVersions.id, forms.currentVersionId),
   eq(formVersions.formId, forms.id),

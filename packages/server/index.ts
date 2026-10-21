@@ -18,6 +18,7 @@ export {
 export {
   Forbidden,
   FormNotPublished,
+  FormPublished,
   Issue,
   NoDraft,
   NotFound,

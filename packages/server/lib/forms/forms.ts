@@ -3,9 +3,22 @@ import { Context, Effect, Layer, type Schema } from "effect";
 import type { Actor } from "../authorization/actor.ts";
 import { requireAdminRead, requireCapability } from "../authorization/authorization.ts";
 import type { Draft, Form, FormDetail, FormSummary } from "../envelopes.ts";
-import { type Forbidden, NotFound, ValidationFailed } from "../errors.ts";
-import { Database } from "../persistence/database.ts";
-import { findFormDetail, insertFormWithDraft, listForms } from "../persistence/forms.ts";
+import {
+  type Forbidden,
+  FormPublished,
+  NotFound,
+  RevisionConflict,
+  ValidationFailed,
+} from "../errors.ts";
+import { Database, dieOnDatabaseError } from "../persistence/database.ts";
+import { findLockedDraft } from "../persistence/drafts.ts";
+import {
+  deleteForm,
+  findFormDetail,
+  insertFormWithDraft,
+  listForms,
+  lockForm,
+} from "../persistence/forms.ts";
 
 export class Forms extends Context.Service<
   Forms,
@@ -24,6 +37,12 @@ export class Forms extends Context.Service<
       actor: Actor,
       formId: string,
     ) => Effect.Effect<FormDetail, Forbidden | NotFound>;
+    /** Deletes a never-published form with its draft, if the draft is still at `expectedRevision`. */
+    readonly delete: (
+      actor: Actor,
+      formId: string,
+      expectedRevision: string,
+    ) => Effect.Effect<void, Forbidden | NotFound | FormPublished | RevisionConflict>;
   }
 >()("@fb/server/Forms") {
   static readonly layer = Layer.effect(
@@ -48,6 +67,24 @@ export class Forms extends Context.Service<
           const detail = yield* findFormDetail(db, tenant, formId).pipe(Effect.orDie);
           if (detail === undefined) return yield* new NotFound();
           return detail;
+        }),
+        delete: Effect.fn("Forms.delete")(function* (actor, formId, expectedRevision) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          yield* db
+            .transaction(
+              (tx) =>
+                Effect.gen(function* () {
+                  const form = yield* lockForm(tx, tenant, formId);
+                  if (form === undefined) return yield* new NotFound();
+                  // Once someone else has published, "it's published now" is the useful answer.
+                  if (form.currentVersionId !== null) return yield* new FormPublished();
+                  const draft = yield* findLockedDraft(tx, form);
+                  if (draft?.revision !== expectedRevision) return yield* new RevisionConflict();
+                  yield* deleteForm(tx, form);
+                }),
+              { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
         }),
       });
     }),
