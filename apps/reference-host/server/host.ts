@@ -1,6 +1,7 @@
 import type { FormModuleHandler } from "@fb/http-api/web";
 import { type DevUser, devUsers, isDevUser, mintDevToken, mintFormToken } from "./dev-users.ts";
 import {
+  demoProjects,
   type ProjectForm,
   type ProjectFormCandidate,
   projectNamespace,
@@ -131,6 +132,57 @@ const projectPage = async (projectId: string, resolve: Resolve, shell: () => Pro
   return formPage(await shell(), resolved.form, projectId);
 };
 
+// The admin page's shell holds this slot, which the host fills with a section per project the page manages.
+const projectsSlot = `<div id="projects"></div>`;
+
+const adminCapabilities = ["forms:manage", "responses:read"];
+
+const isAdmin = (user: DevUser) => {
+  const capabilities: ReadonlyArray<string> = devUsers[user].capabilities;
+  return adminCapabilities.every((capability) => capabilities.includes(capability));
+};
+
+const demoProjectOf: Readonly<Record<string, string>> = demoProjects;
+
+// Each section names the reference it manages; the page's script fills it in with the admin's token.
+const projectSection = (projectId: string, index: number) => {
+  const id = escapeHtml(projectId);
+  const heading = `project-${index}`;
+  return (
+    `<section data-ref-namespace="${projectNamespace}" data-ref-id="${id}" aria-labelledby="${heading}">` +
+    `<h2 id="${heading}">Project ${id}</h2>` +
+    `<p><a href="${projectsPrefix}${escapeHtml(encodeURIComponent(projectId))}">The project's form page</a></p></section>`
+  );
+};
+
+// Without `?project=`, the admin manages their tenant's demo project; with it, any project in their tenant.
+const adminPage = async (request: Request, url: URL, shell: () => Promise<string>) => {
+  const user = signedInUser(request);
+  if (user === null || !isAdmin(user)) {
+    const signIn = `/login?return=${encodeURIComponent(url.pathname + url.search)}`;
+    return staticPage(
+      user === null ? 401 : 403,
+      "Admins only",
+      `<p><a href="${escapeHtml(signIn)}">Sign in as an admin</a></p>`,
+    );
+  }
+  const { tenant } = devUsers[user];
+  const requested = url.searchParams.get("project");
+  if (requested !== null && projectTenant(requested) !== tenant)
+    return staticPage(404, "No such project in your tenant", `<p>Signed in as ${user}.</p>`);
+  const projects = requested === null ? [demoProjectOf[tenant]!] : [requested];
+  const page = await shell();
+  if (!page.includes(projectsSlot)) throw new Error(`The admin page has no empty ${projectsSlot}`);
+  return html(
+    200,
+    // A replacer function, so a `$` in a project id is never read as a replacement pattern.
+    page.replace(
+      projectsSlot,
+      () => `<div id="projects">${projects.map(projectSection).join("")}</div>`,
+    ),
+  );
+};
+
 // Without a project, a dev user gets a tenant-wide token; the anonymous user's grant needs the project's form.
 const token = async (request: Request, project: string | null, resolve: Resolve) => {
   const user = signedInUser(request);
@@ -172,11 +224,13 @@ const projectIdOf = (pathname: string) => {
 export interface ReferenceHostOptions {
   /** The project page's HTML shell (`project.html`, as Vite serves it), holding an empty `<form-renderer>`. */
   readonly projectPage: () => Promise<string>;
+  /** The admin page's HTML shell (`admin.html`, as Vite serves it), holding an empty `<div id="projects">`. */
+  readonly adminPage: () => Promise<string>;
 }
 
 /**
- * The reference host's server routes: the module's API at `/api`, dev sign-in at `/login` and `/token`, and
- * "the form for project X" at `/projects/<id>`.
+ * The reference host's server routes: the module's API at `/api`, dev sign-in at `/login` and `/token`,
+ * "the form for project X" at `/projects/<id>`, and the admin page for projects' references at `/admin`.
  */
 export const createReferenceHost = (
   api: FormModuleHandler,
@@ -198,6 +252,7 @@ export const createReferenceHost = (
       isApiPath(pathname) ||
       pathname === "/login" ||
       pathname === "/token" ||
+      pathname === "/admin" ||
       (pathname.startsWith(projectsPrefix) && pathname.length > projectsPrefix.length),
     fetch: async (request) => {
       const url = new URL(request.url);
@@ -211,6 +266,7 @@ export const createReferenceHost = (
       if (route === "POST /login") return signIn(request);
       if (route === "GET /token")
         return withCors(request, await token(request, url.searchParams.get("project"), resolve));
+      if (route === "GET /admin") return adminPage(request, url, options.adminPage);
       if (request.method === "GET" && url.pathname.startsWith(projectsPrefix))
         return projectPage(projectIdOf(url.pathname), resolve, options.projectPage);
       return new Response(null, { status: 404 });

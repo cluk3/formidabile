@@ -1,7 +1,7 @@
 import { defaultClientConditions, defineConfig } from "vite-plus";
 import { resolve } from "node:path";
 import { databaseUrl } from "./server/database-url.ts";
-import { projectPageFile, referenceHost } from "./server/plugin.ts";
+import { adminPageFile, projectPageFile, referenceHost } from "./server/plugin.ts";
 
 export default defineConfig({
   plugins: [referenceHost()],
@@ -10,11 +10,12 @@ export default defineConfig({
   build: {
     // The preview page is served under a strict CSP, so no inline preload polyfill.
     modulePreload: { polyfill: false },
-    // The project page's shell is built too: the host serves it at `/projects/<id>`.
+    // The project and admin pages' shells are built too: the host serves them at `/projects/<id>` and `/admin`.
     rolldownOptions: {
       input: [
         resolve(import.meta.dirname, "index.html"),
         resolve(import.meta.dirname, projectPageFile),
+        resolve(import.meta.dirname, adminPageFile),
       ],
     },
   },
