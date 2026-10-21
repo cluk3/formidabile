@@ -25,13 +25,15 @@ const sign = (claims: JWTPayload, secret = jwt.secret) =>
 
 const admin = { sub: "acme-admin", tenant: "acme", capabilities: ["forms:manage"] };
 const analyst = { sub: "acme-analyst", tenant: "acme", capabilities: ["responses:read"] };
+const respondent = { sub: "alice", tenant: "acme", capabilities: [] };
 
+const questionId = "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e";
 const definition = {
   format: 1,
   title: "Parity",
   questions: [
     {
-      id: "0192f5a0-7c3e-7b1a-9d2e-3f4a5b6c7d8e",
+      id: questionId,
       type: "boolean",
       label: "Ready?",
       required: true,
@@ -67,6 +69,8 @@ const server = ManagedRuntime.make(
 let port = 0;
 let handler: ReturnType<typeof createFormModuleHandler>;
 let publishedFormId = "";
+/** Open and unlimited, so every submit to it is a new response. */
+let openForm = { id: "", versionId: "" };
 
 beforeAll(async () => {
   const context = await server.context();
@@ -93,6 +97,18 @@ beforeAll(async () => {
     }),
   );
   publishedFormId = form.id;
+
+  const open = await send(request("POST", "/forms", { claims: admin, body: { definition } }));
+  const { version } = await send(
+    request("POST", `/forms/${open.form.id}/draft/publish`, {
+      claims: admin,
+      body: { expectedRevision: open.draft.revision },
+    }),
+  );
+  await send(
+    request("PATCH", `/forms/${open.form.id}`, { claims: admin, body: { availability: "open" } }),
+  );
+  openForm = { id: open.form.id, versionId: version.id };
 });
 
 afterAll(async () => {
@@ -105,6 +121,8 @@ interface Row {
   readonly request: () => Promise<Request>;
   /** Sent with `Transfer-Encoding: chunked` and no `Content-Length`, which only a raw socket can do. */
   readonly chunked?: true;
+  /** Creates something on each send, so the ids in its reply are compared as placeholders. */
+  readonly creates?: true;
 }
 
 const rows: Record<string, Row> = {
@@ -121,6 +139,19 @@ const rows: Record<string, Row> = {
   "an analyst creating a form is 403": {
     status: 403,
     request: () => request("POST", "/forms", { claims: analyst, body: { definition } }),
+  },
+  "a respondent submits a response": {
+    status: 201,
+    creates: true,
+    request: () =>
+      request("POST", `/respond/forms/${openForm.id}/responses`, {
+        claims: respondent,
+        body: {
+          versionId: openForm.versionId,
+          answers: { [questionId]: true },
+          idempotencyKey: crypto.randomUUID(),
+        },
+      }),
   },
   "an unknown form is 404": {
     status: 404,
@@ -228,13 +259,21 @@ const dechunk = (chunked: Buffer) => {
   }
 };
 
+const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+
+const withIdPlaceholders = <A extends { readonly body: string }>(reply: A) => ({
+  ...reply,
+  body: reply.body.replaceAll(uuid, "<id>"),
+});
+
 test.each(Object.entries(rows))(
   "%s, alike from the server and the Fetch handler",
   async (_, row) => {
     const fromServer = await viaServer(row);
     const fromHandler = await viaHandler(row);
+    const compared = row.creates ? withIdPlaceholders : (reply: typeof fromServer) => reply;
 
     expect(fromServer.status).toBe(row.status);
-    expect(fromHandler).toEqual(fromServer);
+    expect(compared(fromHandler)).toEqual(compared(fromServer));
   },
 );
