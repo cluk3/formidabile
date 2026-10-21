@@ -90,6 +90,12 @@ Points the spike left unverified, settled in phase 0:
 
 `apps/reference-host/server/` serves the module at `/api` (the prefix comes off before the handler sees the path, and the schema is migrated before the first API request), checking tokens with the public HS256 dev secret in `server/dev-users.ts`. `/login` is the dev user switcher: it sets the `dev-user` cookie for `acme-admin`, `acme-analyst`, `globex-admin`, `alice` or `bob`, clears it for anonymous, and returns to its `return` parameter. `GET /token` answers `{ token }`, a five-minute tenant-wide identified JWT for the signed-in user, or 401 for anonymous. Both `/api` and `/token` allow the builder's origin, `http://localhost:4174`, with credentials.
 
+## The demo seed
+
+`apps/reference-host/seed/` is the host's demo data, for manual demos and as e2e's background. It needs no running server: it builds its own `createFormModuleHandler` on `DATABASE_URL` (else the compose database), migrates it, and creates and publishes one form in `acme` and one in `globex` through `@fb/api-client`, signed as each tenant's dev admin with `server/dev-users.ts`. It never inserts rows directly, so it can't break an invariant.
+
+`vp run @fb/reference-host#seed:reset` drops the `form_management` schema through `docker compose exec -T postgres psql`, then runs the seed, which migrates it again. Published forms can't be deleted, so a reset is the only way back to a clean demo. `vp run e2e` depends on it, so every Playwright run starts from the demo seed; no test may rely on the seed's data.
+
 ## The builder
 
 `apps/builder` is a SvelteKit 3 static SPA (`adapter-static`, `fallback: "index.html"`, `ssr = false`). Kit's options live in the `sveltekit()` plugin in its `vite.config.ts`, and there is no `svelte.config.js`. App-internal imports use `#lib/...`, declared in its `package.json` `imports`. It starts by fetching `/config.json` (`apiBaseUrl`, `tokenUrl`, `loginUrl`) from `static/`, so one build runs against any host.

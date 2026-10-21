@@ -1,6 +1,7 @@
 import { createFormModuleHandler } from "@fb/http-api/web";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import type { Connect, Plugin } from "vite-plus";
+import { databaseUrl } from "./database-url.ts";
 import { devJwt } from "./dev-users.ts";
 import { builderOrigin, createReferenceHost, type ReferenceHost } from "./host.ts";
 
@@ -13,8 +14,6 @@ const strictContentSecurityPolicy = [
   "require-trusted-types-for 'script'",
   "trusted-types svelte-trusted-html",
 ].join("; ");
-
-const composeDatabaseUrl = "postgres://formidabile:formidabile@localhost:5432/formidabile";
 
 const hostMiddleware = (host: ReferenceHost): Connect.NextHandleFunction => {
   return (req, res, next) => {
@@ -40,7 +39,7 @@ const contentSecurityPolicyMiddleware: Connect.NextHandleFunction = (_req, res, 
 export const referenceHost = (): Plugin => {
   const host = createReferenceHost(
     createFormModuleHandler({
-      databaseUrl: process.env.DATABASE_URL ?? composeDatabaseUrl,
+      databaseUrl,
       jwt: devJwt,
       cors: [builderOrigin],
     }),

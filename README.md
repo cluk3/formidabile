@@ -56,6 +56,14 @@ It starts Postgres if it isn't running, applies migrations, listens on `PORT` (d
 
 `test:pg` uses the compose database unless you set `DATABASE_URL`.
 
+## Demo data
+
+```bash
+vp run @fb/reference-host#seed:reset
+```
+
+It wipes the module's schema in the compose database (or `DATABASE_URL`'s) and seeds one published demo form each for the `acme` and `globex` dev tenants. `vp run e2e` runs it first.
+
 ## Without the global `vp`
 
 The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`, so `pnpm vp <command>` works too.
