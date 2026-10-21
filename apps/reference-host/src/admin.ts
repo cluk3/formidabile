@@ -54,11 +54,10 @@ const manage = (section: HTMLElement, ref: ExternalRef, index: number) => {
     }
   };
 
-  const reload = (focus: boolean) =>
-    run(async () => {
-      render(await loadReference(client, ref));
-      if (focus) document.getElementById(ids.forms)?.focus();
-    });
+  const reload = async (focus: boolean) => {
+    render(await loadReference(client, ref));
+    if (focus) document.getElementById(ids.forms)?.focus();
+  };
 
   const formsPart = ({ forms, otherForms }: ReferenceAdmin) => {
     const heading = create("h3", "Forms with this project", { id: ids.forms, tabindex: "-1" });
@@ -137,7 +136,7 @@ const manage = (section: HTMLElement, ref: ExternalRef, index: number) => {
   const render = (admin: ReferenceAdmin) =>
     content.replaceChildren(...formsPart(admin), ...responsesPart(admin));
 
-  void reload(false);
+  void run(() => reload(false));
 };
 
 document
