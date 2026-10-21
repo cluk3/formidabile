@@ -75,6 +75,13 @@ const matrix = [
     to: `^(${PACKAGES}/|${APPS}/reference-host/src/)`,
     allow: [`^${PACKAGES}/http-api/web\\.ts$`],
   },
+  {
+    // The demo seed builds its own handler and drives it through the client, signing with `server/`'s dev users.
+    name: "reference-host-seed",
+    from: `^${APPS}/reference-host/seed/`,
+    to: `^(${PACKAGES}/|${APPS}/reference-host/src/)`,
+    allow: [`^${PACKAGES}/http-api/web\\.ts$`, `^${PACKAGES}/api-client/`],
+  },
 ];
 
 /** @type {import('dependency-cruiser').IConfiguration} */

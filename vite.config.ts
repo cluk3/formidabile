@@ -110,9 +110,14 @@ export default defineConfig({
         dependsOn: ["@fb/renderer#check:svelte", "@fb/builder#check:svelte"],
       },
       // Runs Playwright against `vp preview` of the reference host and the builder, which `playwright.config.ts` starts.
+      // Every run starts from a fresh schema plus the demo seed, which no spec may rely on.
       e2e: {
         command: "playwright test --config e2e/playwright.config.ts",
-        dependsOn: ["@fb/reference-host#build", "@fb/builder#build"],
+        dependsOn: [
+          "@fb/reference-host#build",
+          "@fb/builder#build",
+          "@fb/reference-host#seed:reset",
+        ],
         cache: false,
       },
       postgres: {
