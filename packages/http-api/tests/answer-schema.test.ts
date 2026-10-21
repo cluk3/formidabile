@@ -66,4 +66,59 @@ describe("the answer schema", () => {
       additionalProperties: false,
     });
   });
+
+  test("is still served for a version a later publish superseded", async () => {
+    const form = await openForm();
+    const draft = await admin.PUT("/forms/{formId}/draft", {
+      params: { path: { formId: form.formId } },
+      body: {
+        expectedRevision: null,
+        definition: { ...definition, questions: [definition.questions[1]!] },
+      },
+    });
+    await admin.POST("/forms/{formId}/draft/publish", {
+      params: { path: { formId: form.formId } },
+      body: { expectedRevision: draft.data!.revision },
+    });
+
+    const { data, response } = await answerSchema(alice, form);
+
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ required: [ids.text] });
+  });
+
+  test("of another form's version gives 404", async () => {
+    const a = await openForm();
+    const b = await openForm();
+
+    const { error, response } = await answerSchema(alice, { ...a, versionId: b.versionId });
+
+    expect(response.status).toBe(404);
+    expect(error).toEqual({ _tag: "NotFound" });
+  });
+
+  test("of a closed form gives 409 FormClosed", async () => {
+    const form = await openForm();
+    await admin.PATCH("/forms/{formId}", {
+      params: { path: { formId: form.formId } },
+      body: { availability: "closed" },
+    });
+
+    const { error, response } = await answerSchema(alice, form);
+
+    expect(response.status).toBe(409);
+    expect(error).toEqual({ _tag: "FormClosed" });
+  });
+
+  test("gives a respondent from another tenant 404", async () => {
+    const form = await openForm();
+    const bob = api.clientWithToken(() =>
+      signToken({ sub: "bob", tenant: "globex", capabilities: [] }),
+    );
+
+    const { error, response } = await answerSchema(bob, form);
+
+    expect(response.status).toBe(404);
+    expect(error).toEqual({ _tag: "NotFound" });
+  });
 });
