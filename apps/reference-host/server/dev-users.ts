@@ -1,4 +1,4 @@
-import { type JWTPayload, SignJWT } from "jose";
+import { type JWTPayload, signHs256 } from "@fb/http-api/sign";
 
 // Dev tokens only: the HS256 secret is public by design.
 export const devJwt = {
@@ -30,17 +30,13 @@ export const devTenants: ReadonlyArray<string> = [
   ...new Set(Object.values(devUsers).map(({ tenant }) => tenant)),
 ];
 
-const secret = new TextEncoder().encode(devJwt.secret);
-
 // Every token the host mints lasts five minutes.
 const sign = (claims: JWTPayload) =>
-  new SignJWT(claims)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(devJwt.issuer)
-    .setAudience(devJwt.audience)
-    .setIssuedAt()
-    .setExpirationTime("5m")
-    .sign(secret);
+  signHs256(claims, {
+    secret: devJwt.secret,
+    issuer: devJwt.issuer,
+    audience: devJwt.audience,
+  });
 
 const identified = (user: DevUser) => {
   const { tenant, capabilities } = devUsers[user];

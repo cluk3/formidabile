@@ -1,9 +1,9 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
 import { JwtActorResolver, toFormApiWebHandler } from "@fb/http-api";
+import { type JWTPayload, signHs256 } from "@fb/http-api/sign";
 import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
-import { type JWTPayload, SignJWT } from "jose";
 
 export const jwt = {
   issuer: "https://host.test",
@@ -35,13 +35,12 @@ export interface TokenOptions {
 }
 
 export const signToken = (claims: JWTPayload, options: TokenOptions = {}) =>
-  new SignJWT(claims)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(jwt.issuer)
-    .setAudience(options.audience ?? jwt.audience)
-    .setIssuedAt()
-    .setExpirationTime(options.expiresAt ?? "5m")
-    .sign(new TextEncoder().encode(options.secret ?? jwt.secret));
+  signHs256(claims, {
+    secret: options.secret ?? jwt.secret,
+    issuer: jwt.issuer,
+    audience: options.audience ?? jwt.audience,
+    expiresAt: options.expiresAt,
+  });
 
 export const baseUrl = "http://localhost";
 

@@ -1,61 +1,22 @@
 import { Database } from "@fb/server/database";
-import { Effect, Layer, Schema } from "effect";
+import { Effect, Layer } from "effect";
 import { SqlClient, SqlError } from "effect/sql";
 import { describe, expect, test } from "vite-plus/test";
+import {
+  insertForm,
+  insertIdentity,
+  insertVersion,
+  insertVersionQuestion,
+  publishedForm,
+  rejection,
+} from "./table-fixtures.ts";
 
 type Services = Database | SqlClient.SqlClient;
 
-const DriverError = Schema.Struct({ code: Schema.String, message: Schema.String });
-
-// The driver's own error, so a test can tell which constraint or trigger rejected a statement.
-const rejection = <A, R>(statement: Effect.Effect<A, SqlError.SqlError, R>) =>
-  statement.pipe(
-    Effect.flip,
-    Effect.map((error) => Schema.decodeUnknownSync(DriverError)(error.reason.cause)),
-  );
-
-const insertForm = (formId: string) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.forms (id, tenant, availability, response_limit, created_at, updated_at)
-      VALUES (${formId}, 'acme', 'closed', 'unlimited', now(), now())
-    `,
-  );
-
-const insertVersion = (formId: string, versionId: string, number: number) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.form_versions (id, form_id, number, definition, published_at, published_by)
-      VALUES (${versionId}, ${formId}, ${number}, '{}', now(), 'acme-admin')
-    `,
-  );
-
 const insertQuestion = (formId: string, versionId: string, questionId: string) =>
-  SqlClient.SqlClient.use((sql) =>
-    sql`
-      INSERT INTO form_management.question_identities (form_id, question_id, type)
-      VALUES (${formId}, ${questionId}, 'text')
-      ON CONFLICT DO NOTHING
-    `.pipe(
-      Effect.andThen(
-        sql`
-          INSERT INTO form_management.form_version_questions (version_id, question_id, form_id, type, position)
-          VALUES (${versionId}, ${questionId}, ${formId}, 'text', 0)
-        `,
-      ),
-    ),
+  insertIdentity(formId, questionId, "text").pipe(
+    Effect.andThen(insertVersionQuestion(formId, versionId, questionId, "text")),
   );
-
-// A form published once, with one text question.
-const publishedForm = Effect.gen(function* () {
-  const formId = crypto.randomUUID();
-  const versionId = crypto.randomUUID();
-  const questionId = crypto.randomUUID();
-  yield* insertForm(formId);
-  yield* insertVersion(formId, versionId, 1);
-  yield* insertQuestion(formId, versionId, questionId);
-  return { formId, versionId, questionId };
-});
 
 interface ResponseRow {
   readonly formId: string;

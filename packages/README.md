@@ -48,7 +48,7 @@ packages/<name>/
   | `apps/api-server`            | `http-api`, `server`                                           |
   | `apps/builder`               | `core`, `api-client`, the `renderer` component (not `element`) |
   | `apps/reference-host/src`    | `renderer/element`, `api-client`                               |
-  | `apps/reference-host/server` | `http-api/web` only                                            |
+  | `apps/reference-host/server` | `http-api/web`, `http-api/sign`                                |
   | `apps/reference-host/seed`   | `http-api/web`, `api-client`, `core/editing`                   |
 
   Nothing imports from `apps/` (`no-import-of-apps-from-outside`, `no-import-between-apps`).

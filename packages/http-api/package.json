@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./index.ts",
-    "./web": "./web.ts"
+    "./web": "./web.ts",
+    "./sign": "./sign.ts"
   },
   "dependencies": {
     "@fb/core": "workspace:*",

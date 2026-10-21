@@ -1,11 +1,11 @@
 import { connect } from "node:net";
 import { JwtActorResolver } from "@fb/http-api";
+import { type JWTPayload, signHs256 } from "@fb/http-api/sign";
 import { createFormModuleHandler, declareLength } from "@fb/http-api/web";
 import { Database } from "@fb/server/database";
 import { DatabaseTest } from "@fb/server/testing";
 import { Context, Layer, ManagedRuntime } from "effect";
 import { HttpServer } from "effect/http";
-import { type JWTPayload, SignJWT } from "jose";
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { ServerLive } from "../server.ts";
 
@@ -16,12 +16,7 @@ const jwt = {
 };
 
 const sign = (claims: JWTPayload, secret = jwt.secret) =>
-  new SignJWT(claims)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(jwt.issuer)
-    .setAudience(jwt.audience)
-    .setExpirationTime("5m")
-    .sign(new TextEncoder().encode(secret));
+  signHs256(claims, { secret, issuer: jwt.issuer, audience: jwt.audience });
 
 const admin = { sub: "acme-admin", tenant: "acme", capabilities: ["forms:manage"] };
 const analyst = { sub: "acme-analyst", tenant: "acme", capabilities: ["responses:read"] };
