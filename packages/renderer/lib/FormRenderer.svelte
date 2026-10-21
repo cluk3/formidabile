@@ -22,10 +22,16 @@
     | { readonly state: "stopped"; readonly code: ProblemCode }
     | { readonly state: "answering"; readonly form: Loaded }
     | { readonly state: "submitted"; readonly edited: boolean };
+  type Submission = {
+    readonly versionId: string;
+    readonly answers: Schemas["AnyAnswers"];
+    readonly idempotencyKey: string;
+  };
   /** A refusal shown above Submit while the answers stay, with what the respondent can do next. */
   type Notice =
-    | { readonly code: Exclude<ProblemCode, "alreadyResponded"> }
-    | { readonly code: "alreadyResponded"; readonly responseId: string };
+    | { readonly code: Exclude<ProblemCode, "alreadyResponded" | "submitUnconfirmed"> }
+    | { readonly code: "alreadyResponded"; readonly responseId: string }
+    | { readonly code: "submitUnconfirmed"; readonly submission: Submission };
   type Refusal =
     | Schemas["UnauthenticatedEncoded"]
     | Schemas["NotFoundEncoded"]
@@ -37,12 +43,43 @@
     | Schemas["PayloadTooLargeEncoded"]
     | Schemas["LengthRequiredEncoded"]
     | Schemas["ValidationFailedEncoded"];
+  const refusals = {
+    Unauthenticated: true,
+    NotFound: true,
+    FormNotPublished: true,
+    FormClosed: true,
+    VersionSuperseded: true,
+    AlreadyResponded: true,
+    RevisionConflict: true,
+    PayloadTooLarge: true,
+    LengthRequired: true,
+    ValidationFailed: true,
+  } satisfies Record<Refusal["_tag"], true>;
+  const isRefusal = (error: unknown): error is Refusal => {
+    const tag =
+      typeof error === "object" && error !== null ? Reflect.get(error, "_tag") : undefined;
+    return typeof tag === "string" && Object.hasOwn(refusals, tag);
+  };
+  type Reply = {
+    readonly data?: { readonly responseId: unknown };
+    readonly error?: unknown;
+    readonly response: Response;
+  };
+
+  /** The host's `getToken` failed, so the request was never sent. */
+  class NotSent extends Error {}
 
   const live = $derived.by(() => {
     if (preview !== undefined) return undefined;
     const client = createFormApiClient({
       baseUrl: apiBaseUrl,
-      getToken: () => getToken({ formId }),
+      getToken: async () => {
+        try {
+          return await getToken({ formId });
+        } catch {
+          throw new NotSent();
+        }
+      },
     });
     return { formId, responseId, client };
   });
@@ -161,9 +198,8 @@
     control?.focus();
   };
 
-  const refuse = async (error: Refusal | undefined, status: number) => {
-    if (status === 413) return warn({ code: "tooLarge" });
-    switch (error?._tag) {
+  const refuse = async (error: Refusal) => {
+    switch (error._tag) {
       case "ValidationFailed": {
         const next = questionErrors(error.issues);
         if (Object.keys(next).length > 0) return showErrors(next);
@@ -185,9 +221,52 @@
     warn({ code: "sendFailed" });
   };
 
+  // Only a reply the contract describes is definite. A rejected `fetch`, a 5xx, or any other reply may follow a
+  // commit, so `unknown` decides what the respondent can do (ADR 0016).
+  const settle = async (send: () => Promise<Reply>, edited: boolean, unknown: () => void) => {
+    sending = true;
+    try {
+      let reply: Reply;
+      try {
+        reply = await send();
+      } catch (error) {
+        return error instanceof NotSent ? warn({ code: "sendFailed" }) : unknown();
+      }
+      const { data, error, response } = reply;
+      if (response.ok && typeof data?.responseId === "string") {
+        idempotencyKey = undefined;
+        loaded = { state: "submitted", edited };
+        onsubmitted?.({ responseId: data.responseId });
+      } else if (response.status === 413) {
+        warn({ code: "tooLarge" });
+      } else if (response.ok || response.status >= 500 || !isRefusal(error)) {
+        unknown();
+      } else {
+        notice = undefined;
+        await refuse(error);
+      }
+    } finally {
+      sending = false;
+    }
+  };
+
+  // Retry resends exactly what may already be stored, so the key returns that response (ADR 0016).
+  const post = (client: FormApiClient, formId: string, submission: Submission) =>
+    settle(
+      () =>
+        client.POST("/respond/forms/{formId}/responses", {
+          params: { path: { formId } },
+          body: submission,
+        }),
+      false,
+      () => warn({ code: "submitUnconfirmed", submission }),
+    );
+
   const submit = async (event: SubmitEvent, form: Loaded) => {
     event.preventDefault();
     if (sending) return;
+    if (live !== undefined && notice?.code === "submitUnconfirmed")
+      return post(live.client, live.formId, notice.submission);
     notice = undefined;
     previewed = false;
     const checked = checkDrafts(form.definition, drafts);
@@ -199,34 +278,21 @@
     }
     const { client, formId } = live;
     const { editing } = form;
-    sending = true;
-    try {
-      const { data, error, response } =
-        editing === undefined
-          ? await client.POST("/respond/forms/{formId}/responses", {
-              params: { path: { formId } },
-              body: {
-                versionId: form.versionId,
-                answers: checked.answers,
-                idempotencyKey: (idempotencyKey ??= crypto.randomUUID()),
-              },
-            })
-          : await client.PUT("/respond/responses/{responseId}", {
-              params: { path: { responseId: editing.responseId } },
-              body: { expectedRevision: editing.revision, answers: checked.answers },
-            });
-      if (data !== undefined) {
-        idempotencyKey = undefined;
-        loaded = { state: "submitted", edited: editing !== undefined };
-        onsubmitted?.({ responseId: data.responseId });
-        return;
-      }
-      await refuse(error, response.status);
-    } catch {
-      warn({ code: "sendFailed" });
-    } finally {
-      sending = false;
-    }
+    if (editing === undefined)
+      return post(client, formId, {
+        versionId: form.versionId,
+        answers: checked.answers,
+        idempotencyKey: (idempotencyKey ??= crypto.randomUUID()),
+      });
+    return settle(
+      () =>
+        client.PUT("/respond/responses/{responseId}", {
+          params: { path: { responseId: editing.responseId } },
+          body: { expectedRevision: editing.revision, answers: checked.answers },
+        }),
+      true,
+      () => warn({ code: "editUnconfirmed" }),
+    );
   };
 </script>
 
@@ -248,10 +314,13 @@
     {#if form.editing}
       <p class="description" part="description">You're editing the response you sent.</p>
     {/if}
+    {@const unconfirmed = notice?.code === "submitUnconfirmed"}
     <form bind:this={formElement} novalidate onsubmit={(event) => submit(event, form)}>
-      {#each form.definition.questions as question (question.id)}
-        <QuestionCard {question} bind:value={drafts[question.id]} error={errors[question.id]} />
-      {/each}
+      <fieldset class="answers" disabled={unconfirmed}>
+        {#each form.definition.questions as question (question.id)}
+          <QuestionCard {question} bind:value={drafts[question.id]} error={errors[question.id]} />
+        {/each}
+      </fieldset>
       {#if notice !== undefined}
         {@const current = notice}
         <p class="notice" role="alert">{messages[current.code]}</p>
@@ -261,7 +330,7 @@
               Reload
             </button>
           </p>
-        {:else if current.code === "revisionConflict" && form.editing}
+        {:else if (current.code === "revisionConflict" || current.code === "editUnconfirmed") && form.editing}
           {@const { responseId } = form.editing}
           <p class="actions">
             <button class="action" part="action" type="button" onclick={() => open(responseId)}>
@@ -289,6 +358,8 @@
       <button class="submit" part="submit" type="submit" aria-disabled={sending}>
         {#if form.editing}
           {sending ? "Saving…" : "Save changes"}
+        {:else if unconfirmed}
+          {sending ? "Sending…" : "Retry"}
         {:else}
           {sending ? "Sending…" : "Submit"}
         {/if}
@@ -310,6 +381,12 @@
   }
   .description {
     margin: 0 0 1rem;
+  }
+  .answers {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
   .notice {
     color: var(--form-renderer-error, rgb(180, 20, 20));

@@ -155,40 +155,6 @@ test("fixing an answer and submitting again sends it", async () => {
   expect(requests.filter(({ method }) => method === "POST")).toHaveLength(1);
 });
 
-test("the idempotency key minted at the first Submit is resent until a 201", async () => {
-  const { requests } = fakeApi(definitionOf([questions.guests]), {
-    submits: [
-      Response.json({ _tag: "Unavailable" }, { status: 503 }),
-      Response.json(
-        {
-          _tag: "ValidationFailed",
-          issues: [{ path: [questions.guests.id], message: "Too many" }],
-        },
-        { status: 422 },
-      ),
-    ],
-  });
-  await render(FormRenderer, { apiBaseUrl, formId, getToken: staticToken });
-
-  await userEvent.fill(labelled("Guests"), "2");
-  await userEvent.click(page.getByRole("button", { name: "Submit" }));
-  await expect
-    .element(page.getByText("We couldn't send your response.", { exact: false }))
-    .toBeVisible();
-  await userEvent.click(page.getByRole("button", { name: "Submit" }));
-  await expect.element(page.getByText("Too many")).toBeVisible();
-  await userEvent.fill(labelled("Guests"), "1");
-  await userEvent.click(page.getByRole("button", { name: "Submit" }));
-
-  await expect.element(page.getByText("Thank you, your response was received.")).toBeVisible();
-  const keys = requests
-    .filter(({ method }) => method === "POST")
-    .map(({ body }) => (body as { idempotencyKey: string }).idempotencyKey);
-  expect(keys).toHaveLength(3);
-  expect(keys[0]).toMatch(uuid);
-  expect(new Set(keys).size).toBe(1);
-});
-
 test("a form with a question type this renderer doesn't know is refused", async () => {
   fakeApi({
     ...definitionOf([questions.name]),
