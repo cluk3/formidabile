@@ -81,7 +81,7 @@ export const questionTypes = {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };
 
-const moduleOf = (q: QuestionSnapshot) =>
+export const moduleOf = (q: QuestionSnapshot) =>
   questionTypes[q.type] as QuestionType<QuestionSnapshot, unknown>;
 
 /**
