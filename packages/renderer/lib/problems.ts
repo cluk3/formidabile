@@ -9,6 +9,10 @@ export const messages = {
     "This form uses a question type this renderer doesn't support, so it can't be shown.",
   loadFailed: "This form couldn't be loaded.",
   sendFailed: "We couldn't send your response. Please try again.",
+  submitUnconfirmed:
+    "We couldn't confirm your response was received. Retry to send the same answers again.",
+  editUnconfirmed:
+    "We couldn't confirm your changes were saved. Reload the response to see the saved answers, or stay to keep yours on screen.",
   tooLarge: "Your answers are too long to send.",
   versionSuperseded:
     "This form was updated while you were answering. Reload it to answer the new version. Your answers won't carry over.",
