@@ -48,18 +48,55 @@ export class ActorResolver extends Context.Service<
 >()("@fb/server/ActorResolver") {}
 
 // ADR 0015 counts code points. Effect Schema's length checks count UTF-16 units, so an emoji would count twice.
-const isIdentifier = (text: string) => {
-  let codePoints = 0;
-  for (const _ of text) if (++codePoints > 255) return false;
-  return codePoints >= 1;
-};
+const codePoints = (min: number, max: number) =>
+  Schema.makeFilter<string>(
+    (text) => {
+      let count = 0;
+      for (const _ of text) if (++count > max) return false;
+      return count >= min;
+    },
+    { expected: `${min} to ${max} code points` },
+  );
+
+const Identifier = Schema.String.check(codePoints(1, 255));
+
+const FormId = Schema.String.check(Schema.isUUID());
+
+// The persistence model's reference shape (the `*_external_refs` check constraints).
+const Refs = Schema.Array(
+  Schema.Struct({
+    namespace: Schema.String.check(codePoints(1, 64), Schema.isPattern(/^[a-z][a-z0-9_.-]*$/)),
+    refId: Identifier,
+  }),
+).check(Schema.isMaxLength(20), Schema.isUnique());
+
+const ValidActor = Schema.Union([
+  Schema.Struct({
+    _tag: Schema.Literal("Identified"),
+    subject: Identifier,
+    tenant: Identifier,
+    formId: Schema.Option(FormId),
+    refs: Refs,
+  }).check(
+    Schema.makeFilter((actor) => actor.refs.length === 0 || actor.formId._tag === "Some", {
+      expected: "refs bound to a form",
+    }),
+  ),
+  Schema.Struct({
+    _tag: Schema.Literal("Anonymous"),
+    tenant: Identifier,
+    formId: FormId,
+    refs: Refs,
+  }),
+]);
+
+const isValidActor = Schema.is(ValidActor);
 
 /** Resolves the request's actor and holds it to the claim limits, whichever resolver produced it. */
 export const authenticate = (request: ActorRequest) =>
   ActorResolver.use((resolver) => resolver.resolve(request)).pipe(
     Effect.filterOrFail(
-      (actor) =>
-        isIdentifier(actor.tenant) && (actor._tag === "Anonymous" || isIdentifier(actor.subject)),
+      (actor) => isValidActor(actor),
       () => new Unauthenticated({ reason: "invalid" }),
     ),
   );

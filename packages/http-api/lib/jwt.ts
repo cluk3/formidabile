@@ -11,14 +11,24 @@ export type JwtOptions = { readonly issuer: string; readonly audience: string } 
 // Registered claims (`iss`, `exp`, ...) and any the host adds pass through the index signature.
 const OtherClaims = [Schema.Record(Schema.String, Schema.Unknown)] as const;
 
+// Only the shape: `authenticate` holds every actor to the reference limits. Decoding rejects extra keys.
+const Refs = Schema.Array(Schema.Struct({ namespace: Schema.String, refId: Schema.String }));
+
 const IdentifiedClaims = Schema.StructWithRest(
   Schema.Struct({
     sub: Schema.String,
     tenant: Schema.String,
     capabilities: Schema.Array(Capability),
+    form: Schema.optionalKey(Schema.String),
+    refs: Schema.optionalKey(Refs),
     anonymous: Schema.optionalKey(Schema.Never),
   }),
   OtherClaims,
+).check(
+  // ADR 0012: `refs` binds the token to one form, even when it's empty.
+  Schema.makeFilter((claims) => claims.refs === undefined || claims.form !== undefined, {
+    expected: "form alongside refs",
+  }),
 );
 
 const AnonymousClaims = Schema.StructWithRest(
@@ -26,6 +36,7 @@ const AnonymousClaims = Schema.StructWithRest(
     anonymous: Schema.Literal(true),
     tenant: Schema.String,
     form: Schema.String,
+    refs: Schema.optionalKey(Refs),
     sub: Schema.optionalKey(Schema.Never),
     capabilities: Schema.optionalKey(Schema.Never),
   }),
@@ -38,13 +49,17 @@ const decodeClaims = Schema.decodeUnknownEffect(Schema.Union([IdentifiedClaims, 
 
 const toActor = (claims: typeof IdentifiedClaims.Type | typeof AnonymousClaims.Type): Actor =>
   claims.anonymous === true
-    ? Actor.Anonymous({ tenant: TenantId.make(claims.tenant), formId: claims.form, refs: [] })
+    ? Actor.Anonymous({
+        tenant: TenantId.make(claims.tenant),
+        formId: claims.form,
+        refs: claims.refs ?? [],
+      })
     : Actor.Identified({
         subject: claims.sub,
         tenant: TenantId.make(claims.tenant),
         capabilities: claims.capabilities,
-        formId: Option.none(),
-        refs: [],
+        formId: Option.fromUndefinedOr(claims.form),
+        refs: claims.refs ?? [],
       });
 
 const bearerToken = /^Bearer +([^ ]+) *$/i;
