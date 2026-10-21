@@ -90,10 +90,14 @@ export class BodyLimits extends HttpApiMiddleware.Service<BodyLimits>()("@fb/htt
   error: [LengthRequired, PayloadTooLarge],
 }) {}
 
-const FormIdParams = { formId: Schema.String.check(Schema.isUUID()) };
-const ResponseIdParams = { responseId: Schema.String.check(Schema.isUUID()) };
+const Uuid = Schema.String.check(Schema.isUUID());
+const FormIdParams = { formId: Uuid };
+const ResponseIdParams = { responseId: Uuid };
 
-/** Revisions travel as opaque strings in the body, or the query for a discard or a delete (ADR 0010). */
+/**
+ * Revisions are opaque strings (ADR 0010). They travel in the body, except that a discard or a delete takes
+ * `expectedRevision` from the query, as the HTTP API surface issue (16) specifies: a `DELETE` carries no body.
+ */
 const Revision = Schema.String;
 
 /** A lookup by reference names both halves, or neither. */
@@ -111,164 +115,142 @@ const FormListQuery = Schema.Struct(RefQuery).check(refHalvesTogether);
 
 const ExternalRefs = Schema.Struct({ externalRefs: Schema.Array(ExternalRef) });
 
-export class FormsGroup extends HttpApiGroup.make("forms")
-  .add(
-    HttpApiEndpoint.post("create", "/forms", {
-      payload: Schema.Struct({ definition: FormDefinitionJson }),
-      success: Schema.Struct({ form: Form, draft: Draft }).pipe(HttpApiSchema.status(201)),
-      error: [Forbidden, ValidationFailed],
-    }).annotate(BodyLimit, largeBody),
-    HttpApiEndpoint.get("list", "/forms", {
-      query: FormListQuery,
-      success: Schema.Struct({ forms: Schema.Array(FormSummary) }),
-      error: Forbidden,
-    }),
-    HttpApiEndpoint.get("detail", "/forms/:formId", {
-      params: FormIdParams,
-      success: FormDetail,
-      error: [Forbidden, NotFound],
-    }),
-    HttpApiEndpoint.patch("updateSettings", "/forms/:formId", {
-      params: FormIdParams,
-      payload: FormSettings,
-      success: Form,
-      error: [Forbidden, ValidationFailed, NotFound, FormNotPublished],
-    }),
-    HttpApiEndpoint.delete("delete", "/forms/:formId", {
-      params: FormIdParams,
-      query: { expectedRevision: Revision },
-      error: [Forbidden, NotFound, FormPublished, RevisionConflict],
-    }),
-    HttpApiEndpoint.post("addExternalRef", "/forms/:formId/external-refs", {
-      params: FormIdParams,
-      payload: ExternalRef,
-      success: ExternalRefs,
-      error: [Forbidden, NotFound, ExternalRefLimitReached],
-    }),
-    HttpApiEndpoint.delete("removeExternalRef", "/forms/:formId/external-refs", {
-      params: FormIdParams,
-      query: ExternalRef,
-      success: ExternalRefs,
-      error: [Forbidden, NotFound],
-    }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+export class FormsGroup extends HttpApiGroup.make("forms").add(
+  HttpApiEndpoint.post("create", "/forms", {
+    payload: Schema.Struct({ definition: FormDefinitionJson }),
+    success: Schema.Struct({ form: Form, draft: Draft }).pipe(HttpApiSchema.status(201)),
+    error: [Forbidden, ValidationFailed],
+  }).annotate(BodyLimit, largeBody),
+  HttpApiEndpoint.get("list", "/forms", {
+    query: FormListQuery,
+    success: Schema.Struct({ forms: Schema.Array(FormSummary) }),
+    error: Forbidden,
+  }),
+  HttpApiEndpoint.get("detail", "/forms/:formId", {
+    params: FormIdParams,
+    success: FormDetail,
+    error: [Forbidden, NotFound],
+  }),
+  HttpApiEndpoint.patch("updateSettings", "/forms/:formId", {
+    params: FormIdParams,
+    payload: FormSettings,
+    success: Form,
+    error: [Forbidden, ValidationFailed, NotFound, FormNotPublished],
+  }),
+  HttpApiEndpoint.delete("delete", "/forms/:formId", {
+    params: FormIdParams,
+    query: { expectedRevision: Revision },
+    error: [Forbidden, NotFound, FormPublished, RevisionConflict],
+  }),
+  HttpApiEndpoint.post("addExternalRef", "/forms/:formId/external-refs", {
+    params: FormIdParams,
+    payload: ExternalRef,
+    success: ExternalRefs,
+    error: [Forbidden, NotFound, ExternalRefLimitReached],
+  }),
+  HttpApiEndpoint.delete("removeExternalRef", "/forms/:formId/external-refs", {
+    params: FormIdParams,
+    query: ExternalRef,
+    success: ExternalRefs,
+    error: [Forbidden, NotFound],
+  }),
+) {}
 
-export class DraftsGroup extends HttpApiGroup.make("drafts")
-  .add(
-    HttpApiEndpoint.get("read", "/forms/:formId/draft", {
-      params: FormIdParams,
-      success: Schema.Struct({ draft: Schema.NullOr(Draft) }),
-      error: [Forbidden, NotFound],
+export class DraftsGroup extends HttpApiGroup.make("drafts").add(
+  HttpApiEndpoint.get("read", "/forms/:formId/draft", {
+    params: FormIdParams,
+    success: Schema.Struct({ draft: Schema.NullOr(Draft) }),
+    error: [Forbidden, NotFound],
+  }),
+  HttpApiEndpoint.put("save", "/forms/:formId/draft", {
+    params: FormIdParams,
+    payload: Schema.Struct({
+      expectedRevision: Schema.NullOr(Revision),
+      definition: FormDefinitionJson,
     }),
-    HttpApiEndpoint.put("save", "/forms/:formId/draft", {
-      params: FormIdParams,
-      payload: Schema.Struct({
-        expectedRevision: Schema.NullOr(Revision),
-        definition: FormDefinitionJson,
-      }),
-      success: Draft,
-      error: [Forbidden, NotFound, ValidationFailed, RevisionConflict, NoDraft],
-    }).annotate(BodyLimit, largeBody),
-    HttpApiEndpoint.delete("discard", "/forms/:formId/draft", {
-      params: FormIdParams,
-      query: { expectedRevision: Revision },
-      error: [Forbidden, NotFound, FormNotPublished, NoDraft, RevisionConflict],
-    }),
-    HttpApiEndpoint.post("publish", "/forms/:formId/draft/publish", {
-      params: FormIdParams,
-      payload: Schema.Struct({ expectedRevision: Revision }),
-      success: Schema.Struct({ form: Form, version: VersionSummary }).pipe(
-        HttpApiSchema.status(201),
-      ),
-      error: [Forbidden, NotFound, NoDraft, RevisionConflict, ValidationFailed],
-    }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+    success: Draft,
+    error: [Forbidden, NotFound, ValidationFailed, RevisionConflict, NoDraft],
+  }).annotate(BodyLimit, largeBody),
+  HttpApiEndpoint.delete("discard", "/forms/:formId/draft", {
+    params: FormIdParams,
+    query: { expectedRevision: Revision },
+    error: [Forbidden, NotFound, FormNotPublished, NoDraft, RevisionConflict],
+  }),
+  HttpApiEndpoint.post("publish", "/forms/:formId/draft/publish", {
+    params: FormIdParams,
+    payload: Schema.Struct({ expectedRevision: Revision }),
+    success: Schema.Struct({ form: Form, version: VersionSummary }).pipe(HttpApiSchema.status(201)),
+    error: [Forbidden, NotFound, NoDraft, RevisionConflict, ValidationFailed],
+  }),
+) {}
 
-export class VersionsGroup extends HttpApiGroup.make("versions")
-  .add(
-    HttpApiEndpoint.get("list", "/forms/:formId/versions", {
-      params: FormIdParams,
-      success: Schema.Struct({ versions: Schema.Array(VersionSummary) }),
-      error: [Forbidden, NotFound],
-    }),
-    HttpApiEndpoint.get("read", "/forms/:formId/versions/:versionId", {
-      params: { ...FormIdParams, versionId: Schema.String.check(Schema.isUUID()) },
-      success: FormVersion,
-      error: [Forbidden, NotFound],
-    }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+export class VersionsGroup extends HttpApiGroup.make("versions").add(
+  HttpApiEndpoint.get("list", "/forms/:formId/versions", {
+    params: FormIdParams,
+    success: Schema.Struct({ versions: Schema.Array(VersionSummary) }),
+    error: [Forbidden, NotFound],
+  }),
+  HttpApiEndpoint.get("read", "/forms/:formId/versions/:versionId", {
+    params: { ...FormIdParams, versionId: Uuid },
+    success: FormVersion,
+    error: [Forbidden, NotFound],
+  }),
+) {}
 
 const listLimit = { minimum: 1, maximum: 200 };
 
 /** Every filter is optional; `cursor` is the previous page's `nextCursor` (ADR 0013, ADR 0015). */
 const ResponseListQuery = Schema.Struct({
-  formId: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
-  versionId: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+  formId: Schema.optionalKey(Uuid),
+  versionId: Schema.optionalKey(Uuid),
   ...RefQuery,
   respondentId: Schema.optionalKey(RespondentId),
-  cursor: Schema.optionalKey(Schema.String.check(Schema.isUUID())),
+  cursor: Schema.optionalKey(Uuid),
   limit: Schema.optionalKey(
     Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween(listLimit)),
   ),
 }).check(refHalvesTogether);
 
-export class ResponsesGroup extends HttpApiGroup.make("responses")
-  .add(
-    HttpApiEndpoint.get("list", "/responses", {
-      query: ResponseListQuery,
-      success: ResponsePage,
-      error: Forbidden,
-    })
-      // Effect documents a query parameter by its text encoding, which would type `limit` as a string.
-      .annotate(OpenApi.Transform, (operation) => ({
-        ...operation,
-        parameters: operation.parameters.map((parameter: OpenApi.OpenAPISpecParameter) =>
-          parameter.name === "limit"
-            ? { ...parameter, schema: { type: "integer", ...listLimit } }
-            : parameter,
-        ),
-      })),
-    HttpApiEndpoint.get("read", "/responses/:responseId", {
-      params: ResponseIdParams,
-      success: ResponseDetail,
-      error: [Forbidden, NotFound],
-    }),
-    HttpApiEndpoint.delete("delete", "/responses/:responseId", {
-      params: ResponseIdParams,
-      error: [Forbidden, NotFound],
-    }),
-    // Erasure is tenant-scoped: a person known in several tenants is erased once per tenant (ADR 0013).
-    HttpApiEndpoint.delete("deleteByRespondent", "/respondents/:respondentId/responses", {
-      params: { respondentId: RespondentId },
-      success: DeletedResponses,
-      error: Forbidden,
-    }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+export class ResponsesGroup extends HttpApiGroup.make("responses").add(
+  HttpApiEndpoint.get("list", "/responses", {
+    query: ResponseListQuery,
+    success: ResponsePage,
+    error: Forbidden,
+  })
+    // Effect documents a query parameter by its text encoding, which would type `limit` as a string.
+    .annotate(OpenApi.Transform, (operation) => ({
+      ...operation,
+      parameters: operation.parameters.map((parameter: OpenApi.OpenAPISpecParameter) =>
+        parameter.name === "limit"
+          ? { ...parameter, schema: { type: "integer", ...listLimit } }
+          : parameter,
+      ),
+    })),
+  HttpApiEndpoint.get("read", "/responses/:responseId", {
+    params: ResponseIdParams,
+    success: ResponseDetail,
+    error: [Forbidden, NotFound],
+  }),
+  HttpApiEndpoint.delete("delete", "/responses/:responseId", {
+    params: ResponseIdParams,
+    error: [Forbidden, NotFound],
+  }),
+  // Erasure is tenant-scoped: a person known in several tenants is erased once per tenant (ADR 0013).
+  HttpApiEndpoint.delete("deleteByRespondent", "/respondents/:respondentId/responses", {
+    params: { respondentId: RespondentId },
+    success: DeletedResponses,
+    error: Forbidden,
+  }),
+) {}
 
-export class AnalyticsGroup extends HttpApiGroup.make("analytics")
-  .add(
-    // A never-published form gives empty analytics, not 404 (ADR 0009).
-    HttpApiEndpoint.get("form", "/forms/:formId/analytics", {
-      params: FormIdParams,
-      success: FormAnalytics,
-      error: [Forbidden, NotFound],
-    }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+export class AnalyticsGroup extends HttpApiGroup.make("analytics").add(
+  // A never-published form gives empty analytics, not 404 (ADR 0009).
+  HttpApiEndpoint.get("form", "/forms/:formId/analytics", {
+    params: FormIdParams,
+    success: FormAnalytics,
+    error: [Forbidden, NotFound],
+  }),
+) {}
 
 const AnswerSchema = Schema.JsonObject.annotate({
   identifier: "AnswerSchema",
@@ -277,60 +259,52 @@ const AnswerSchema = Schema.JsonObject.annotate({
 });
 
 /** Respondents' operations, under the respondent rules rather than capabilities (ADR 0010). */
-export class RespondGroup extends HttpApiGroup.make("respond")
-  .add(
-    HttpApiEndpoint.get("load", "/respond/forms/:formId", {
-      params: FormIdParams,
-      success: RespondentForm,
-      error: [NotFound, FormNotPublished, FormClosed],
+export class RespondGroup extends HttpApiGroup.make("respond").add(
+  HttpApiEndpoint.get("load", "/respond/forms/:formId", {
+    params: FormIdParams,
+    success: RespondentForm,
+    error: [NotFound, FormNotPublished, FormClosed],
+  }),
+  HttpApiEndpoint.get("answerSchema", "/respond/forms/:formId/versions/:versionId/answer-schema", {
+    params: { ...FormIdParams, versionId: Uuid },
+    success: AnswerSchema,
+    error: [NotFound, FormClosed],
+  }),
+  HttpApiEndpoint.post("submit", "/respond/forms/:formId/responses", {
+    params: FormIdParams,
+    // References come only from the token, so `externalRefs` in the body is refused (ADR 0012).
+    payload: Schema.Struct({
+      versionId: Uuid,
+      answers: AnswersJson,
+      idempotencyKey: Uuid,
     }),
-    HttpApiEndpoint.get(
-      "answerSchema",
-      "/respond/forms/:formId/versions/:versionId/answer-schema",
-      {
-        params: { ...FormIdParams, versionId: Schema.String.check(Schema.isUUID()) },
-        success: AnswerSchema,
-        error: [NotFound, FormClosed],
-      },
-    ),
-    HttpApiEndpoint.post("submit", "/respond/forms/:formId/responses", {
-      params: FormIdParams,
-      // References come only from the token, so `externalRefs` in the body is refused (ADR 0012).
-      payload: Schema.Struct({
-        versionId: Schema.String.check(Schema.isUUID()),
-        answers: AnswersJson,
-        idempotencyKey: Schema.String.check(Schema.isUUID()),
-      }),
-      success: SubmittedResponse.pipe(HttpApiSchema.status(201)),
-      error: [
-        NotFound,
-        Unauthenticated,
-        ValidationFailed,
-        FormClosed,
-        VersionSuperseded,
-        AlreadyResponded,
-      ],
-    })
-      .annotate(BodyLimit, largeBody)
-      .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
-    HttpApiEndpoint.get("readResponse", "/respond/responses/:responseId", {
-      params: ResponseIdParams,
-      success: RespondentResponse,
-      error: [NotFound, Unauthenticated],
-    }),
-    HttpApiEndpoint.put("editResponse", "/respond/responses/:responseId", {
-      params: ResponseIdParams,
-      // An edit never changes the references, so `externalRefs` in the body is refused too.
-      payload: Schema.Struct({ expectedRevision: Revision, answers: AnswersJson }),
-      success: EditedResponse,
-      error: [NotFound, Unauthenticated, ValidationFailed, FormClosed, RevisionConflict],
-    })
-      .annotate(BodyLimit, largeBody)
-      .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
-  )
-  .middleware(EdgeValidation)
-  .middleware(Authentication)
-  .middleware(BodyLimits) {}
+    success: SubmittedResponse.pipe(HttpApiSchema.status(201)),
+    error: [
+      NotFound,
+      Unauthenticated,
+      ValidationFailed,
+      FormClosed,
+      VersionSuperseded,
+      AlreadyResponded,
+    ],
+  })
+    .annotate(BodyLimit, largeBody)
+    .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
+  HttpApiEndpoint.get("readResponse", "/respond/responses/:responseId", {
+    params: ResponseIdParams,
+    success: RespondentResponse,
+    error: [NotFound, Unauthenticated],
+  }),
+  HttpApiEndpoint.put("editResponse", "/respond/responses/:responseId", {
+    params: ResponseIdParams,
+    // An edit never changes the references, so `externalRefs` in the body is refused too.
+    payload: Schema.Struct({ expectedRevision: Revision, answers: AnswersJson }),
+    success: EditedResponse,
+    error: [NotFound, Unauthenticated, ValidationFailed, FormClosed, RevisionConflict],
+  })
+    .annotate(BodyLimit, largeBody)
+    .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
+) {}
 
 const documented = (schema: z.ZodMiniType) => {
   const { $schema: _, ...json } = toJSONSchema(schema, { target: "draft-2020-12", io: "input" });
@@ -344,6 +318,9 @@ export class FormApi extends HttpApi.make("FormApi")
   .add(RespondGroup)
   .add(ResponsesGroup)
   .add(AnalyticsGroup)
+  .middleware(EdgeValidation)
+  .middleware(Authentication)
+  .middleware(BodyLimits)
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",
