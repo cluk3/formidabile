@@ -1,35 +1,36 @@
-import { createFormApiClient } from "@fb/api-client";
-import { FormApiLive, JwtActorResolver } from "@fb/http-api";
+import { createFormModuleHandler } from "@fb/http-api/web";
+import { Database } from "@fb/server/database";
 import { DatabaseTest } from "@fb/server/testing";
-import { Layer } from "effect";
-import { HttpRouter, HttpServer } from "effect/http";
-import { afterAll, expect, test } from "vite-plus/test";
+import { Context, Effect, Layer, ManagedRuntime } from "effect";
+import { SqlClient } from "effect/sql";
+import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { seed } from "../seed/seed.ts";
-import { type DevUser, devJwt, mintDevToken } from "../server/dev-users.ts";
+import { devJwt } from "../server/dev-users.ts";
+import { demoProjects, resolveProjectForm } from "../server/projects.ts";
+import { clientFor } from "./api.ts";
 
-// The module's API on a fresh PGlite database, checking tokens with the dev secret, as the seed's handler does.
-const api = HttpRouter.toWebHandler(
-  FormApiLive.pipe(
-    Layer.provide([JwtActorResolver(devJwt), DatabaseTest]),
-    Layer.provide(HttpServer.layerServices),
-  ),
-  { disableLogger: true },
-);
+// The module's handler on a PGlite database the test can also query, checking tokens as the seed's handler does.
+const database = ManagedRuntime.make(DatabaseTest);
+let handler: ReturnType<typeof createFormModuleHandler>;
+const fetch = (request: Request) => handler.fetch(request);
 
-afterAll(() => api.dispose());
+beforeAll(async () => {
+  const shared = Layer.succeed(Database, Context.get(await database.context(), Database));
+  handler = createFormModuleHandler({ database: shared, jwt: devJwt });
+  await seed(fetch);
+});
 
-const clientFor = (user: DevUser) =>
-  createFormApiClient({
-    baseUrl: "http://seed.test",
-    getToken: () => mintDevToken(user),
-    fetch: (request) => api.handler(request),
-  });
+afterAll(async () => {
+  await handler.dispose();
+  await database.dispose();
+});
+
+const query = <A>(statement: (sql: SqlClient.SqlClient) => Effect.Effect<A, unknown>) =>
+  database.runPromise(SqlClient.SqlClient.use(statement).pipe(Effect.orDie));
 
 test("the seed publishes one form in each dev tenant through the API", async () => {
-  await seed((request) => api.handler(request));
-
   for (const admin of ["acme-admin", "globex-admin"] as const) {
-    const { data } = await clientFor(admin).GET("/forms");
+    const { data } = await clientFor(admin, fetch).GET("/forms");
 
     expect(data?.forms).toEqual([
       expect.objectContaining({
@@ -39,3 +40,31 @@ test("the seed publishes one form in each dev tenant through the API", async () 
     ]);
   }
 });
+
+test.each([
+  ["acme", "Customer feedback", "alice"],
+  ["globex", "Event registration", "globex-admin"],
+] as const)(
+  "the %s demo project resolves to %s, with an identified and an anonymous response under its reference",
+  async (tenant, title, respondent) => {
+    const projectId = demoProjects[tenant];
+
+    const resolved = await resolveProjectForm(fetch, tenant, projectId);
+
+    expect(resolved).toEqual({ kind: "one", form: { id: expect.any(String), title } });
+    const formId = resolved.kind === "one" ? resolved.form.id : "";
+    const responses = await query(
+      (sql) => sql`
+        SELECT r.respondent_id AS "respondentId", x.namespace, x.ref_id AS "refId"
+        FROM form_management.responses r
+        LEFT JOIN form_management.response_external_refs x ON x.response_id = r.id
+        WHERE r.form_id = ${formId}
+        ORDER BY r.respondent_id NULLS LAST
+      `,
+    );
+    expect(responses).toEqual([
+      { respondentId: respondent, namespace: "project", refId: projectId },
+      { respondentId: null, namespace: "project", refId: projectId },
+    ]);
+  },
+);
