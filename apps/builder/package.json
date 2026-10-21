@@ -1,0 +1,39 @@
+{
+  "name": "@fb/builder",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#lib/*": [
+      "./src/lib/*",
+      "./src/lib/*.ts",
+      "./src/lib/*.js",
+      "./src/lib/*/index.ts",
+      "./src/lib/*/index.js"
+    ]
+  },
+  "scripts": {
+    "prepare": "svelte-kit sync"
+  },
+  "dependencies": {
+    "@fb/api-client": "workspace:*",
+    "@fb/core": "workspace:*",
+    "@fb/renderer": "workspace:*"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "catalog:",
+    "@lucide/svelte": "catalog:",
+    "@sveltejs/adapter-static": "catalog:",
+    "@sveltejs/kit": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "bits-ui": "catalog:",
+    "cn": "catalog:",
+    "shadcn-svelte": "catalog:",
+    "svelte": "catalog:",
+    "svelte-check": "catalog:",
+    "tailwind-variants": "^3.3.0",
+    "tailwindcss": "catalog:",
+    "tw-animate-css": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

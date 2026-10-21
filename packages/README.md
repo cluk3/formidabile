@@ -42,6 +42,12 @@ Points the spike left unverified, settled in phase 0:
 - **`:global()` styles in inner components.** They work. In a build they are emitted unscoped into the adopted sheet, which applies across the shadow root, and a test asserts it on the built bundle.
 - **CSS hot reload in dev.** It works. Editing an inner component's CSS in the renderer's own `vp dev` server updated the computed style in the shadow root with no full reload. The reference host loads the built element, so a CSS change there needs `vp build --watch` in `packages/renderer`.
 
+## The builder
+
+`apps/builder` is a SvelteKit 3 static SPA (`adapter-static`, `fallback: "index.html"`, `ssr = false`). Kit's options live in the `sveltekit()` plugin in its `vite.config.ts`, and there is no `svelte.config.js`. App-internal imports use `#lib/...`, declared in its `package.json` `imports`. It starts by fetching `/config.json` (`apiBaseUrl`, `tokenUrl`, `loginUrl`) from `static/`, so one build runs against any host.
+
+shadcn-svelte is initialised (`components.json`, Tailwind 4 theme in `src/routes/layout.css`) and `vp exec shadcn-svelte add <component>` writes into `src/lib/components/ui/`, which is vendored: Oxlint ignores it. `vp run @fb/builder#check:svelte` runs `svelte-check` with `--fail-on-warnings`, and the e2e `builder-chromium` project runs against `vp preview` on port 4174.
+
 ## Browser-safe code
 
 These paths run in the browser:
