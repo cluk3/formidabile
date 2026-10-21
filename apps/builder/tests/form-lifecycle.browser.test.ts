@@ -265,3 +265,14 @@ test("an unknown outcome on a settings change says so and reloads the settings",
   await expect.element(screen.getByLabelText("Open for responses")).not.toBeChecked();
   await expect.element(screen.getByLabelText("Form title")).toHaveValue("Unsaved edit");
 });
+
+test("a 413 on a settings change shows that the form is too large to save", async () => {
+  const host = formHost(publishedWithDraft(), {
+    patch: () => json(413, { _tag: "PayloadTooLarge", limit: 16384 }),
+  });
+  const screen = await renderEditor(host.fetch);
+
+  await screen.getByLabelText("Open for responses").click();
+
+  await expect.element(screen.getByText("This form is too large to save")).toBeVisible();
+});

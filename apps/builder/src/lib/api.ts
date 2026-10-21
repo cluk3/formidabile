@@ -125,3 +125,38 @@ export const outcome = async <R extends FetchResult>(
   }
   return { kind: "rejected", error };
 };
+
+/** What a write's caller decides; a 413 and a missing token become the same notice for every write. */
+type WriteHandlers<T, E> = {
+  readonly ok: (data: T) => unknown;
+  readonly rejected: (error: E) => unknown;
+  /** Reloads what the write may have changed, and says it couldn't confirm the write (ADR 0016). */
+  readonly unknown: () => unknown;
+  readonly signIn: () => unknown;
+  readonly notice: (message: string) => unknown;
+};
+
+export const settleWrite = async <T, E>(
+  result: Outcome<T, E>,
+  handlers: WriteHandlers<T, E>,
+): Promise<void> => {
+  switch (result.kind) {
+    case "ok":
+      await handlers.ok(result.data);
+      return;
+    case "rejected":
+      await handlers.rejected(result.error);
+      return;
+    case "unknown":
+      await handlers.unknown();
+      return;
+    case "signIn":
+      await handlers.signIn();
+      return;
+    case "tooLarge":
+      await handlers.notice("This form is too large to save");
+      return;
+    case "tokenUnavailable":
+      await handlers.notice("Couldn't get a sign-in token from the host. Try again.");
+  }
+};

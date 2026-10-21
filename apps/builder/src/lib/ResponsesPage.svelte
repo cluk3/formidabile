@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
   import { onMount } from "svelte";
-  import { outcome, type BuilderClient, type Outcome } from "#lib/api.ts";
+  import { outcome, settleWrite, type BuilderClient } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { fieldClass, nativeInputClass } from "#lib/editors/props.ts";
@@ -39,8 +39,6 @@
   let canDelete = $state(false);
   let confirming = $state<"response" | "respondent" | null>(null);
   let busy = $state(false);
-
-  const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
 
   /** One page of the list under `filters`, newest first: the first one, or the page after `cursor`. */
   const loadPage = async (filters: Filters, cursor?: string) => {
@@ -82,18 +80,19 @@
     if (opened?.response.id === responseId) opened = null;
   };
 
-  /** What a refused or unconfirmed delete leaves on screen; `ok` is handled by each delete. */
-  const deleteFailed = async (
-    result: Exclude<Outcome<unknown, { _tag: string }>, { kind: "ok" }>,
-    unconfirmed: string,
-  ) => {
-    if (result.kind === "unknown") {
+  /** What an unconfirmed delete, a sign-in prompt or a notice leaves on screen, for either delete. */
+  const deleting = (unconfirmed: string) => ({
+    unknown: async () => {
       opened = null;
       await loadPage(applied);
       notice = `We couldn't confirm ${unconfirmed} deleted, so the list has been reloaded.`;
-    } else if (result.kind === "signIn") signedOut = true;
-    else if (result.kind === "tokenUnavailable") notice = tokenUnavailable;
-    else if (result.kind === "rejected" && result.error._tag === "Forbidden") {
+    },
+    signIn: () => (signedOut = true),
+    notice: (message: string) => (notice = message),
+  });
+
+  const refusedDelete = (error: { _tag: string }) => {
+    if (error._tag === "Forbidden") {
       canDelete = false;
       notice = "You can't delete responses. Sign in as someone who can.";
     } else notice = "The responses couldn't be deleted.";
@@ -107,13 +106,18 @@
     );
     busy = false;
     confirming = null;
-    if (result.kind === "ok") {
-      forget(responseId);
-      notice = "Response deleted";
-    } else if (result.kind === "rejected" && result.error._tag === "NotFound") {
-      forget(responseId);
-      notice = "This response was already deleted.";
-    } else await deleteFailed(result, "the response was");
+    await settleWrite(result, {
+      ...deleting("the response was"),
+      ok: () => {
+        forget(responseId);
+        notice = "Response deleted";
+      },
+      rejected: (error) => {
+        if (error._tag !== "NotFound") return refusedDelete(error);
+        forget(responseId);
+        notice = "This response was already deleted.";
+      },
+    });
   };
 
   /** Erasure (ADR 0013): every response the respondent submitted to any form in the tenant. */
@@ -127,12 +131,15 @@
     );
     busy = false;
     confirming = null;
-    if (result.kind === "ok") {
-      opened = null;
-      await loadPage(applied);
-      const { deleted } = result.data;
-      notice = `Deleted ${deleted} ${deleted === 1 ? "response" : "responses"} from ${respondentId}`;
-    } else await deleteFailed(result, "the respondent's responses were");
+    await settleWrite(result, {
+      ...deleting("the respondent's responses were"),
+      ok: async ({ deleted }) => {
+        opened = null;
+        await loadPage(applied);
+        notice = `Deleted ${deleted} ${deleted === 1 ? "response" : "responses"} from ${respondentId}`;
+      },
+      rejected: refusedDelete,
+    });
   };
 
   const loadVersions = async () => {
