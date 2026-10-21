@@ -2,21 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
 import FormsPage from "#lib/FormsPage.svelte";
-
-const config = {
-  apiBaseUrl: "https://host.test/api",
-  tokenUrl: "https://host.test/token",
-  loginUrl: "https://host.test/login",
-};
-
-const base64Url = (value: object) =>
-  btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-
-// Only the claims the builder reads matter: the host signs the token and the API verifies it.
-const adminToken = `${base64Url({ alg: "HS256" })}.${base64Url({ sub: "acme-admin", capabilities: ["forms:manage"] })}.signature`;
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+import { config, fakeHost, json } from "./fake-host.ts";
 
 const summary = (title: string) => ({
   id: crypto.randomUUID(),
@@ -31,18 +17,15 @@ const summary = (title: string) => ({
 test("an unknown outcome on create says so and reloads the form list", async () => {
   const forms: ReturnType<typeof summary>[] = [];
   // The host commits the create, but the reply is lost to a proxy's 502.
-  const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = new Request(input, init);
-    const route = `${request.method} ${new URL(request.url).pathname}`;
-    if (route === "GET /token") return json(200, { token: adminToken });
-    if (route === "GET /api/forms") return json(200, { forms });
-    if (route === "POST /api/forms") {
+  const fetch = fakeHost(async (route, request) => {
+    if (route === "GET /forms") return json(200, { forms });
+    if (route === "POST /forms") {
       const { definition } = await request.json();
       forms.push(summary(definition.title));
       return new Response("Bad Gateway", { status: 502 });
     }
     return json(404, { _tag: "NotFound" });
-  };
+  });
   const screen = await render(FormsPage, {
     client: createBuilderClient(config, fetch),
     signInHref: config.loginUrl,
@@ -54,4 +37,19 @@ test("an unknown outcome on create says so and reloads the form list", async () 
 
   await expect.element(screen.getByText(/couldn.t confirm the form was created/i)).toBeVisible();
   await expect.element(screen.getByRole("listitem").getByText("Customer survey")).toBeVisible();
+});
+
+test("each listed form links to its editor", async () => {
+  const form = summary("Customer survey");
+  const fetch = fakeHost((route) =>
+    route === "GET /forms" ? json(200, { forms: [form] }) : json(404, { _tag: "NotFound" }),
+  );
+  const screen = await render(FormsPage, {
+    client: createBuilderClient(config, fetch),
+    signInHref: config.loginUrl,
+  });
+
+  await expect
+    .element(screen.getByRole("link", { name: "Customer survey" }))
+    .toHaveAttribute("href", `/forms/${form.id}`);
 });

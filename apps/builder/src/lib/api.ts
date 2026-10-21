@@ -59,11 +59,13 @@ export const signInUrl = (loginUrl: string, returnTo: string): string => {
 /**
  * What became of an API call (ADR 0016). Only a tagged 4xx is a definite refusal. A rejected `fetch`, a 5xx or a
  * reply outside the contract is `unknown`: a write may have committed, so the caller says it couldn't confirm the
- * action and reloads what it affected (the form list after a create, the form's detail otherwise).
+ * action and reloads what it affected (the form list after a create, the form's detail otherwise). `tooLarge` is the
+ * edge's 413: the body was refused before any of it was read.
  */
 export type Outcome<T, E> =
   | { readonly kind: "ok"; readonly data: T }
   | { readonly kind: "rejected"; readonly error: E }
+  | { readonly kind: "tooLarge" }
   | { readonly kind: "signIn" }
   | { readonly kind: "tokenUnavailable" }
   | { readonly kind: "unknown" };
@@ -91,6 +93,7 @@ export const outcome = async <R extends FetchResult>(
     return typeof data === "object" && data !== null ? { kind: "ok", data } : { kind: "unknown" };
   }
   if (response.status === 401) return { kind: "signIn" };
+  if (response.status === 413) return { kind: "tooLarge" };
   if (response.status >= 500 || !isTagged(error)) return { kind: "unknown" };
   if (error._tag === "Forbidden" && Reflect.get(error, "capability") === "forms:manage") {
     return { kind: "signIn" };
