@@ -13,23 +13,48 @@ import {
  */
 export type IdSource = { questionId(): string; optionValue(): string };
 
-const blankOption = (ids: IdSource) => ({ value: ids.optionValue(), label: "" });
+type ChoiceOption = QuestionSnapshotOf<"single_choice">["config"]["options"][number];
 
-/** A new question's config. Choice questions start with as many blank options as publish needs. */
-const blankConfig = {
+/** `kept`, then blank options with minted values up to `atLeast`. */
+const optionsFrom = (kept: readonly ChoiceOption[], atLeast: number, ids: IdSource) => [
+  ...kept,
+  ...Array.from({ length: Math.max(0, atLeast - kept.length) }, () => ({
+    value: ids.optionValue(),
+    label: "",
+  })),
+];
+
+/**
+ * A new question's config, keeping the options of a choice question it replaces. Choice questions
+ * start with at least as many options as publish needs.
+ */
+const newConfig = {
   text: () => ({ display: "single_line" }),
   email: () => ({}),
   number: () => ({ integer: false }),
   date: () => ({}),
-  single_choice: (ids) => ({ options: [blankOption(ids), blankOption(ids)], display: "radio" }),
-  multiple_choice: (ids) => ({ options: [blankOption(ids)] }),
+  single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
+  multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
 } satisfies {
-  [T in QuestionTypeName]: (ids: IdSource) => QuestionSnapshotOf<T>["config"];
+  [T in QuestionTypeName]: (
+    kept: readonly ChoiceOption[],
+    ids: IdSource,
+  ) => QuestionSnapshotOf<T>["config"];
 };
 
-const configFor = (type: QuestionTypeName, ids: IdSource) =>
-  blankConfig[type](ids) as QuestionSnapshot["config"];
+const newQuestion = (
+  type: QuestionTypeName,
+  content: Pick<QuestionSnapshot, "label" | "description" | "required">,
+  kept: readonly ChoiceOption[],
+  ids: IdSource,
+) =>
+  ({
+    id: ids.questionId(),
+    type,
+    ...content,
+    config: newConfig[type](kept, ids),
+  }) as QuestionSnapshot;
 
 /**
  * Appends a blank question of `type` with a new question identity. Throws at the question cap, so
@@ -46,13 +71,7 @@ export const addQuestion = (
     ...definition,
     questions: [
       ...definition.questions,
-      {
-        id: ids.questionId(),
-        type,
-        label: "",
-        required: false,
-        config: configFor(type, ids),
-      } as QuestionSnapshot,
+      newQuestion(type, { label: "", required: false }, [], ids),
     ],
   };
 };
@@ -85,3 +104,20 @@ export const reidentifyQuestion = (
   ids: IdSource,
 ): FormDefinition =>
   replaceQuestion(definition, questionId, (q) => ({ ...q, id: ids.questionId() }));
+
+/**
+ * A question identity keeps one type for life (ADR 0005), so a new type means a new identity. The
+ * label, description, required flag and position carry over, and so do the options between the
+ * choice types; the rest of the config starts blank.
+ */
+export const changeQuestionType = (
+  definition: FormDefinition,
+  questionId: string,
+  type: QuestionTypeName,
+  ids: IdSource,
+): FormDefinition => {
+  if (definition.questions[indexOf(definition, questionId)]!.type === type) return definition;
+  return replaceQuestion(definition, questionId, ({ id: _id, type: _type, config, ...content }) =>
+    newQuestion(type, content, "options" in config ? config.options : [], ids),
+  );
+};

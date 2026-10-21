@@ -5,7 +5,7 @@ import {
   type FormDefinition,
   type QuestionTypeName,
 } from "@fb/core/definition";
-import { addQuestion, reidentifyQuestion } from "@fb/core/editing";
+import { addQuestion, changeQuestionType, reidentifyQuestion } from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -127,5 +127,97 @@ describe("reidentifyQuestion", () => {
 
   test("refuses an identity the definition doesn't have", () => {
     expect(() => reidentifyQuestion(survey, uuid(9), idSource())).toThrow(`No question ${uuid(9)}`);
+  });
+});
+
+describe("changeQuestionType", () => {
+  test("mints a new identity and keeps the label, description, required flag and position", () => {
+    const edited = changeQuestionType(survey, name.id, "email", idSource());
+    expect(edited).toEqual({
+      ...survey,
+      questions: [
+        {
+          id: uuid(101),
+          type: "email",
+          label: "Name",
+          description: "As it appears on your badge",
+          required: true,
+          config: {},
+        },
+        colour,
+        age,
+      ],
+    });
+    expect(parsed(edited)).toEqual(edited);
+  });
+
+  test("gives a new choice question the blank options publish needs", () => {
+    const edited = changeQuestionType(survey, age.id, "single_choice", idSource());
+    expect(edited.questions[2]).toEqual({
+      id: uuid(101),
+      type: "single_choice",
+      label: "Age",
+      required: true,
+      config: {
+        options: [
+          { value: "minted-1", label: "" },
+          { value: "minted-2", label: "" },
+        ],
+        display: "radio",
+      },
+    });
+  });
+
+  test("keeps the options between choice types, and their values", () => {
+    const edited = changeQuestionType(survey, colour.id, "multiple_choice", idSource());
+    expect(edited.questions[1]).toEqual({
+      id: uuid(101),
+      type: "multiple_choice",
+      label: "Favourite colour",
+      required: false,
+      config: { options: colour.config.options },
+    });
+  });
+
+  test("tops kept options up to the blank options publish needs", () => {
+    const ids = idSource();
+    const oneOption = parsed({
+      format: 1,
+      title: "Survey",
+      questions: [
+        { ...colour, type: "multiple_choice", config: { options: [{ value: "r", label: "Red" }] } },
+      ],
+    });
+    const edited = changeQuestionType(oneOption, colour.id, "single_choice", ids);
+    expect(edited.questions[0]!.config).toEqual({
+      options: [
+        { value: "r", label: "Red" },
+        { value: "minted-1", label: "" },
+      ],
+      display: "radio",
+    });
+  });
+
+  test("keeps the identity when the type doesn't change", () => {
+    expect(changeQuestionType(survey, colour.id, "single_choice", idSource())).toBe(survey);
+  });
+
+  test("changes every type into every other type, passing parseDefinition", () => {
+    const ids = idSource();
+    const types = Object.keys(questionTypes) as QuestionTypeName[];
+    for (const from of types)
+      for (const to of types) {
+        const start = addQuestion(survey, from, ids);
+        const id = start.questions.at(-1)!.id;
+        const edited = changeQuestionType(start, id, to, ids);
+        expect(edited.questions.at(-1)!.type).toBe(to);
+        expect(parsed(edited)).toEqual(edited);
+      }
+  });
+
+  test("refuses an identity the definition doesn't have", () => {
+    expect(() => changeQuestionType(survey, uuid(9), "email", idSource())).toThrow(
+      `No question ${uuid(9)}`,
+    );
   });
 });
