@@ -1,4 +1,6 @@
-import { Layer } from "effect";
+import { DatabaseLive } from "@fb/server/database";
+import { migrate } from "@fb/server/migrate";
+import { Layer, ManagedRuntime } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
 import { FormApiLive } from "./index.ts";
 
@@ -12,14 +14,18 @@ export interface FormModuleHandler {
   readonly dispose: () => Promise<void>;
 }
 
-export const createFormModuleHandler = (_options: FormModuleHandlerOptions): FormModuleHandler => {
+export const createFormModuleHandler = (options: FormModuleHandlerOptions): FormModuleHandler => {
+  const database = ManagedRuntime.make(DatabaseLive(options.databaseUrl));
   const { handler, dispose } = HttpRouter.toWebHandler(
     FormApiLive.pipe(Layer.provide(HttpServer.layerServices)),
     { disableLogger: true },
   );
   return {
     fetch: handler,
-    migrate: async () => {},
-    dispose,
+    migrate: () => database.runPromise(migrate),
+    dispose: async () => {
+      await dispose();
+      await database.dispose();
+    },
   };
 };

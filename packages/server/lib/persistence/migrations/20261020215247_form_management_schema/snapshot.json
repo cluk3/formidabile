@@ -1,0 +1,15 @@
+{
+  "version": "8",
+  "dialect": "postgres",
+  "id": "a8a88bfa-9311-4f68-bd2e-f2944d6b3f96",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "form_management",
+      "entityType": "schemas"
+    }
+  ],
+  "renames": []
+}

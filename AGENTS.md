@@ -1,6 +1,7 @@
 ## Workspace
 
 - A pnpm workspace on Vite+. Run `vp install` after pulling, and `vp run ready` before opening a PR. It runs the same tasks as CI.
+- `vp` is the global Vite+ CLI; [README.md](./README.md) covers installing it. If it isn't on `PATH`, use `pnpm vp` (or `node_modules/.bin/vp`) instead.
 - Packages are deep modules: see [packages/README.md](./packages/README.md) before adding or importing one.
 
 ## Agent skills

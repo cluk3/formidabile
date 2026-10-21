@@ -35,6 +35,10 @@ catalog:
   vitest-browser-svelte: 3.1.0
   zod: 4.6.7
 
+allowBuilds:
+  # drizzle-kit's esbuild finds its platform binary through optionalDependencies, so its install script isn't needed.
+  esbuild: false
+
 overrides:
   vite@*: "catalog:"
 
