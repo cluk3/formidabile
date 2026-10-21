@@ -55,15 +55,15 @@ const definition = (title: string) => ({
 });
 const answers = { [readyId]: true };
 
-/** An open, unlimited form in `acme` with one published version. */
-const openForm = async (title = "Survey") => {
-  const created = await admin.POST("/forms", { body: { definition: definition(title) } });
+/** An open, unlimited form in the owner's tenant (`acme` by default) with one published version. */
+const openForm = async (title = "Survey", owner = admin) => {
+  const created = await owner.POST("/forms", { body: { definition: definition(title) } });
   const { form, draft } = created.data!;
-  const published = await admin.POST("/forms/{formId}/draft/publish", {
+  const published = await owner.POST("/forms/{formId}/draft/publish", {
     params: { path: { formId: form.id } },
     body: { expectedRevision: draft.revision },
   });
-  await admin.PATCH("/forms/{formId}", {
+  await owner.PATCH("/forms/{formId}", {
     params: { path: { formId: form.id } },
     body: { availability: "open" },
   });
@@ -415,5 +415,130 @@ describe("references and the form binding", () => {
 
     expect(response.status).toBe(201);
     expect(await storedRefs(data!.responseId)).toEqual(refs);
+  });
+});
+
+describe("an anonymous grant", () => {
+  const refs = [{ namespace: "project", refId: "apollo" }];
+  const grant = (formId: string, tenant = "acme") =>
+    as({ anonymous: true, tenant, form: formId, refs });
+  const identityRequired = { _tag: "Unauthenticated", reason: "identityRequired" };
+
+  const storedRespondent = (responseId: string) =>
+    query(
+      (sql) => sql<{ respondentId: string | null }>`
+        SELECT respondent_id AS "respondentId" FROM form_management.responses
+        WHERE id = ${responseId}
+      `,
+    ).then(([row]) => row!.respondentId);
+
+  test("no token on load or submit gives 401 missing", async () => {
+    const form = await openForm();
+    const anonymous = clientOf(
+      () => viaJwt,
+      () => null,
+    );
+
+    const loaded = await load(anonymous, form.formId);
+    const submitted = await submit(anonymous, form);
+
+    expect(loaded.response.status).toBe(401);
+    expect(loaded.error).toEqual({ _tag: "Unauthenticated", reason: "missing" });
+    expect(submitted.response.status).toBe(401);
+    expect(submitted.error).toEqual({ _tag: "Unauthenticated", reason: "missing" });
+    expect(await responseCount(form.formId)).toBe(0);
+  });
+
+  test("submitting to its open, unlimited form gives 201, with no respondent id stored", async () => {
+    const form = await openForm();
+
+    const loaded = await load(grant(form.formId), form.formId);
+    const { data, response } = await submit(grant(form.formId), form);
+
+    expect(loaded.data?.respondent).toBe("anonymous");
+    expect(response.status).toBe(201);
+    expect(data).toEqual({ responseId: expect.any(String), revision: "1" });
+    expect(await storedRespondent(data!.responseId)).toBeNull();
+    expect(await storedRefs(data!.responseId)).toEqual(refs);
+  });
+
+  test("a replay gives a 201 body identical to the original, and stores nothing more", async () => {
+    const form = await openForm();
+    const idempotencyKey = crypto.randomUUID();
+    const send = () =>
+      grant(form.formId).POST("/respond/forms/{formId}/responses", {
+        params: { path: { formId: form.formId } },
+        body: { versionId: form.versionId, answers, idempotencyKey },
+        parseAs: "text",
+      });
+
+    const original = await send();
+    const replayed = await send();
+
+    expect(original.response.status).toBe(201);
+    expect(replayed.response.status).toBe(201);
+    expect(replayed.data).toBe(original.data);
+    expect(await responseCount(form.formId)).toBe(1);
+  });
+
+  test("a grant for form A gets 404 on form B's load and submit", async () => {
+    const a = await openForm("A");
+    const b = await openForm("B");
+
+    const loaded = await load(grant(a.formId), b.formId);
+    const submitted = await submit(grant(a.formId), b);
+
+    expect(loaded.response.status).toBe(404);
+    expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(submitted.response.status).toBe(404);
+    expect(submitted.error).toEqual({ _tag: "NotFound" });
+    expect(await responseCount(b.formId)).toBe(0);
+  });
+
+  test("an acme grant naming a globex form gets 404 on its load and submit", async () => {
+    const form = await openForm("Globex", as(devUsers["globex-admin"]));
+
+    const loaded = await load(grant(form.formId), form.formId);
+    const submitted = await submit(grant(form.formId), form);
+
+    expect(loaded.response.status).toBe(404);
+    expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(submitted.response.status).toBe(404);
+    expect(submitted.error).toEqual({ _tag: "NotFound" });
+    expect(await responseCount(form.formId)).toBe(0);
+  });
+
+  test("on a limited form loads as anonymous, and submitting gives 401 identityRequired", async () => {
+    const form = await openForm();
+    await admin.PATCH("/forms/{formId}", {
+      params: { path: { formId: form.formId } },
+      body: { responseLimit: "one_per_respondent" },
+    });
+
+    const loaded = await load(grant(form.formId), form.formId);
+    const submitted = await submit(grant(form.formId), form);
+
+    expect(loaded.response.status).toBe(200);
+    expect(loaded.data).toMatchObject({
+      responseLimit: "one_per_respondent",
+      respondent: "anonymous",
+      myResponseId: null,
+    });
+    expect(submitted.response.status).toBe(401);
+    expect(submitted.error).toEqual(identityRequired);
+    expect(await responseCount(form.formId)).toBe(0);
+  });
+
+  test("reading or editing a response gives 401 identityRequired", async () => {
+    const form = await openForm();
+    const { data: submitted } = await submit(grant(form.formId), form);
+
+    const read = await readResponse(grant(form.formId), submitted!.responseId);
+    const edited = await editResponse(grant(form.formId), submitted!.responseId);
+
+    expect(read.response.status).toBe(401);
+    expect(read.error).toEqual(identityRequired);
+    expect(edited.response.status).toBe(401);
+    expect(edited.error).toEqual(identityRequired);
   });
 });
