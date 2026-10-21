@@ -93,43 +93,46 @@ export interface NewVersion {
  * Inserts the next version with its question keys and any new question identities, then makes it the
  * form's current version.
  */
-export const insertCurrentVersion = (db: Db, form: LockedForm, version: NewVersion) =>
-  Effect.gen(function* () {
-    const id = yield* newId;
-    const now = yield* currentInstant;
-    const [latest] = yield* db
-      .select({ number: max(formVersions.number) })
-      .from(formVersions)
-      .where(eq(formVersions.formId, form.id));
-    const [inserted] = yield* db
-      .insert(formVersions)
-      .values({
-        id,
-        formId: form.id,
-        number: (latest?.number ?? 0) + 1,
-        definition: version.definition,
-        publishedAt: now,
-        publishedBy: version.publishedBy,
-        derivedFromVersionId: version.derivedFromVersionId,
-      })
-      .returning(versionSummaryColumns);
-    yield* db
-      .insert(questionIdentities)
-      .values(version.questions.map((q) => ({ formId: form.id, questionId: q.id, type: q.type })))
-      .onConflictDoNothing({ target: [questionIdentities.formId, questionIdentities.questionId] });
-    yield* db.insert(formVersionQuestions).values(
-      version.questions.map((q, position) => ({
-        versionId: id,
-        questionId: q.id,
-        formId: form.id,
-        type: q.type,
-        position,
-      })),
-    );
-    const [moved] = yield* db
-      .update(forms)
-      .set({ currentVersionId: id, updatedAt: now })
-      .where(eq(forms.id, form.id))
-      .returning();
-    return { form: toForm(moved!), version: toVersionSummary(inserted!, id) };
-  });
+export const insertCurrentVersion = Effect.fnUntraced(function* (
+  db: Db,
+  form: LockedForm,
+  version: NewVersion,
+) {
+  const id = yield* newId;
+  const now = yield* currentInstant;
+  const [latest] = yield* db
+    .select({ number: max(formVersions.number) })
+    .from(formVersions)
+    .where(eq(formVersions.formId, form.id));
+  const [inserted] = yield* db
+    .insert(formVersions)
+    .values({
+      id,
+      formId: form.id,
+      number: (latest?.number ?? 0) + 1,
+      definition: version.definition,
+      publishedAt: now,
+      publishedBy: version.publishedBy,
+      derivedFromVersionId: version.derivedFromVersionId,
+    })
+    .returning(versionSummaryColumns);
+  yield* db
+    .insert(questionIdentities)
+    .values(version.questions.map((q) => ({ formId: form.id, questionId: q.id, type: q.type })))
+    .onConflictDoNothing({ target: [questionIdentities.formId, questionIdentities.questionId] });
+  yield* db.insert(formVersionQuestions).values(
+    version.questions.map((q, position) => ({
+      versionId: id,
+      questionId: q.id,
+      formId: form.id,
+      type: q.type,
+      position,
+    })),
+  );
+  const [moved] = yield* db
+    .update(forms)
+    .set({ currentVersionId: id, updatedAt: now })
+    .where(eq(forms.id, form.id))
+    .returning();
+  return { form: toForm(moved!), version: toVersionSummary(inserted!, id) };
+});

@@ -25,34 +25,40 @@ export const findLockedDraft = (db: Db, form: LockedForm) =>
     .pipe(Effect.map(([row]) => row && toDraft(row)));
 
 /** A new draft is based on the form's current version, or on nothing before the first publish. */
-export const insertDraft = (db: Db, form: LockedForm, definition: Schema.Json) =>
-  Effect.gen(function* () {
-    const [draft] = yield* db
-      .insert(drafts)
-      .values({
-        formId: form.id,
-        basedOnVersionId: form.currentVersionId,
-        definition,
-        updatedAt: yield* currentInstant,
-      })
-      .returning();
-    return toDraft(draft!);
-  });
+export const insertDraft = Effect.fnUntraced(function* (
+  db: Db,
+  form: LockedForm,
+  definition: Schema.Json,
+) {
+  const [draft] = yield* db
+    .insert(drafts)
+    .values({
+      formId: form.id,
+      basedOnVersionId: form.currentVersionId,
+      definition,
+      updatedAt: yield* currentInstant,
+    })
+    .returning();
+  return toDraft(draft!);
+});
 
 /** Every save draws a new revision from the sequence. */
-export const updateDraft = (db: Db, form: LockedForm, definition: Schema.Json) =>
-  Effect.gen(function* () {
-    const [draft] = yield* db
-      .update(drafts)
-      .set({
-        definition,
-        revision: sql`nextval('form_management.draft_revisions')`,
-        updatedAt: yield* currentInstant,
-      })
-      .where(eq(drafts.formId, form.id))
-      .returning();
-    return toDraft(draft!);
-  });
+export const updateDraft = Effect.fnUntraced(function* (
+  db: Db,
+  form: LockedForm,
+  definition: Schema.Json,
+) {
+  const [draft] = yield* db
+    .update(drafts)
+    .set({
+      definition,
+      revision: sql`nextval('form_management.draft_revisions')`,
+      updatedAt: yield* currentInstant,
+    })
+    .where(eq(drafts.formId, form.id))
+    .returning();
+  return toDraft(draft!);
+});
 
 export const deleteDraft = (db: Db, form: LockedForm) =>
   db.delete(drafts).where(eq(drafts.formId, form.id));

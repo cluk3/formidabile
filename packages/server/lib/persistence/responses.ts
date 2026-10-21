@@ -224,45 +224,47 @@ export interface NewResponse {
 }
 
 /** Inserts the response at revision 1 with its answer rows and references, under the form's limit. */
-export const insertResponse = (db: Db, form: SharedForm, response: NewResponse) =>
-  Effect.gen(function* () {
-    const id = yield* newId;
-    const [inserted] = yield* db
-      .insert(responses)
-      .values({
-        id,
-        formId: form.id,
-        versionId: response.versionId,
-        respondentId: response.respondentId,
-        limited: form.responseLimit === "one_per_respondent",
-        revision: 1,
-        idempotencyKey: response.idempotencyKey,
-        submittedAt: yield* currentInstant,
-      })
-      .returning({ id: responses.id, revision: responses.revision });
-    yield* insertAnswers(db, id, response.versionId, response.answers);
-    if (response.refs.length > 0) {
-      yield* db
-        .insert(responseExternalRefs)
-        .values(response.refs.map((ref) => ({ responseId: id, ...ref })));
-    }
-    return inserted!;
-  });
+export const insertResponse = Effect.fnUntraced(function* (
+  db: Db,
+  form: SharedForm,
+  response: NewResponse,
+) {
+  const id = yield* newId;
+  const [inserted] = yield* db
+    .insert(responses)
+    .values({
+      id,
+      formId: form.id,
+      versionId: response.versionId,
+      respondentId: response.respondentId,
+      limited: form.responseLimit === "one_per_respondent",
+      revision: 1,
+      idempotencyKey: response.idempotencyKey,
+      submittedAt: yield* currentInstant,
+    })
+    .returning({ id: responses.id, revision: responses.revision });
+  yield* insertAnswers(db, id, response.versionId, response.answers);
+  if (response.refs.length > 0) {
+    yield* db
+      .insert(responseExternalRefs)
+      .values(response.refs.map((ref) => ({ responseId: id, ...ref })));
+  }
+  return inserted!;
+});
 
 /** Overwrites the answers on the response's own version and moves its revision; references never change. */
-export const replaceAnswers = (
+export const replaceAnswers = Effect.fnUntraced(function* (
   db: Db,
   form: SharedForm,
   response: { readonly id: string; readonly versionId: string },
   given: Answers,
-) =>
-  Effect.gen(function* () {
-    const [edited] = yield* db
-      .update(responses)
-      .set({ revision: sql`${responses.revision} + 1`, editedAt: yield* currentInstant })
-      .where(and(eq(responses.formId, form.id), eq(responses.id, response.id)))
-      .returning({ id: responses.id, revision: responses.revision, editedAt: responses.editedAt });
-    yield* db.delete(answers).where(eq(answers.responseId, response.id));
-    yield* insertAnswers(db, response.id, response.versionId, given);
-    return { id: edited!.id, revision: edited!.revision, editedAt: edited!.editedAt! };
-  });
+) {
+  const [edited] = yield* db
+    .update(responses)
+    .set({ revision: sql`${responses.revision} + 1`, editedAt: yield* currentInstant })
+    .where(and(eq(responses.formId, form.id), eq(responses.id, response.id)))
+    .returning({ id: responses.id, revision: responses.revision, editedAt: responses.editedAt });
+  yield* db.delete(answers).where(eq(answers.responseId, response.id));
+  yield* insertAnswers(db, response.id, response.versionId, given);
+  return { id: edited!.id, revision: edited!.revision, editedAt: edited!.editedAt! };
+});
