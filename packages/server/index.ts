@@ -9,6 +9,7 @@ export {
   Availability,
   Draft,
   DraftSummary,
+  EditedResponse,
   Form,
   FormDefinitionJson,
   FormDetail,
@@ -16,6 +17,7 @@ export {
   FormSummary,
   FormVersion,
   RespondentForm,
+  RespondentResponse,
   ResponseLimit,
   SubmittedResponse,
   VersionSummary,
@@ -35,7 +37,7 @@ export {
   VersionSuperseded,
 } from "./lib/errors.ts";
 export type { SaveDraft } from "./lib/drafts/drafts.ts";
-export type { SubmitResponse } from "./lib/submission/submission.ts";
+export type { EditResponse, SubmitResponse } from "./lib/submission/submission.ts";
 export { Drafts, Forms, Publication, Submission };
 
 /** Every use case, given a `Database`. */

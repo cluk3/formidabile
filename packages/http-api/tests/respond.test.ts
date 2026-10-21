@@ -234,6 +234,117 @@ describe("submit", () => {
   });
 });
 
+const readResponse = (client: FormApiClient, responseId: string) =>
+  client.GET("/respond/responses/{responseId}", { params: { path: { responseId } } });
+
+const editResponse = (
+  client: FormApiClient,
+  responseId: string,
+  body: Record<string, unknown> = {},
+) =>
+  client.PUT("/respond/responses/{responseId}", {
+    params: { path: { responseId } },
+    body: { expectedRevision: "1", answers, ...body } as never,
+  });
+
+describe("a respondent's response", () => {
+  test("is read with its version and replaced by an edit", async () => {
+    const form = await openForm("Edited");
+    const { data: submitted } = await submit(as(alice), form);
+    const responseId = submitted!.responseId;
+
+    const before = await readResponse(as(alice), responseId);
+    const edited = await editResponse(as(alice), responseId, {
+      answers: { [readyId]: false },
+    });
+    const after = await readResponse(as(alice), responseId);
+
+    expect(before.response.status).toBe(200);
+    expect(before.data).toEqual({
+      response: {
+        id: responseId,
+        formId: form.formId,
+        versionId: form.versionId,
+        revision: "1",
+        answers,
+        submittedAt: expect.any(String),
+        editedAt: null,
+      },
+      version: { id: form.versionId, number: 1, definition: definition("Edited") },
+      editable: true,
+    });
+    expect(edited.response.status).toBe(200);
+    expect(edited.data).toEqual({ responseId, revision: "2", editedAt: expect.any(String) });
+    expect(after.data?.response).toMatchObject({
+      revision: "2",
+      answers: { [readyId]: false },
+      editedAt: edited.data!.editedAt,
+    });
+  });
+
+  test("an edit from a stale revision gives 409 RevisionConflict", async () => {
+    const form = await openForm();
+    const { data: submitted } = await submit(as(alice), form);
+    await editResponse(as(alice), submitted!.responseId);
+
+    const { error, response } = await editResponse(as(alice), submitted!.responseId);
+
+    expect(response.status).toBe(409);
+    expect(error).toEqual({ _tag: "RevisionConflict" });
+  });
+
+  test("externalRefs in the edit body gives 422, and nothing changes", async () => {
+    const form = await openForm();
+    const refs = [{ namespace: "project", refId: "apollo" }];
+    const { data: submitted } = await submit(as({ ...alice, form: form.formId, refs }), form);
+
+    const { error, response } = await editResponse(as(alice), submitted!.responseId, {
+      externalRefs: [{ namespace: "project", refId: "gemini" }],
+    });
+
+    expect(response.status).toBe(422);
+    expect(error).toMatchObject({ _tag: "ValidationFailed" });
+    expect((await readResponse(as(alice), submitted!.responseId)).data?.response.revision).toBe(
+      "1",
+    );
+    expect(await storedRefs(submitted!.responseId)).toEqual(refs);
+  });
+
+  test("an edit declaring 1 MiB plus one byte gives 413", async () => {
+    const response = await viaJwt.fetch(
+      new Request(`${baseUrl}/respond/responses/${crypto.randomUUID()}`, {
+        method: "PUT",
+        body: "{}",
+        headers: {
+          authorization: `Bearer ${await signToken(alice)}`,
+          "content-type": "application/json",
+          "content-length": String(1024 * 1024 + 1),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ _tag: "PayloadTooLarge", limit: 1024 * 1024 });
+  });
+
+  test("another respondent gets 404 on reading or editing it", async () => {
+    const form = await openForm();
+    const { data: submitted } = await submit(as(alice), form);
+    const bob = as({ ...alice, sub: "bob" });
+
+    const read = await readResponse(bob, submitted!.responseId);
+    const edited = await editResponse(bob, submitted!.responseId);
+
+    expect(read.response.status).toBe(404);
+    expect(read.error).toEqual({ _tag: "NotFound" });
+    expect(edited.response.status).toBe(404);
+    expect(edited.error).toEqual({ _tag: "NotFound" });
+    expect((await readResponse(as(alice), submitted!.responseId)).data?.response.revision).toBe(
+      "1",
+    );
+  });
+});
+
 describe("references and the form binding", () => {
   const refs = [
     { namespace: "crm.account", refId: "A-1" },
@@ -263,6 +374,25 @@ describe("references and the form binding", () => {
     expect(submitted.error).toEqual({ _tag: "NotFound" });
     expect(await responseCount(b.formId)).toBe(0);
     expect((await load(boundToA, a.formId)).response.status).toBe(200);
+  });
+
+  test("an identified token bound to form A gets 404 on form B's responses", async () => {
+    const a = await openForm("A");
+    const b = await openForm("B");
+    const { data: submitted } = await submit(as(alice), b);
+    const boundToA = as({ ...alice, form: a.formId, refs });
+
+    const read = await readResponse(boundToA, submitted!.responseId);
+    const edited = await editResponse(boundToA, submitted!.responseId);
+
+    expect(read.response.status).toBe(404);
+    expect(read.error).toEqual({ _tag: "NotFound" });
+    expect(edited.response.status).toBe(404);
+    expect(edited.error).toEqual({ _tag: "NotFound" });
+    expect(
+      (await readResponse(as({ ...alice, form: b.formId, refs }), submitted!.responseId)).response
+        .status,
+    ).toBe(200);
   });
 
   test("a custom resolver returning refs gets them stored", async () => {

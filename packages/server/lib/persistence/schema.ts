@@ -198,7 +198,7 @@ export const answers = formManagement.table(
     responseId: uuid("response_id").notNull(),
     questionId: uuid("question_id").notNull(),
     versionId: uuid("version_id").notNull(),
-    value: jsonb("value").notNull(),
+    value: jsonb("value").$type<Schema.Json>().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.responseId, table.questionId] }),

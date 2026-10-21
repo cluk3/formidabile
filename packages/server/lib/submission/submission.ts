@@ -1,21 +1,30 @@
 import { validateAnswers } from "@fb/core/answers";
 import { Context, Effect, Layer, Option } from "effect";
 import { type Actor, Unauthenticated } from "../authorization/actor.ts";
-import type { RespondentForm, SubmittedResponse } from "../envelopes.ts";
+import type {
+  EditedResponse,
+  RespondentForm,
+  RespondentResponse,
+  SubmittedResponse,
+} from "../envelopes.ts";
 import {
   AlreadyResponded,
   FormClosed,
   FormNotPublished,
   NotFound,
+  RevisionConflict,
   ValidationFailed,
   VersionSuperseded,
 } from "../errors.ts";
 import { Database, dieOnDatabaseError, isUniqueViolation } from "../persistence/database.ts";
 import { shareForm } from "../persistence/forms.ts";
 import {
+  findAnswers,
   findByIdempotencyKey,
+  findOwnResponse,
   insertResponse,
   latestResponseId,
+  replaceAnswers,
 } from "../persistence/responses.ts";
 import { findVersionContent, storedDefinition } from "../persistence/versions.ts";
 
@@ -25,6 +34,13 @@ export interface SubmitResponse {
   readonly answers: unknown;
   /** Minted by the client for this submit attempt (ADR 0016). */
   readonly idempotencyKey: string;
+}
+
+export interface EditResponse {
+  /** The revision the respondent last read. */
+  readonly expectedRevision: string;
+  /** Validated against the response's own version here, not at the edge. */
+  readonly answers: unknown;
 }
 
 /** A form-bound actor (an anonymous grant, or a token with `refs`) reaches only its own form (ADR 0012). */
@@ -53,6 +69,20 @@ export class Submission extends Context.Service<
       | VersionSuperseded
       | AlreadyResponded
       | ValidationFailed
+    >;
+    /** The identified respondent's own response, whether or not the form is open. */
+    readonly read: (
+      actor: Actor,
+      responseId: string,
+    ) => Effect.Effect<RespondentResponse, NotFound | Unauthenticated>;
+    /** Overwrites the answers on the response's own version; the stored references never change. */
+    readonly edit: (
+      actor: Actor,
+      responseId: string,
+      edit: EditResponse,
+    ) => Effect.Effect<
+      EditedResponse,
+      NotFound | Unauthenticated | FormClosed | RevisionConflict | ValidationFailed
     >;
   }
 >()("@fb/server/Submission") {
@@ -147,6 +177,84 @@ export class Submission extends Context.Service<
             ),
             dieOnDatabaseError,
           );
+        }),
+        read: Effect.fn("Submission.read")(function* (actor, responseId) {
+          if (actor._tag === "Anonymous") {
+            return yield* new Unauthenticated({ reason: "identityRequired" });
+          }
+          return yield* db
+            .transaction(
+              (tx) =>
+                Effect.gen(function* () {
+                  const response = yield* findOwnResponse(
+                    tx,
+                    actor.tenant,
+                    actor.subject,
+                    responseId,
+                    "share",
+                  );
+                  if (response === undefined || !reaches(actor, response.formId)) {
+                    return yield* new NotFound();
+                  }
+                  const form = (yield* shareForm(tx, actor.tenant, response.formId))!;
+                  return {
+                    response: {
+                      id: response.id,
+                      formId: response.formId,
+                      versionId: response.versionId,
+                      revision: String(response.revision),
+                      answers: yield* findAnswers(tx, form, response.id),
+                      submittedAt: response.submittedAt,
+                      editedAt: response.editedAt,
+                    },
+                    version: (yield* findVersionContent(tx, form, response.versionId))!,
+                    editable: form.availability === "open",
+                  } satisfies RespondentResponse;
+                }),
+              { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        edit: Effect.fn("Submission.edit")(function* (actor, responseId, edit) {
+          if (actor._tag === "Anonymous") {
+            return yield* new Unauthenticated({ reason: "identityRequired" });
+          }
+          return yield* db
+            .transaction(
+              (tx) =>
+                Effect.gen(function* () {
+                  const response = yield* findOwnResponse(
+                    tx,
+                    actor.tenant,
+                    actor.subject,
+                    responseId,
+                    "update",
+                  );
+                  if (response === undefined || !reaches(actor, response.formId)) {
+                    return yield* new NotFound();
+                  }
+                  const form = (yield* shareForm(tx, actor.tenant, response.formId))!;
+                  if (form.availability === "closed") return yield* new FormClosed();
+                  if (String(response.revision) !== edit.expectedRevision) {
+                    return yield* new RevisionConflict();
+                  }
+                  // A response never moves between versions (ADR 0002).
+                  const version = yield* findVersionContent(tx, form, response.versionId);
+                  const valid = validateAnswers(
+                    storedDefinition(version!.definition),
+                    edit.answers,
+                  );
+                  if (!valid.ok) return yield* new ValidationFailed({ issues: valid.issues });
+                  const edited = yield* replaceAnswers(tx, form, response, valid.value);
+                  return {
+                    responseId: edited.id,
+                    revision: String(edited.revision),
+                    editedAt: edited.editedAt,
+                  } satisfies EditedResponse;
+                }),
+              { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
         }),
       });
     }),

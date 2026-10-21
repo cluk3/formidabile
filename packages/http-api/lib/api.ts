@@ -4,6 +4,7 @@ import {
   AlreadyResponded,
   AnswersJson,
   Draft,
+  EditedResponse,
   ExternalRefLimitReached,
   Forbidden,
   Form,
@@ -18,6 +19,7 @@ import {
   NoDraft,
   NotFound,
   RespondentForm,
+  RespondentResponse,
   RevisionConflict,
   SubmittedResponse,
   ValidationFailed,
@@ -85,6 +87,7 @@ export class BodyLimits extends HttpApiMiddleware.Service<BodyLimits>()("@fb/htt
 }) {}
 
 const FormIdParams = { formId: Schema.String.check(Schema.isUUID()) };
+const ResponseIdParams = { responseId: Schema.String.check(Schema.isUUID()) };
 
 /** Revisions travel as opaque strings in the body, or the query for a discard or a delete (ADR 0010). */
 const Revision = Schema.String;
@@ -222,6 +225,20 @@ export class RespondGroup extends HttpApiGroup.make("respond")
         VersionSuperseded,
         AlreadyResponded,
       ],
+    })
+      .annotate(BodyLimit, largeBody)
+      .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),
+    HttpApiEndpoint.get("readResponse", "/respond/responses/:responseId", {
+      params: ResponseIdParams,
+      success: RespondentResponse,
+      error: [NotFound, Unauthenticated],
+    }),
+    HttpApiEndpoint.put("editResponse", "/respond/responses/:responseId", {
+      params: ResponseIdParams,
+      // An edit never changes the references, so `externalRefs` in the body is refused too.
+      payload: Schema.Struct({ expectedRevision: Revision, answers: AnswersJson }),
+      success: EditedResponse,
+      error: [NotFound, Unauthenticated, ValidationFailed, FormClosed, RevisionConflict],
     })
       .annotate(BodyLimit, largeBody)
       .annotate(HttpApi.PayloadParseOptions, { onExcessProperty: "error" }),

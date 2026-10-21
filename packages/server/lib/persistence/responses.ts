@@ -1,11 +1,11 @@
 import type { Answers } from "@fb/core/answers";
-import { and, desc, eq, isNull } from "drizzle-orm";
-import { Effect } from "effect";
-import type { ExternalRef } from "../authorization/actor.ts";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { Effect, type Schema } from "effect";
+import type { ExternalRef, TenantId } from "../authorization/actor.ts";
 import type { Database } from "./database.ts";
 import type { SharedForm } from "./forms.ts";
 import { currentInstant, newId } from "./ids.ts";
-import { answers, responseExternalRefs, responses } from "./schema.ts";
+import { answers, forms, responseExternalRefs, responses } from "./schema.ts";
 
 type Db = Database["Service"];
 
@@ -40,6 +40,54 @@ export const findByIdempotencyKey = (
     )
     .pipe(Effect.map(([row]) => row));
 
+/**
+ * The respondent's own response in the tenant, locked until the transaction ends: `share` keeps a read's
+ * revision and answers together, and `update` makes concurrent edits of one revision take turns.
+ */
+export const findOwnResponse = (
+  db: Db,
+  tenant: TenantId,
+  respondentId: string,
+  responseId: string,
+  lock: "share" | "update",
+) =>
+  db
+    .select({ response: responses })
+    .from(responses)
+    .innerJoin(forms, eq(forms.id, responses.formId))
+    .where(
+      and(
+        eq(forms.tenant, tenant),
+        eq(responses.id, responseId),
+        eq(responses.respondentId, respondentId),
+      ),
+    )
+    .for(lock, { of: responses })
+    .pipe(Effect.map(([row]) => row?.response));
+
+export const findAnswers = (db: Db, form: SharedForm, responseId: string) =>
+  db
+    .select({ questionId: answers.questionId, value: answers.value })
+    .from(answers)
+    .innerJoin(responses, eq(responses.id, answers.responseId))
+    .where(and(eq(responses.formId, form.id), eq(answers.responseId, responseId)))
+    .pipe(
+      Effect.map((rows): Record<string, Schema.Json> =>
+        Object.fromEntries(rows.map((row) => [row.questionId, row.value])),
+      ),
+    );
+
+const insertAnswers = (db: Db, responseId: string, versionId: string, given: Answers) => {
+  const answered = Object.entries(given);
+  return answered.length === 0
+    ? Effect.void
+    : db
+        .insert(answers)
+        .values(
+          answered.map(([questionId, value]) => ({ responseId, questionId, versionId, value })),
+        );
+};
+
 export interface NewResponse {
   readonly versionId: string;
   /** Null when anonymous. */
@@ -66,21 +114,29 @@ export const insertResponse = (db: Db, form: SharedForm, response: NewResponse) 
         submittedAt: yield* currentInstant,
       })
       .returning({ id: responses.id, revision: responses.revision });
-    const answered = Object.entries(response.answers);
-    if (answered.length > 0) {
-      yield* db.insert(answers).values(
-        answered.map(([questionId, value]) => ({
-          responseId: id,
-          questionId,
-          versionId: response.versionId,
-          value,
-        })),
-      );
-    }
+    yield* insertAnswers(db, id, response.versionId, response.answers);
     if (response.refs.length > 0) {
       yield* db
         .insert(responseExternalRefs)
         .values(response.refs.map((ref) => ({ responseId: id, ...ref })));
     }
     return inserted!;
+  });
+
+/** Overwrites the answers on the response's own version and moves its revision; references never change. */
+export const replaceAnswers = (
+  db: Db,
+  form: SharedForm,
+  response: { readonly id: string; readonly versionId: string },
+  given: Answers,
+) =>
+  Effect.gen(function* () {
+    const [edited] = yield* db
+      .update(responses)
+      .set({ revision: sql`${responses.revision} + 1`, editedAt: yield* currentInstant })
+      .where(and(eq(responses.formId, form.id), eq(responses.id, response.id)))
+      .returning({ id: responses.id, revision: responses.revision, editedAt: responses.editedAt });
+    yield* db.delete(answers).where(eq(answers.responseId, response.id));
+    yield* insertAnswers(db, response.id, response.versionId, given);
+    return { id: edited!.id, revision: edited!.revision, editedAt: edited!.editedAt! };
   });

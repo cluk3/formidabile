@@ -80,12 +80,19 @@ export const FormSummary = Schema.Struct({
 }).annotate({ identifier: "FormSummary" });
 export type FormSummary = typeof FormSummary.Type;
 
+/** A version as a respondent answers it. */
+const RespondentVersion = Schema.Struct({
+  id: Schema.String,
+  number: Schema.Int,
+  definition: FormDefinitionJson,
+});
+
 /** What a respondent loads: the form's current version, and enough to decide on a sign-in prompt. */
 export const RespondentForm = Schema.Struct({
   formId: Schema.String,
   responseLimit: ResponseLimit,
   respondent: Schema.Literals(["identified", "anonymous"]),
-  version: Schema.Struct({ id: Schema.String, number: Schema.Int, definition: FormDefinitionJson }),
+  version: RespondentVersion,
   /** Set only for an identified respondent who already answered a one-per-respondent form. */
   myResponseId: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "RespondentForm" });
@@ -96,6 +103,30 @@ export const SubmittedResponse = Schema.Struct({
   revision: Revision,
 }).annotate({ identifier: "SubmittedResponse" });
 export type SubmittedResponse = typeof SubmittedResponse.Type;
+
+/** A respondent's own response, on the version it was submitted against, with raw answers. */
+export const RespondentResponse = Schema.Struct({
+  response: Schema.Struct({
+    id: Schema.String,
+    formId: Schema.String,
+    versionId: Schema.String,
+    revision: Revision,
+    answers: AnswersJson,
+    submittedAt: Schema.Date,
+    editedAt: Schema.NullOr(Schema.Date),
+  }),
+  version: RespondentVersion,
+  /** Whether the form is open, so an edit can succeed. */
+  editable: Schema.Boolean,
+}).annotate({ identifier: "RespondentResponse" });
+export type RespondentResponse = typeof RespondentResponse.Type;
+
+export const EditedResponse = Schema.Struct({
+  responseId: Schema.String,
+  revision: Revision,
+  editedAt: Schema.Date,
+}).annotate({ identifier: "EditedResponse" });
+export type EditedResponse = typeof EditedResponse.Type;
 
 export const FormDetail = Schema.Struct({
   id: Schema.String,
