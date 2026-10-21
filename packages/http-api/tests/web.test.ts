@@ -70,6 +70,20 @@ test("a custom resolver's actor is held to the claim limits", async () => {
   expect(error).toEqual({ _tag: "Unauthenticated", reason: "invalid" });
 });
 
+test("a path parameter longer than the router's default 100 units reaches its endpoint", async () => {
+  resolved = analyst("acme-analyst");
+  const { response, error } = await createFormApiClient({
+    baseUrl,
+    getToken: () => null,
+    fetch: async (request) => custom.fetch(await declareLength(request)),
+  }).DELETE("/respondents/{respondentId}/responses", {
+    params: { path: { respondentId: "😀".repeat(255) } },
+  });
+
+  expect(response.status).toBe(403);
+  expect(error).toEqual({ _tag: "Forbidden", capability: "responses:delete" });
+});
+
 describe("a custom resolver and the JWT resolver", () => {
   const viaJwt = createFormModuleHandler({ databaseUrl, jwt });
   afterAll(() => viaJwt.dispose());

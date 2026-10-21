@@ -1,10 +1,12 @@
 import { Context, Effect, Layer } from "effect";
 import type { Actor } from "../authorization/actor.ts";
 import { requireCapability } from "../authorization/authorization.ts";
-import type { ResponseDetail, ResponsePage } from "../envelopes.ts";
+import type { DeletedResponses, ResponseDetail, ResponsePage } from "../envelopes.ts";
 import { type Forbidden, NotFound } from "../errors.ts";
 import { Database, dieOnDatabaseError } from "../persistence/database.ts";
 import {
+  deleteRespondentResponses,
+  deleteResponse,
   findResponse,
   findResponseAnswers,
   findResponseRefs,
@@ -34,6 +36,19 @@ export class Responses extends Context.Service<
       actor: Actor,
       responseId: string,
     ) => Effect.Effect<ResponseDetail, Forbidden | NotFound>;
+    /** Hard-deletes one response with its answers and references (ADR 0013). */
+    readonly delete: (
+      actor: Actor,
+      responseId: string,
+    ) => Effect.Effect<void, Forbidden | NotFound>;
+    /**
+     * Erases a respondent: hard-deletes their responses to every form in the caller's tenant, and only there
+     * (ADR 0013). Versions stay as they were, publisher included.
+     */
+    readonly deleteByRespondent: (
+      actor: Actor,
+      respondentId: string,
+    ) => Effect.Effect<DeletedResponses, Forbidden>;
   }
 >()("@fb/server/Responses") {
   static readonly layer = Layer.effect(
@@ -95,6 +110,21 @@ export class Responses extends Context.Service<
             )
             .pipe(dieOnDatabaseError);
         }),
+        delete: Effect.fn("Responses.delete")(function* (actor, responseId) {
+          const { tenant } = yield* requireCapability(actor, "responses:delete");
+          const deleted = yield* deleteResponse(db, tenant, responseId).pipe(dieOnDatabaseError);
+          if (deleted === 0) return yield* new NotFound();
+        }),
+        deleteByRespondent: Effect.fn("Responses.deleteByRespondent")(
+          function* (actor, respondentId) {
+            const { tenant } = yield* requireCapability(actor, "responses:delete");
+            return {
+              deleted: yield* deleteRespondentResponses(db, tenant, respondentId).pipe(
+                dieOnDatabaseError,
+              ),
+            } satisfies DeletedResponses;
+          },
+        ),
       });
     }),
   );

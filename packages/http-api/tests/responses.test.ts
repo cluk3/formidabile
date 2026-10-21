@@ -100,6 +100,17 @@ const listedIds = async (query: ListQuery, user?: DevUser) =>
 const read = (responseId: string, user: DevUser = "acme-admin") =>
   api.clientAs(user).GET("/responses/{responseId}", { params: { path: { responseId } } });
 
+const deleteOne = (responseId: string, client: FormApiClient = api.clientAs("acme-admin")) =>
+  client.DELETE("/responses/{responseId}", { params: { path: { responseId } } });
+
+const erase = (respondentId: string, client: FormApiClient = api.clientAs("acme-admin")) =>
+  client.DELETE("/respondents/{respondentId}/responses", { params: { path: { respondentId } } });
+
+const versionRead = (form: { formId: string; v1: { id: string } }) =>
+  api.clientAs("acme-admin").GET("/forms/{formId}/versions/{versionId}", {
+    params: { path: { formId: form.formId, versionId: form.v1.id } },
+  });
+
 /** UUIDv7 ids order by time only across milliseconds, so newest-first needs a gap between submits. */
 const tick = () => new Promise((resolve) => setTimeout(resolve, 2));
 
@@ -212,7 +223,125 @@ describe("GET /responses", () => {
   });
 });
 
+describe("DELETE /responses/{responseId}", () => {
+  test("deletes one response and gives 204, then 404", async () => {
+    const form = await openForm();
+    const alice = newRespondent();
+    const responseId = await submit(alice, form);
+    const kept = await submit(alice, form);
+
+    const deleted = await deleteOne(responseId);
+    const again = await deleteOne(responseId);
+
+    expect(deleted.response.status).toBe(204);
+    expect(again.response.status).toBe(404);
+    expect((await read(responseId)).response.status).toBe(404);
+    expect(await listedIds({ formId: form.formId })).toEqual([kept]);
+  });
+
+  test("after the last response of a version is deleted, that version and its question keys still read", async () => {
+    const form = await openForm();
+    await deleteOne(await submit(newRespondent(), form));
+
+    const version = await versionRead(form);
+    // An answer row needs its question key in the version.
+    const resubmitted = await submit(newRespondent(), form);
+
+    expect(version.response.status).toBe(200);
+    expect(version.data!.definition).toEqual(definition("Survey"));
+    expect(resubmitted).toEqual(expect.any(String));
+  });
+});
+
+describe("DELETE /respondents/{respondentId}/responses", () => {
+  test("erases the respondent across the whole tenant, and gives { deleted: 0 } when there's nothing to delete", async () => {
+    const a = await openForm();
+    const b = await openForm();
+    const g = await openForm("globex-admin");
+    const alice = newRespondent();
+    const bob = newRespondent();
+    await submit(alice, a);
+    await submit(alice, b);
+    const bobs = await submit(bob, a);
+    const inGlobex = await submit({ ...alice, tenant: "globex" }, g);
+
+    const erased = await erase(alice.sub);
+    const again = await erase(alice.sub);
+
+    expect(erased.response.status).toBe(200);
+    expect(erased.data).toEqual({ deleted: 2 });
+    expect(again.data).toEqual({ deleted: 0 });
+    expect(await listedIds({ respondentId: alice.sub })).toEqual([]);
+    expect(await listedIds({ respondentId: bob.sub })).toEqual([bobs]);
+    expect(await listedIds({ respondentId: alice.sub }, "globex-admin")).toEqual([inGlobex]);
+    for (const form of [a, b]) expect((await versionRead(form)).response.status).toBe(200);
+  });
+
+  test("afterwards the same respondent can submit again to a one-per-respondent form", async () => {
+    const form = await openForm();
+    await api.clientAs("acme-admin").PATCH("/forms/{formId}", {
+      params: { path: { formId: form.formId } },
+      body: { responseLimit: "one_per_respondent" },
+    });
+    const alice = newRespondent();
+    await submit(alice, form);
+    const blocked = await as(alice).POST("/respond/forms/{formId}/responses", {
+      params: { path: { formId: form.formId } },
+      body: {
+        versionId: form.v1.id,
+        answers: { [readyId]: true },
+        idempotencyKey: crypto.randomUUID(),
+      },
+    });
+
+    await erase(alice.sub);
+
+    expect(blocked.response.status).toBe(409);
+    expect(await submit(alice, form)).toEqual(expect.any(String));
+  });
+
+  test("respondentId counts code points: 255 is accepted and 256 gives 422", async () => {
+    const accepted = await erase("😀".repeat(255));
+    const refused = await erase("😀".repeat(256));
+
+    expect(accepted.data).toEqual({ deleted: 0 });
+    expect(refused.response.status).toBe(422);
+    expect(refused.error).toMatchObject({ _tag: "ValidationFailed" });
+  });
+});
+
 describe("authorization", () => {
+  test("without responses:delete, both deletes give 403", async () => {
+    const form = await openForm();
+    const alice = newRespondent();
+    const responseId = await submit(alice, form);
+    const analyst = api.clientAs("acme-analyst");
+
+    const deleted = await deleteOne(responseId, analyst);
+    const erased = await erase(alice.sub, analyst);
+
+    expect(deleted.response.status).toBe(403);
+    expect(deleted.error).toEqual({ _tag: "Forbidden", capability: "responses:delete" });
+    expect(erased.response.status).toBe(403);
+    expect(erased.error).toEqual({ _tag: "Forbidden", capability: "responses:delete" });
+    expect((await read(responseId)).response.status).toBe(200);
+  });
+
+  test("another tenant's admin gets 404 deleting a response, and erases nothing", async () => {
+    const form = await openForm();
+    const alice = newRespondent();
+    const responseId = await submit(alice, form);
+    const globex = api.clientAs("globex-admin");
+
+    const deleted = await deleteOne(responseId, globex);
+    const erased = await erase(alice.sub, globex);
+
+    expect(deleted.response.status).toBe(404);
+    expect(deleted.error).toEqual({ _tag: "NotFound" });
+    expect(erased.data).toEqual({ deleted: 0 });
+    expect(await listedIds({ respondentId: alice.sub })).toEqual([responseId]);
+  });
+
   test("without responses:read, listing and reading give 403", async () => {
     const form = await openForm();
     const responseId = await submit(newRespondent(), form);

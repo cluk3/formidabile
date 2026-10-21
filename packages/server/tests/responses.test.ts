@@ -10,6 +10,7 @@ import {
 import { Actor, type ExternalRef, TenantId } from "@fb/server/actor";
 import { DatabaseTest } from "@fb/server/testing";
 import { Effect, Layer, Option } from "effect";
+import { SqlClient } from "effect/sql";
 import { describe, expect, test } from "vite-plus/test";
 
 const acme = TenantId.make("acme");
@@ -17,7 +18,7 @@ const acme = TenantId.make("acme");
 const admin = Actor.Identified({
   subject: "acme-admin",
   tenant: acme,
-  capabilities: ["forms:manage", "responses:read"],
+  capabilities: ["forms:manage", "responses:read", "responses:delete"],
   formId: Option.none(),
   refs: [],
 });
@@ -75,13 +76,15 @@ const openForm = (owner: Actor = admin, first: unknown = definition("Survey")) =
     return { formId: form.id, v1: version };
   });
 
-const submit = (actor: Actor, formId: string, versionId: string, given: unknown = answers) =>
+const submit = (
+  actor: Actor,
+  formId: string,
+  versionId: string,
+  given: unknown = answers,
+  idempotencyKey: string = crypto.randomUUID(),
+) =>
   Submission.use((submission) =>
-    submission.submit(actor, formId, {
-      versionId,
-      answers: given,
-      idempotencyKey: crypto.randomUUID(),
-    }),
+    submission.submit(actor, formId, { versionId, answers: given, idempotencyKey }),
   );
 
 /** Publishes `next` as the form's next version. */
@@ -105,6 +108,15 @@ const list = (query: ListResponses, actor: Actor = admin) =>
 
 const listedIds = (query: ListResponses, actor?: Actor) =>
   Effect.map(list(query, actor), (page) => page.responses.map((response) => response.id));
+
+const deleteOne = (responseId: string, actor: Actor = admin) =>
+  Responses.use((responses) => responses.delete(actor, responseId));
+
+const erase = (respondentId: string, actor: Actor = admin) =>
+  Responses.use((responses) => responses.deleteByRespondent(actor, respondentId));
+
+const versionRead = (formId: string, versionId: string) =>
+  Publication.use((publication) => publication.version(admin, formId, versionId));
 
 /** UUIDv7 ids order by time only across milliseconds, so newest-first needs a gap between submits. */
 const tick = Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 2)));
@@ -280,7 +292,164 @@ describe("list", () => {
   });
 });
 
+describe("delete", () => {
+  test("deleting one response removes only that response", async () => {
+    const { readAgain, deleteAgain, listed, kept } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        const kept = (yield* submit(alice, formId, v1.id)).responseId;
+        yield* deleteOne(responseId);
+        return {
+          readAgain: yield* Effect.flip(read(admin, responseId)),
+          deleteAgain: yield* Effect.flip(deleteOne(responseId)),
+          listed: yield* listedIds({ formId }),
+          kept,
+        };
+      }),
+    );
+
+    expect(readAgain._tag).toBe("NotFound");
+    expect(deleteAgain._tag).toBe("NotFound");
+    expect(listed).toEqual([kept]);
+  });
+
+  test("by respondent covers the whole tenant, and gives { deleted: 0 } when there's nothing to delete", async () => {
+    const { erased, again, left, others, versions } = await run(
+      Effect.gen(function* () {
+        const a = yield* openForm();
+        const b = yield* openForm();
+        const g = yield* openForm(globexAdmin);
+        yield* submit(alice, a.formId, a.v1.id);
+        yield* submit(alice, a.formId, a.v1.id);
+        yield* submit(alice, b.formId, b.v1.id);
+        const bobs = yield* submit(bob, a.formId, a.v1.id);
+        const globexResponse = yield* submit(globexAlice, g.formId, g.v1.id);
+        const erased = yield* erase("alice");
+        return {
+          erased,
+          again: yield* erase("alice"),
+          left: yield* listedIds({ respondentId: "alice" }),
+          others: {
+            bob: yield* listedIds({ respondentId: "bob" }),
+            expectedBob: [bobs.responseId],
+            globex: yield* listedIds({ respondentId: "alice" }, globexAdmin),
+            expectedGlobex: [globexResponse.responseId],
+          },
+          versions: [yield* versionRead(a.formId, a.v1.id), yield* versionRead(b.formId, b.v1.id)],
+        };
+      }),
+    );
+
+    expect(erased).toEqual({ deleted: 3 });
+    expect(again).toEqual({ deleted: 0 });
+    expect(left).toEqual([]);
+    expect(others.bob).toEqual(others.expectedBob);
+    expect(others.globex).toEqual(others.expectedGlobex);
+    expect(versions.map((version) => version.definition)).toEqual([
+      definition("Survey"),
+      definition("Survey"),
+    ]);
+  });
+
+  test("another tenant's admin gets NotFound for one response and deletes nothing by respondent", async () => {
+    const { deleteOneError, erased, listed, responseId } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        return {
+          deleteOneError: yield* Effect.flip(deleteOne(responseId, globexAdmin)),
+          erased: yield* erase("alice", globexAdmin),
+          listed: yield* listedIds({ formId }),
+          responseId,
+        };
+      }),
+    );
+
+    expect(deleteOneError._tag).toBe("NotFound");
+    expect(erased).toEqual({ deleted: 0 });
+    expect(listed).toEqual([responseId]);
+  });
+
+  test("after the last response of a version is deleted, that version and its question keys still read", async () => {
+    const { version, questionKeys, resubmitted } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        yield* deleteOne(responseId);
+        const questionKeys = yield* SqlClient.SqlClient.use(
+          (sql) => sql<{ questionId: string }>`
+            SELECT question_id AS "questionId" FROM form_management.form_version_questions
+            WHERE version_id = ${v1.id}
+          `,
+        );
+        return {
+          version: yield* versionRead(formId, v1.id),
+          questionKeys,
+          // An answer row needs its question key in the version.
+          resubmitted: yield* submit(bob, formId, v1.id),
+        };
+      }),
+    );
+
+    expect(version.definition).toEqual(definition("Survey"));
+    expect(questionKeys).toEqual([{ questionId: readyId }]);
+    expect(resubmitted.responseId).toEqual(expect.any(String));
+  });
+
+  test("after erasure, the same idempotency key creates a new response", async () => {
+    const { first, second, listed } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        const key = crypto.randomUUID();
+        const first = yield* submit(alice, formId, v1.id, answers, key);
+        yield* erase("alice");
+        const second = yield* submit(alice, formId, v1.id, answers, key);
+        return { first, second, listed: yield* listedIds({ formId }) };
+      }),
+    );
+
+    expect(second.responseId).not.toBe(first.responseId);
+    expect(listed).toEqual([second.responseId]);
+  });
+
+  test("after erasure, the same respondent can submit again to a one-per-respondent form", async () => {
+    const { blocked, resubmitted } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { responseLimit: "one_per_respondent" }),
+        );
+        yield* submit(alice, formId, v1.id);
+        const blocked = yield* Effect.flip(submit(alice, formId, v1.id));
+        yield* erase("alice");
+        return { blocked, resubmitted: yield* submit(alice, formId, v1.id) };
+      }),
+    );
+
+    expect(blocked._tag).toBe("AlreadyResponded");
+    expect(resubmitted.responseId).toEqual(expect.any(String));
+  });
+});
+
 describe("authorization", () => {
+  test("without responses:delete, both deletes give Forbidden", async () => {
+    const reader = Actor.Identified({ ...admin, capabilities: ["responses:read"] });
+    const { deleteOneError, eraseError } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm();
+        const { responseId } = yield* submit(alice, formId, v1.id);
+        return {
+          deleteOneError: yield* Effect.flip(deleteOne(responseId, reader)),
+          eraseError: yield* Effect.flip(erase("alice", reader)),
+        };
+      }),
+    );
+
+    expect(deleteOneError).toMatchObject({ _tag: "Forbidden", capability: "responses:delete" });
+    expect(eraseError).toMatchObject({ _tag: "Forbidden", capability: "responses:delete" });
+  });
+
   test("without responses:read, listing and reading give Forbidden", async () => {
     const manager = Actor.Identified({ ...admin, capabilities: ["forms:manage"] });
     const { listed, readOne } = await run(

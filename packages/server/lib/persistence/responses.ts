@@ -1,5 +1,5 @@
 import type { Answers } from "@fb/core/answers";
-import { and, desc, eq, exists, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, isNull, lt, type SQL, sql } from "drizzle-orm";
 import { Effect, type Schema } from "effect";
 import type { ExternalRef, TenantId } from "../authorization/actor.ts";
 import type { Database } from "./database.ts";
@@ -104,6 +104,27 @@ export const findResponseRefs = (db: Db, responseIds: ReadonlyArray<string>) =>
         return byResponse;
       }),
     );
+
+const inTenant = (db: Db, tenant: TenantId) =>
+  inArray(
+    responses.formId,
+    db.select({ id: forms.id }).from(forms).where(eq(forms.tenant, tenant)),
+  );
+
+/** Answers and references go by cascade. Gives how many responses were deleted. */
+const deleteResponsesWhere = (db: Db, tenant: TenantId, condition: SQL) =>
+  db
+    .delete(responses)
+    .where(and(inTenant(db, tenant), condition))
+    .returning({ id: responses.id })
+    .pipe(Effect.map((rows) => rows.length));
+
+export const deleteResponse = (db: Db, tenant: TenantId, responseId: string) =>
+  deleteResponsesWhere(db, tenant, eq(responses.id, responseId));
+
+/** Every response the respondent gave to any form in the tenant. */
+export const deleteRespondentResponses = (db: Db, tenant: TenantId, respondentId: string) =>
+  deleteResponsesWhere(db, tenant, eq(responses.respondentId, respondentId));
 
 /** Whatever the limit was when each response came in. */
 export const latestResponseId = (db: Db, form: SharedForm, respondentId: string) =>

@@ -373,25 +373,49 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
       expect(kept).toBe(1);
     });
 
-    test("deleting a response removes its answers and references by cascade", async () => {
-      const remaining = await run(
+    test("deleting responses removes their answers and references by cascade, without firing any immutability trigger", async () => {
+      const { remaining, publisherChange } = await run(
         Effect.gen(function* () {
           const { formId, versionId, questionId } = yield* publishedForm;
-          const responseId = yield* insertResponse({ formId, versionId });
-          yield* insertAnswer(responseId, versionId, questionId);
-          yield* insertResponseRef(responseId, "project", "p-1");
+          const responseIds = [
+            yield* insertResponse({ formId, versionId }),
+            yield* insertResponse({ formId, versionId, respondentId: "bob" }),
+          ];
+          for (const responseId of responseIds) {
+            yield* insertAnswer(responseId, versionId, questionId);
+            yield* insertResponseRef(responseId, "project", "p-1");
+          }
           const sql = yield* SqlClient.SqlClient;
-          yield* sql`DELETE FROM form_management.responses WHERE id = ${responseId}`;
-          const [row] = yield* sql<{ answers: number; refs: number }>`
+          // The version's last responses, as an erasure would delete them.
+          yield* sql`DELETE FROM form_management.responses WHERE form_id = ${formId}`;
+          const [remaining] = yield* sql<Record<string, number>>`
             SELECT
-              (SELECT count(*)::int FROM form_management.answers WHERE response_id = ${responseId}) AS answers,
-              (SELECT count(*)::int FROM form_management.response_external_refs WHERE response_id = ${responseId}) AS refs
+              (SELECT count(*)::int FROM form_management.responses WHERE form_id = ${formId}) AS responses,
+              (SELECT count(*)::int FROM form_management.answers WHERE response_id IN ${sql.in(responseIds)}) AS answers,
+              (SELECT count(*)::int FROM form_management.response_external_refs WHERE response_id IN ${sql.in(responseIds)}) AS refs,
+              (SELECT count(*)::int FROM form_management.form_versions WHERE id = ${versionId}) AS versions,
+              (SELECT count(*)::int FROM form_management.form_version_questions WHERE version_id = ${versionId}) AS "questionKeys"
           `;
-          return row;
+          return {
+            remaining,
+            publisherChange: yield* rejection(
+              sql`UPDATE form_management.form_versions SET published_by = 'erased' WHERE id = ${versionId}`,
+            ),
+          };
         }),
       );
 
-      expect(remaining).toEqual({ answers: 0, refs: 0 });
+      expect(remaining).toEqual({
+        responses: 0,
+        answers: 0,
+        refs: 0,
+        versions: 1,
+        questionKeys: 1,
+      });
+      expect(publisherChange).toEqual({
+        code: "23001",
+        message: "UPDATE on form_management.form_versions is not allowed",
+      });
     });
 
     test.each([

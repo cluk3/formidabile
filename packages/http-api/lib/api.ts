@@ -3,6 +3,7 @@ import { FormDefinition } from "@fb/core/definition";
 import {
   AlreadyResponded,
   AnswersJson,
+  DeletedResponses,
   Draft,
   EditedResponse,
   ExternalRefLimitReached,
@@ -239,6 +240,16 @@ export class ResponsesGroup extends HttpApiGroup.make("responses")
       params: ResponseIdParams,
       success: ResponseDetail,
       error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.delete("delete", "/responses/:responseId", {
+      params: ResponseIdParams,
+      error: [Forbidden, NotFound],
+    }),
+    // Erasure is tenant-scoped: a person known in several tenants is erased once per tenant (ADR 0013).
+    HttpApiEndpoint.delete("deleteByRespondent", "/respondents/:respondentId/responses", {
+      params: { respondentId: RespondentId },
+      success: DeletedResponses,
+      error: Forbidden,
     }),
   )
   .middleware(EdgeValidation)
