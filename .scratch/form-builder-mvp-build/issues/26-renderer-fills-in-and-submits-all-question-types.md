@@ -17,7 +17,7 @@
 - [x] Component test: preview mode renders a definition and never calls the API.
 - [x] The element wraps the same component tree, with no static `style` attributes in its markup.
 - [x] Playwright, renderer project (Chromium, Firefox, WebKit): load and submit through the project route.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

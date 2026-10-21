@@ -17,7 +17,7 @@
 - [x] Query tests run on PGlite. `http-api` tests cover the empty form, `responses:read`, and cross-tenant access.
 - [x] The erasure tests gain analytics assertions. After deleting by respondent, analytics succeed for every affected form and their counts drop by exactly the deleted responses. After the last response of a version is deleted, analytics still list that version, with its questions present and zero counts.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -13,7 +13,7 @@
 - [x] Multiple-choice `minSelected` and `maxSelected` are structurally whole numbers from 1 to 100, and there is one test for each satisfiability rule: `minSelected` above the number of options, `maxSelected: 0`, and an integer number question with fractional bounds are each rejected.
 - [x] Email answers are capped at 254 code points: a 254-code-point answer passes and a 255-code-point one fails.
 - [x] Core has no envelope types and no `draftFrom`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

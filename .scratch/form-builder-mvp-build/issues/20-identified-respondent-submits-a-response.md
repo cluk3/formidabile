@@ -21,7 +21,7 @@
 - [x] `http-api`: a respondent from another tenant gets 404 on submit; a token with `form` and `refs` submits and the references are stored; an identified token bound to form A gets 404 on form B's load and submit; a custom resolver returning `refs` gets them stored; a submit declaring 1 MiB plus one byte gives 413.
 - [x] The parity table gains a submit row.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

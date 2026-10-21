@@ -14,7 +14,7 @@
 - [x] A form's external references are shown read-only.
 - [x] Unknown outcomes on these actions use the shared handling from ticket 31.
 - [x] Playwright, builder project: create a form, delete it, and check it's gone from the list.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

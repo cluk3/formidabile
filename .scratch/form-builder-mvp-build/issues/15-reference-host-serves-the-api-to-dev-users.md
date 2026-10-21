@@ -13,7 +13,7 @@
 - [x] `/token` mints a tenant-wide identified JWT with `jose` for the signed-in dev user, and gives 401 for the anonymous user, because a grant needs `form`. There is no `project` parameter yet.
 - [x] The CORS list allows the builder's origin.
 - [x] Reference host Vitest: `/token` mints the expected claims for each dev user, gives 401 for the anonymous user, and an `acme-admin` token creates a form through `/api`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

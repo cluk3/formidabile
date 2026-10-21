@@ -18,7 +18,7 @@
 - [x] `http-api`: deleting without `responses:delete` gives 403, and another tenant's admin gets 404.
 - [x] The embedding guide's personal-data part gains the erasure procedure (delete by respondent once per tenant, and anonymous responses through the references their grants asserted) and the access-request procedure (the `respondentId` list plus each response read).
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -14,7 +14,7 @@
 - [x] A chunked body with no `Content-Length` gives 411.
 - [x] A test shows the rejection happens before any of the body is read.
 - [x] `LengthRequired` and `PayloadTooLarge` appear in `openapi.json`, and the client is regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

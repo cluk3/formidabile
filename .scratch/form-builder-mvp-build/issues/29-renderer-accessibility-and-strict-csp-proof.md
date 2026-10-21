@@ -13,7 +13,7 @@
 - [x] If WebKit's default Tab order can't reach every control, that one test falls back to Chromium and Firefox, and the test says why.
 - [x] Focus moves to the first error through the shadow root.
 - [x] The strict-CSP test passes on the real renderer in all three browsers.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

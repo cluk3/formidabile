@@ -11,7 +11,7 @@
 - [x] `buildAnswerSchema` and `interpretAnswers` are unit-tested across all seven types.
 - [x] Unknown answer keys are rejected.
 - [x] An unanswered optional question has no key, and values are untagged.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

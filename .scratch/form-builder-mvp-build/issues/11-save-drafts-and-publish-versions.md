@@ -20,7 +20,7 @@
 - [x] `test:pg`: a save and a publish fired at once end in one of the states above. There is exactly one new version, it holds the definition publish expected, and a save that got a 200 is never lost.
 - [x] `http-api`: saving or publishing without `forms:manage` gives 403; `acme-analyst` reads versions but not the draft; another tenant's admin gets 404.
 - [x] `openapi.json` and the client are regenerated with the `RevisionConflict`, `NoDraft` and `FormNotPublished` errors.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

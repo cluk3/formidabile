@@ -14,7 +14,7 @@
 - [x] The database enforces one question type per question identity.
 - [x] `timestamptz` and `jsonb` values round-trip on both drivers.
 - [x] Every test here runs on PGlite under `vp test`, and again under `test:pg`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

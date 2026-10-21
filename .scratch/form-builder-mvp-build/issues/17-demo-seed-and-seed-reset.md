@@ -13,7 +13,7 @@
 - [x] `seed:reset` runs `DROP SCHEMA IF EXISTS form_management CASCADE` through `docker compose exec -T postgres psql`, then runs the seed, which re-migrates.
 - [x] The `e2e` task depends on `seed:reset`, locally and in CI.
 - [x] No test depends on the seed's data.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

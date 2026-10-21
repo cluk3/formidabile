@@ -16,7 +16,7 @@
 - [x] Component test: a 413 shows "Your answers are too long to send".
 - [x] Playwright, renderer project (three browsers): load, submit and edit; publish v2 behind an open form, submit, see the reload prompt, then submit on v2.
 - [x] Playwright, renderer project: the anonymous dev user submits to an unlimited form, and is prompted to sign in on a form limited to one response per respondent.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

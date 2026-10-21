@@ -16,7 +16,7 @@
 - [x] Vitest table test of `resolveProjectForm`: no forms, only unpublished, only closed, one open, open plus closed (the open one wins), and two open (ambiguous).
 - [x] Vitest: `/token?project=<id>` gives 404 for none and for several candidates, refuses a project in another tenant, and mints `form` and `refs` for exactly one; the anonymous user's grant expires after 5 minutes; `/token` with no `project` gives 401 for the anonymous user.
 - [x] Playwright: the route mounts the element for one candidate. The "no open form" and "ambiguous" pages each seed their own project and assert no `<form-renderer>` is mounted.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

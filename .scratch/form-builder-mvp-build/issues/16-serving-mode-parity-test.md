@@ -11,7 +11,7 @@
 - [x] The test runs under `vp test` on PGlite.
 - [x] The rows are: one success; a 401 with each `reason` phase 1 can raise; a 403; a 404; a 409; a 422; a 411 sent chunked over a raw socket; and a 413.
 - [x] Adding a case means adding one table row.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

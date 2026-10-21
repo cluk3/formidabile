@@ -13,7 +13,7 @@
 - [x] On an unknown outcome, the builder says it couldn't confirm the action and reloads: the form list after a create, or the form's detail otherwise.
 - [x] Component test: an unknown outcome on create reloads the form list.
 - [x] Playwright, builder project: signed in as `acme-admin`, create a form and find it in the list by title.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

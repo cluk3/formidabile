@@ -14,7 +14,7 @@
 - [x] One reference on two forms in the tenant returns both, and the same reference in another tenant isn't returned.
 - [x] Changing references without `forms:manage` gives 403.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -17,7 +17,7 @@
 - [x] **Host duties:** hosts rate-limit `/respond` (especially submit) and the endpoint that mints grants; under the Fetch handler the host owns connection and request timeouts; hosts run the exported migration; the body limits; and the design envelope as advisory.
 - [x] **Personal data:** subjects are opaque and pseudonymous, tenants are opaque, form content holds no personal data, and the host owns retention.
 - [x] Every statement is checked against its source ADR or ticket.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

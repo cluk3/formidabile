@@ -14,7 +14,7 @@
 - [x] `test:pg`: concurrent submits with the same key leave exactly one response.
 - [x] `http-api`: a replay gives a 201 body identical to the original.
 - [x] The parity table gains a replay row.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

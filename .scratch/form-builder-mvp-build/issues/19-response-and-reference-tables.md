@@ -14,7 +14,7 @@
 - [x] The partial unique index enforces one response per respondent on limited forms.
 - [x] Deleting a never-published form removes its external references by cascade.
 - [x] Every test here runs on PGlite under `vp test`, and again under `test:pg`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

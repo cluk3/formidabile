@@ -15,7 +15,7 @@
 - [x] Use case: replaying the original submit after an edit returns the same `responseId` with the current revision.
 - [x] `http-api`: reading or editing another respondent's response gives 404, and an identified token bound to form A gets 404 on form B's responses.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

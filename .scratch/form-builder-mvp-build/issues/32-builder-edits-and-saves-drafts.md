@@ -14,7 +14,7 @@
 - [x] Save is explicit. On `RevisionConflict` the editor chooses to reload or stay.
 - [x] Component test: a 413 shows "This form is too large to save".
 - [x] An unknown outcome on save uses the shared handling from ticket 31.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

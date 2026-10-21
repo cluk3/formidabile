@@ -12,7 +12,7 @@
 - [x] The seed adds one form in `acme` with versions that drop a question, add an option, relabel an option, change a number range and reidentify a question, with responses from `alice`, `bob` and anonymous respondents.
 - [x] Playwright, builder project: on a multi-version form the test builds for itself, the view shows counts by version and keeps an absent question out of that version's totals.
 - [x] Every row of the spec's §12 proof table and Security cases table has its tests.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

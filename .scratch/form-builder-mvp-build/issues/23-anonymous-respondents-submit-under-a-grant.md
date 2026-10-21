@@ -16,7 +16,7 @@
 - [x] A grant submitting to its open, unlimited form gets 201, and no respondent id is stored.
 - [x] An anonymous replay returns the original response.
 - [x] The parity table gains a 401 `identityRequired` row.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

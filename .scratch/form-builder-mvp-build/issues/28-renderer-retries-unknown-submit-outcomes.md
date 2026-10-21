@@ -12,7 +12,7 @@
 - [x] On an unknown edit outcome, the respondent chooses to reload or stay.
 - [x] Component tests: a rejected `fetch` and a 503 each lock the answers and show Retry; Retry resends the same key; a 201 moves on to the confirmation; a 422 after Retry unlocks the form.
 - [x] Playwright, renderer project: route interception lets a submit reach the server and drops its reply, and Retry shows the confirmation with the same `responseId` the server sent the first time.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

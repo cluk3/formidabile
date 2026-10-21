@@ -13,7 +13,7 @@
 - [x] A table-driven contract test runs every case through Zod and through ajv (2020-12, with formats), including the 254 and 255 code-point email cases. The two may differ only on the date-range case.
 - [x] The embedding guide's custom-renderer contract gains item 3: optional browser validation through this endpoint, with the date-range gap listed.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -13,7 +13,7 @@
 - [x] A custom resolver whose `subject` is 256 code points is rejected by the post-resolver check.
 - [x] An integration test proves a custom `resolveActor` produces the same `Identified` and `Anonymous` actors as the JWT resolver, and that they pass the same checks.
 - [x] An anonymous grant on any admin endpoint gives 403.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -13,7 +13,7 @@
 - [x] Both deletes are available only with `responses:delete`.
 - [x] Playwright, builder project: open a v1 response after v2 is published and see v1's questions.
 - [x] Playwright, builder project: `acme-analyst` reads responses but can't publish or delete.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

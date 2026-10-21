@@ -18,7 +18,7 @@
 - [x] `createFormModuleHandler` takes `resolveActor` and `cors`. `FormModuleLive` is exported, and `openapi.json` and the client are regenerated.
 - [x] `http-api` tests cover: no token gives 401 `missing`; expired, wrongly signed and wrong-audience tokens give 401 `invalid`; creating without `forms:manage` gives 403; `acme-analyst` reads forms; another tenant's admin gets 404.
 - [x] The `apps/api-server` smoke test also answers one authenticated request.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -17,7 +17,7 @@
 - [x] Use case and `http-api`: listing by reference finds a response submitted under that `refs` claim.
 - [x] `http-api`: reading responses without `responses:read` gives 403, and another tenant's admin gets 404.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

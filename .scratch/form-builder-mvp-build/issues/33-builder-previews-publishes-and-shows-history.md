@@ -13,7 +13,7 @@
 - [x] Publication history shows the versions list, reads one version, and indicates the current published version against the outstanding draft.
 - [x] An unknown outcome on publish uses the shared handling from ticket 31.
 - [x] Playwright, builder project: create, edit, preview (asserting no `/respond` request is made), save, publish v1, edit and publish v2, and see both versions in the history.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

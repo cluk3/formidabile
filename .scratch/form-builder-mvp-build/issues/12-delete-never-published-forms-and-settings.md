@@ -14,7 +14,7 @@
 - [x] `test:pg`: a delete racing a publish ends either with the form gone and no version, or with the version published and `FormPublished`, never both.
 - [x] `http-api`: deleting or changing settings without `forms:manage` gives 403, and another tenant's admin gets 404.
 - [x] `openapi.json` and the client are regenerated.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

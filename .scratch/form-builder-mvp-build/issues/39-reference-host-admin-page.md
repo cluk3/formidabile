@@ -11,7 +11,7 @@
 - [x] Signed in as `acme-admin` or `globex-admin`, the page adds and removes form references and lists responses by reference for each demo project.
 - [x] Playwright, renderer project: the "form for project X" test checks the new response is listed under its project.
 - [x] Playwright, renderer project: the dropped-reply test checks the form's response list shows exactly one response.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

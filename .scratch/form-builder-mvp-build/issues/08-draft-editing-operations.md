@@ -12,7 +12,7 @@
 - [x] `reidentifyQuestion` gives a question a new question identity, as ADR 0009 describes.
 - [x] Every function's output passes `parseDefinition`.
 - [x] Core still has no envelope types and no `draftFrom`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 
