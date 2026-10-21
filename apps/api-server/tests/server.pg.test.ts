@@ -1,9 +1,9 @@
 import { JwtActorResolver } from "@fb/http-api";
+import { signHs256 } from "@fb/http-api/sign";
 import { DatabaseLive } from "@fb/server/database";
 import { Effect, Layer } from "effect";
 import { HttpServer } from "effect/http";
 import { SqlClient } from "effect/sql";
-import { SignJWT } from "jose";
 import { expect, test } from "vite-plus/test";
 import { ServerLive } from "../server.ts";
 
@@ -12,16 +12,10 @@ if (!databaseUrl) throw new Error("test:pg needs DATABASE_URL");
 
 const jwt = { issuer: "https://host.test", audience: "form-module", secret: "smoke-test-secret" };
 
-const adminToken = new SignJWT({
-  sub: "acme-admin",
-  tenant: "acme",
-  capabilities: ["forms:manage"],
-})
-  .setProtectedHeader({ alg: "HS256" })
-  .setIssuer(jwt.issuer)
-  .setAudience(jwt.audience)
-  .setExpirationTime("5m")
-  .sign(new TextEncoder().encode(jwt.secret));
+const adminToken = signHs256(
+  { sub: "acme-admin", tenant: "acme", capabilities: ["forms:manage"] },
+  { secret: jwt.secret, issuer: jwt.issuer, audience: jwt.audience },
+);
 
 // A database of its own, so the startup migration runs against an empty one.
 const freshDatabaseUrl = Effect.acquireRelease(

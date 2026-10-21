@@ -4,15 +4,16 @@
   "type": "module",
   "dependencies": {
     "@fb/api-client": "workspace:*",
+    "@fb/core": "workspace:*",
     "@fb/http-api": "workspace:*",
     "@fb/renderer": "workspace:*",
-    "@remix-run/node-fetch-server": "catalog:",
-    "jose": "catalog:"
+    "@remix-run/node-fetch-server": "catalog:"
   },
   "devDependencies": {
     "@fb/server": "workspace:*",
     "@types/node": "catalog:",
     "effect": "catalog:",
+    "jose": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }

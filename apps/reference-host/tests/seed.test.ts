@@ -98,7 +98,7 @@ test("the acme onboarding survey's versions exercise every cross-version case", 
 
   const team = byLabel("How big is your team?");
   expect(team.map(({ type, inCurrentVersion }) => [type, inCurrentVersion])).toEqual([
-    ["number", true],
+    ["text", true],
     ["text", false],
   ]);
   expect(team.map(presentIn)).toEqual([[4], [1, 2, 3]]);

@@ -1,28 +1,19 @@
 import { Database } from "@fb/server/database";
 import { forms, formVersions } from "@fb/server/testing";
 import { eq, sql as drizzleSql } from "drizzle-orm";
-import { Effect, Layer, Schema } from "effect";
+import { Effect, Layer } from "effect";
 import { SqlClient, SqlError } from "effect/sql";
 import { describe, expect, test } from "vite-plus/test";
+import {
+  insertForm,
+  insertIdentity,
+  insertVersion,
+  insertVersionQuestion,
+  publishedForm,
+  rejection,
+} from "./table-fixtures.ts";
 
 type Services = Database | SqlClient.SqlClient;
-
-const DriverError = Schema.Struct({ code: Schema.String, message: Schema.String });
-
-// The driver's own error, so a test can tell a trigger's rejection from any other failure.
-const rejection = <A, R>(statement: Effect.Effect<A, SqlError.SqlError, R>) =>
-  statement.pipe(
-    Effect.flip,
-    Effect.map((error) => Schema.decodeUnknownSync(DriverError)(error.reason.cause)),
-  );
-
-const insertForm = (formId: string) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.forms (id, tenant, availability, response_limit, created_at, updated_at)
-      VALUES (${formId}, 'acme', 'closed', 'unlimited', now(), now())
-    `,
-  );
 
 const insertDraft = (formId: string) =>
   SqlClient.SqlClient.use(
@@ -31,47 +22,6 @@ const insertDraft = (formId: string) =>
       VALUES (${formId}, '{}', now())
     `,
   );
-
-const insertIdentity = (formId: string, questionId: string, type: string) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.question_identities (form_id, question_id, type)
-      VALUES (${formId}, ${questionId}, ${type})
-    `,
-  );
-
-const insertVersion = (formId: string, versionId: string) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.form_versions (id, form_id, number, definition, published_at, published_by)
-      VALUES (${versionId}, ${formId}, 1, '{}', now(), 'acme-admin')
-    `,
-  );
-
-const insertVersionQuestion = (
-  formId: string,
-  versionId: string,
-  questionId: string,
-  type: string,
-) =>
-  SqlClient.SqlClient.use(
-    (sql) => sql`
-      INSERT INTO form_management.form_version_questions (version_id, question_id, form_id, type, position)
-      VALUES (${versionId}, ${questionId}, ${formId}, ${type}, 0)
-    `,
-  );
-
-// A form published once, with one text question.
-const publishedForm = Effect.gen(function* () {
-  const formId = crypto.randomUUID();
-  const versionId = crypto.randomUUID();
-  const questionId = crypto.randomUUID();
-  yield* insertForm(formId);
-  yield* insertVersion(formId, versionId);
-  yield* insertIdentity(formId, questionId, "text");
-  yield* insertVersionQuestion(formId, versionId, questionId, "text");
-  return { formId, versionId, questionId };
-});
 
 const count = (table: string) =>
   SqlClient.SqlClient.use((sql) =>
@@ -295,11 +245,7 @@ export const describeAuthoringTables = (database: Layer.Layer<Services, unknown>
           const { formId } = yield* publishedForm;
           const versionId = crypto.randomUUID();
           const questionId = crypto.randomUUID();
-          const sql = yield* SqlClient.SqlClient;
-          yield* sql`
-            INSERT INTO form_management.form_versions (id, form_id, number, definition, published_at, published_by)
-            VALUES (${versionId}, ${formId}, 2, '{}', now(), 'acme-admin')
-          `;
+          yield* insertVersion(formId, versionId, 2);
           yield* insertIdentity(formId, questionId, "text");
           return yield* rejection(insertVersionQuestion(formId, versionId, questionId, "email"));
         }),

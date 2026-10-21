@@ -70,17 +70,23 @@ const matrix = [
     allow: [`^${PACKAGES}/renderer/element\\.ts$`, `^${PACKAGES}/api-client/`],
   },
   {
+    // The plugin serves the module. It mints tokens with the same HS256 helper the module verifies with.
     name: "reference-host-server",
     from: `^${APPS}/reference-host/server/`,
     to: `^(${PACKAGES}/|${APPS}/reference-host/src/)`,
-    allow: [`^${PACKAGES}/http-api/web\\.ts$`],
+    allow: [`^${PACKAGES}/http-api/web\\.ts$`, `^${PACKAGES}/http-api/sign\\.ts$`],
   },
   {
     // The demo seed builds its own handler and drives it through the client, signing with `server/`'s dev users.
+    // It edits definitions with core's editing functions, as the builder does.
     name: "reference-host-seed",
     from: `^${APPS}/reference-host/seed/`,
     to: `^(${PACKAGES}/|${APPS}/reference-host/src/)`,
-    allow: [`^${PACKAGES}/http-api/web\\.ts$`, `^${PACKAGES}/api-client/`],
+    allow: [
+      `^${PACKAGES}/http-api/web\\.ts$`,
+      `^${PACKAGES}/api-client/`,
+      `^${PACKAGES}/core/editing\\.ts$`,
+    ],
   },
 ];
 
