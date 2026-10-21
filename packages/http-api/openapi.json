@@ -1979,6 +1979,244 @@
           "required": true
         }
       }
+    },
+    "/responses": {
+      "get": {
+        "tags": [
+          "responses"
+        ],
+        "operationId": "responses.list",
+        "parameters": [
+          {
+            "name": "formId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": false
+          },
+          {
+            "name": "versionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": false
+          },
+          {
+            "name": "refNamespace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "refId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "respondentId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ResponsePage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsePage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/responses/{responseId}": {
+      "get": {
+        "tags": [
+          "responses"
+        ],
+        "operationId": "responses.read",
+        "parameters": [
+          {
+            "name": "responseId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ResponseDetail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthenticatedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ValidationFailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationFailedEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2019,33 +2257,27 @@
         ],
         "additionalProperties": false
       },
-      "RevisionConflictEncoded": {
+      "UnauthenticatedEncoded": {
         "type": "object",
         "properties": {
           "_tag": {
             "type": "string",
             "enum": [
-              "RevisionConflict"
+              "Unauthenticated"
             ]
-          }
-        },
-        "required": [
-          "_tag"
-        ],
-        "additionalProperties": false
-      },
-      "FormClosedEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
+          },
+          "reason": {
             "type": "string",
             "enum": [
-              "FormClosed"
+              "missing",
+              "invalid",
+              "identityRequired"
             ]
           }
         },
         "required": [
-          "_tag"
+          "_tag",
+          "reason"
         ],
         "additionalProperties": false
       },
@@ -2106,30 +2338,6 @@
         ],
         "additionalProperties": false
       },
-      "UnauthenticatedEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "Unauthenticated"
-            ]
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "missing",
-              "invalid",
-              "identityRequired"
-            ]
-          }
-        },
-        "required": [
-          "_tag",
-          "reason"
-        ],
-        "additionalProperties": false
-      },
       "NotFoundEncoded": {
         "type": "object",
         "properties": {
@@ -2145,54 +2353,31 @@
         ],
         "additionalProperties": false
       },
-      "EditedResponse": {
+      "ForbiddenEncoded": {
         "type": "object",
         "properties": {
-          "responseId": {
-            "type": "string"
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "Forbidden"
+            ]
           },
-          "revision": {
-            "type": "string"
-          },
-          "editedAt": {
-            "type": "string"
+          "capability": {
+            "type": "string",
+            "enum": [
+              "forms:manage",
+              "responses:read",
+              "responses:delete"
+            ]
           }
         },
         "required": [
-          "responseId",
-          "revision",
-          "editedAt"
+          "_tag",
+          "capability"
         ],
         "additionalProperties": false
       },
-      "AnyAnswers": {
-        "type": "object",
-        "propertyNames": {
-          "type": "string",
-          "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        },
-        "additionalProperties": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        }
-      },
-      "RespondentResponse": {
+      "ResponseDetail": {
         "type": "object",
         "properties": {
           "response": {
@@ -2207,11 +2392,20 @@
               "versionId": {
                 "type": "string"
               },
-              "revision": {
-                "type": "string"
+              "versionNumber": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
               },
-              "answers": {
-                "$ref": "#/components/schemas/AnyAnswers"
+              "respondentId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "submittedAt": {
                 "type": "string"
@@ -2225,16 +2419,27 @@
                     "type": "null"
                   }
                 ]
+              },
+              "externalRefs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalRef"
+                }
+              },
+              "answers": {
+                "$ref": "#/components/schemas/AnyAnswers"
               }
             },
             "required": [
               "id",
               "formId",
               "versionId",
-              "revision",
-              "answers",
+              "versionNumber",
+              "respondentId",
               "submittedAt",
-              "editedAt"
+              "editedAt",
+              "externalRefs",
+              "answers"
             ],
             "additionalProperties": false
           },
@@ -2259,15 +2464,11 @@
               "definition"
             ],
             "additionalProperties": false
-          },
-          "editable": {
-            "type": "boolean"
           }
         },
         "required": [
           "response",
-          "version",
-          "editable"
+          "version"
         ],
         "additionalProperties": false
       },
@@ -2680,6 +2881,263 @@
         ],
         "additionalProperties": false
       },
+      "AnyAnswers": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "ExternalRef": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string"
+          },
+          "refId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "namespace",
+          "refId"
+        ],
+        "additionalProperties": false
+      },
+      "ResponsePage": {
+        "type": "object",
+        "properties": {
+          "responses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseSummary"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "responses",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "ResponseSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "formId": {
+            "type": "string"
+          },
+          "versionId": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "respondentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submittedAt": {
+            "type": "string"
+          },
+          "editedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "externalRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalRef"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "formId",
+          "versionId",
+          "versionNumber",
+          "respondentId",
+          "submittedAt",
+          "editedAt",
+          "externalRefs"
+        ],
+        "additionalProperties": false
+      },
+      "RevisionConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "RevisionConflict"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "FormClosedEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "FormClosed"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
+        ],
+        "additionalProperties": false
+      },
+      "EditedResponse": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "editedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "responseId",
+          "revision",
+          "editedAt"
+        ],
+        "additionalProperties": false
+      },
+      "RespondentResponse": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "formId": {
+                "type": "string"
+              },
+              "versionId": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "string"
+              },
+              "answers": {
+                "$ref": "#/components/schemas/AnyAnswers"
+              },
+              "submittedAt": {
+                "type": "string"
+              },
+              "editedAt": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "formId",
+              "versionId",
+              "revision",
+              "answers",
+              "submittedAt",
+              "editedAt"
+            ],
+            "additionalProperties": false
+          },
+          "version": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "definition": {
+                "$ref": "#/components/schemas/FormDefinition"
+              }
+            },
+            "required": [
+              "id",
+              "number",
+              "definition"
+            ],
+            "additionalProperties": false
+          },
+          "editable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "response",
+          "version",
+          "editable"
+        ],
+        "additionalProperties": false
+      },
       "AlreadyRespondedEncoded": {
         "type": "object",
         "properties": {
@@ -2808,30 +3266,6 @@
           "respondent",
           "version",
           "myResponseId"
-        ],
-        "additionalProperties": false
-      },
-      "ForbiddenEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": [
-              "Forbidden"
-            ]
-          },
-          "capability": {
-            "type": "string",
-            "enum": [
-              "forms:manage",
-              "responses:read",
-              "responses:delete"
-            ]
-          }
-        },
-        "required": [
-          "_tag",
-          "capability"
         ],
         "additionalProperties": false
       },
@@ -3015,22 +3449,6 @@
           "basedOnVersionId",
           "definition",
           "updatedAt"
-        ],
-        "additionalProperties": false
-      },
-      "ExternalRef": {
-        "type": "object",
-        "properties": {
-          "namespace": {
-            "type": "string"
-          },
-          "refId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "namespace",
-          "refId"
         ],
         "additionalProperties": false
       },
@@ -3268,6 +3686,9 @@
     },
     {
       "name": "respond"
+    },
+    {
+      "name": "responses"
     }
   ]
 }

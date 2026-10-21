@@ -1,13 +1,109 @@
 import type { Answers } from "@fb/core/answers";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, isNull, lt, sql } from "drizzle-orm";
 import { Effect, type Schema } from "effect";
 import type { ExternalRef, TenantId } from "../authorization/actor.ts";
 import type { Database } from "./database.ts";
 import type { SharedForm } from "./forms.ts";
 import { currentInstant, newId } from "./ids.ts";
-import { answers, forms, responseExternalRefs, responses } from "./schema.ts";
+import { answers, forms, formVersions, responseExternalRefs, responses } from "./schema.ts";
 
 type Db = Database["Service"];
+
+/** Every filter is optional: none lists the whole tenant. */
+export interface ResponseFilter {
+  readonly formId?: string | undefined;
+  readonly versionId?: string | undefined;
+  readonly ref?: ExternalRef | undefined;
+  readonly respondentId?: string | undefined;
+}
+
+const summaryColumns = {
+  id: responses.id,
+  formId: responses.formId,
+  versionId: responses.versionId,
+  versionNumber: formVersions.number,
+  respondentId: responses.respondentId,
+  submittedAt: responses.submittedAt,
+  editedAt: responses.editedAt,
+};
+
+/** A response in the tenant, with the definition of the version it was submitted under. */
+export const findResponse = (db: Db, tenant: TenantId, responseId: string) =>
+  db
+    .select({ response: summaryColumns, definition: formVersions.definition })
+    .from(responses)
+    .innerJoin(forms, eq(forms.id, responses.formId))
+    .innerJoin(formVersions, eq(formVersions.id, responses.versionId))
+    .where(and(eq(forms.tenant, tenant), eq(responses.id, responseId)))
+    .pipe(Effect.map(([row]) => row));
+
+/**
+ * Up to `limit` responses older than `cursor`, newest first by id: UUIDv7 ids order by time, and edits never
+ * change them, so pages stay stable.
+ */
+export const listResponses = (
+  db: Db,
+  tenant: TenantId,
+  filter: ResponseFilter,
+  page: { readonly cursor?: string | undefined; readonly limit: number },
+) =>
+  db
+    .select(summaryColumns)
+    .from(responses)
+    .innerJoin(forms, eq(forms.id, responses.formId))
+    .innerJoin(formVersions, eq(formVersions.id, responses.versionId))
+    .where(
+      and(
+        eq(forms.tenant, tenant),
+        filter.formId === undefined ? undefined : eq(responses.formId, filter.formId),
+        filter.versionId === undefined ? undefined : eq(responses.versionId, filter.versionId),
+        filter.respondentId === undefined
+          ? undefined
+          : eq(responses.respondentId, filter.respondentId),
+        filter.ref &&
+          exists(
+            db
+              .select({ responseId: responseExternalRefs.responseId })
+              .from(responseExternalRefs)
+              .where(
+                and(
+                  eq(responseExternalRefs.responseId, responses.id),
+                  eq(responseExternalRefs.namespace, filter.ref.namespace),
+                  eq(responseExternalRefs.refId, filter.ref.refId),
+                ),
+              ),
+          ),
+        page.cursor === undefined ? undefined : lt(responses.id, page.cursor),
+      ),
+    )
+    .orderBy(desc(responses.id))
+    .limit(page.limit);
+
+/** Each response's references, sorted by namespace, then `refId`, byte-wise like a form's. */
+export const findResponseRefs = (db: Db, responseIds: ReadonlyArray<string>) =>
+  db
+    .select({
+      responseId: responseExternalRefs.responseId,
+      namespace: responseExternalRefs.namespace,
+      refId: responseExternalRefs.refId,
+    })
+    .from(responseExternalRefs)
+    .where(inArray(responseExternalRefs.responseId, [...responseIds]))
+    .orderBy(
+      sql`${responseExternalRefs.namespace} COLLATE "C"`,
+      sql`${responseExternalRefs.refId} COLLATE "C"`,
+    )
+    .pipe(
+      Effect.map((rows) => {
+        const byResponse = new Map<string, Array<ExternalRef>>();
+        for (const { responseId, ...ref } of rows) {
+          const refs = byResponse.get(responseId);
+          if (refs === undefined) byResponse.set(responseId, [ref]);
+          else refs.push(ref);
+        }
+        return byResponse;
+      }),
+    );
 
 /** Whatever the limit was when each response came in. */
 export const latestResponseId = (db: Db, form: SharedForm, respondentId: string) =>
@@ -65,17 +161,26 @@ export const findOwnResponse = (
     .for(lock, { of: responses })
     .pipe(Effect.map(([row]) => row?.response));
 
+const byQuestion = (
+  rows: ReadonlyArray<{ readonly questionId: string; readonly value: Schema.Json }>,
+): Record<string, Schema.Json> =>
+  Object.fromEntries(rows.map((row) => [row.questionId, row.value]));
+
 export const findAnswers = (db: Db, form: SharedForm, responseId: string) =>
   db
     .select({ questionId: answers.questionId, value: answers.value })
     .from(answers)
     .innerJoin(responses, eq(responses.id, answers.responseId))
     .where(and(eq(responses.formId, form.id), eq(answers.responseId, responseId)))
-    .pipe(
-      Effect.map((rows): Record<string, Schema.Json> =>
-        Object.fromEntries(rows.map((row) => [row.questionId, row.value])),
-      ),
-    );
+    .pipe(Effect.map(byQuestion));
+
+/** The answers of a response the caller already found in its tenant. */
+export const findResponseAnswers = (db: Db, responseId: string) =>
+  db
+    .select({ questionId: answers.questionId, value: answers.value })
+    .from(answers)
+    .where(eq(answers.responseId, responseId))
+    .pipe(Effect.map(byQuestion));
 
 const insertAnswers = (db: Db, responseId: string, versionId: string, given: Answers) => {
   const answered = Object.entries(given);

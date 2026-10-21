@@ -1,4 +1,4 @@
-import { Drafts, FormModuleLive, Forms, Publication, Submission } from "@fb/server";
+import { Drafts, FormModuleLive, Forms, Publication, Responses, Submission } from "@fb/server";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { CurrentActor, FormApi } from "./api.ts";
@@ -116,8 +116,37 @@ const RespondHandlers = HttpApiBuilder.group(
   }),
 );
 
+const ResponsesHandlers = HttpApiBuilder.group(
+  FormApi,
+  "responses",
+  Effect.fn(function* (handlers) {
+    const responses = yield* Responses;
+    return handlers
+      .handle("list", ({ query: { refNamespace, refId, ...query } }) =>
+        CurrentActor.use((actor) =>
+          responses.list(actor, {
+            ...query,
+            ref:
+              refNamespace === undefined || refId === undefined
+                ? undefined
+                : { namespace: refNamespace, refId },
+          }),
+        ),
+      )
+      .handle("read", ({ params }) =>
+        CurrentActor.use((actor) => responses.read(actor, params.responseId)),
+      );
+  }),
+);
+
 /** The whole API, given a `Database` and an `ActorResolver`. */
 export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
-  Layer.provide([FormsHandlers, DraftsHandlers, VersionsHandlers, RespondHandlers]),
+  Layer.provide([
+    FormsHandlers,
+    DraftsHandlers,
+    VersionsHandlers,
+    RespondHandlers,
+    ResponsesHandlers,
+  ]),
   Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive, BodyLimitsLive]),
 );
