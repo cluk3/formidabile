@@ -5,6 +5,9 @@ import { defaultClientConditions, defineConfig } from "vite-plus";
 import { playwright } from "vite-plus/test/browser-playwright";
 
 export default defineConfig({
+  // SvelteKit resolves `src/` and `tsconfig.json` from the working directory unless `root` is set, and the root
+  // `vp test` runs this app as a project from the repo root.
+  root: import.meta.dirname,
   plugins: [
     tailwindcss(),
     sveltekit({
