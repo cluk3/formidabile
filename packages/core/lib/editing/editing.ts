@@ -121,3 +121,17 @@ export const changeQuestionType = (
     newQuestion(type, content, "options" in config ? config.options : [], ids),
   );
 };
+
+/** Moves a question to position `to` in display order. Identities and content are untouched. */
+export const moveQuestion = (
+  definition: FormDefinition,
+  questionId: string,
+  to: number,
+): FormDefinition => {
+  const from = indexOf(definition, questionId);
+  const { questions } = definition;
+  if (!Number.isInteger(to) || to < 0 || to >= questions.length)
+    throw new RangeError(`No position ${to} among ${questions.length} questions`);
+  const rest = questions.toSpliced(from, 1);
+  return { ...definition, questions: rest.toSpliced(to, 0, questions[from]!) };
+};

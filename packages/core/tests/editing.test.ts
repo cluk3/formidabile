@@ -5,7 +5,12 @@ import {
   type FormDefinition,
   type QuestionTypeName,
 } from "@fb/core/definition";
-import { addQuestion, changeQuestionType, reidentifyQuestion } from "@fb/core/editing";
+import {
+  addQuestion,
+  changeQuestionType,
+  moveQuestion,
+  reidentifyQuestion,
+} from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -219,5 +224,24 @@ describe("changeQuestionType", () => {
     expect(() => changeQuestionType(survey, uuid(9), "email", idSource())).toThrow(
       `No question ${uuid(9)}`,
     );
+  });
+});
+
+describe("moveQuestion", () => {
+  test("moves a question to a position, keeping every identity", () => {
+    const edited = moveQuestion(survey, name.id, 2);
+    expect(edited).toEqual({ ...survey, questions: [colour, age, name] });
+    expect(parsed(edited)).toEqual(edited);
+    expect(moveQuestion(survey, age.id, 0).questions).toEqual([age, name, colour]);
+    expect(moveQuestion(survey, colour.id, 1).questions).toEqual([name, colour, age]);
+  });
+
+  test("refuses a position outside the form", () => {
+    expect(() => moveQuestion(survey, name.id, 3)).toThrow("No position 3 among 3 questions");
+    expect(() => moveQuestion(survey, name.id, -1)).toThrow("No position -1 among 3 questions");
+  });
+
+  test("refuses an identity the definition doesn't have", () => {
+    expect(() => moveQuestion(survey, uuid(9), 0)).toThrow(`No question ${uuid(9)}`);
   });
 });
