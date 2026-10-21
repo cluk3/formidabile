@@ -137,6 +137,131 @@ describe("date", () => {
   });
 });
 
+const options = (...labels: string[]) => labels.map((label, i) => ({ value: `v${i}`, label }));
+
+describe("single choice", () => {
+  const single = {
+    type: "single_choice",
+    config: { display: "radio", options: options("A", "B") },
+  };
+
+  test("structure: options with values and labels, and a display", () => {
+    expect(structureIssues(single)).toEqual([]);
+    expect(structureIssues({ ...single, config: { display: "dropdown", options: [] } })).toEqual(
+      [],
+    );
+    expect(structureIssues({ ...single, config: { display: "list", options: [] } })).toEqual([
+      ["config", "display"],
+    ]);
+    expect(
+      structureIssues({
+        ...single,
+        config: { display: "radio", options: [{ value: "", label: "A" }] },
+      }),
+    ).toEqual([["config", "options", 0, "value"]]);
+  });
+
+  test("structure: at most 100 options, each label at most 200 code points", () => {
+    const many = (n: number) => options(...Array.from({ length: n }, (_, i) => `Option ${i}`));
+    expect(
+      structureIssues({ ...single, config: { display: "radio", options: many(100) } }),
+    ).toEqual([]);
+    expect(
+      structureIssues({ ...single, config: { display: "radio", options: many(101) } }),
+    ).toEqual([["config", "options"]]);
+    expect(
+      structureIssues({
+        ...single,
+        config: { display: "radio", options: options("😀".repeat(201)) },
+      }),
+    ).toEqual([["config", "options", 0, "label"]]);
+  });
+
+  test("structure: option values are unique within the question", () => {
+    const twice = [
+      { value: "a", label: "A" },
+      { value: "a", label: "B" },
+    ];
+    expect(structureIssues({ ...single, config: { display: "radio", options: twice } })).toEqual([
+      ["config", "options", 1, "value"],
+    ]);
+  });
+
+  test("publish: needs a label and at least two options", () => {
+    expect(publishIssues(single)).toEqual([]);
+    expect(publishIssues({ ...single, label: "" })).toEqual([["label"]]);
+    expect(
+      publishIssues({ ...single, config: { display: "radio", options: options("A") } }),
+    ).toEqual([["config", "options"]]);
+  });
+
+  test("publish: every option needs a label of its own", () => {
+    expect(
+      publishIssues({ ...single, config: { display: "radio", options: options("A", "", "A") } }),
+    ).toEqual([
+      ["config", "options", 1, "label"],
+      ["config", "options", 2, "label"],
+    ]);
+  });
+});
+
+describe("multiple choice", () => {
+  const multiple = (config: object = {}) => ({
+    type: "multiple_choice",
+    config: { options: options("A", "B", "C"), ...config },
+  });
+
+  test("structure: options, and optional selection counts", () => {
+    expect(structureIssues(multiple())).toEqual([]);
+    expect(structureIssues(multiple({ minSelected: 1, maxSelected: 100 }))).toEqual([]);
+    expect(structureIssues(multiple({ minSelected: 1.5, maxSelected: 101 }))).toEqual([
+      ["config", "minSelected"],
+      ["config", "maxSelected"],
+    ]);
+  });
+
+  test("structure: maxSelected 0 doesn't parse", () => {
+    expect(structureIssues(multiple({ maxSelected: 0 }))).toEqual([["config", "maxSelected"]]);
+  });
+
+  test("structure: option values are unique within the question", () => {
+    const twice = [
+      { value: "a", label: "A" },
+      { value: "a", label: "B" },
+    ];
+    expect(structureIssues(multiple({ options: twice }))).toEqual([
+      ["config", "options", 1, "value"],
+    ]);
+  });
+
+  test("publish: needs a label, and one option with a label of its own", () => {
+    expect(publishIssues(multiple({ options: options("A") }))).toEqual([]);
+    expect(publishIssues({ ...multiple(), label: "" })).toEqual([["label"]]);
+    expect(publishIssues(multiple({ options: [] }))).toEqual([["config", "options"]]);
+    expect(publishIssues(multiple({ options: options("", "B", "B") }))).toEqual([
+      ["config", "options", 0, "label"],
+      ["config", "options", 2, "label"],
+    ]);
+  });
+
+  test("publish: minSelected above the number of options is rejected", () => {
+    expect(publishIssues(multiple({ minSelected: 3 }))).toEqual([]);
+    expect(publishIssues(multiple({ minSelected: 4 }))).toEqual([["config", "minSelected"]]);
+  });
+
+  test("publish: maxSelected above the number of options is rejected", () => {
+    expect(publishIssues(multiple({ maxSelected: 3 }))).toEqual([]);
+    expect(publishIssues(multiple({ maxSelected: 4 }))).toEqual([["config", "maxSelected"]]);
+  });
+
+  test("publish: minSelected is no greater than maxSelected", () => {
+    expect(publishIssues(multiple({ minSelected: 2, maxSelected: 2 }))).toEqual([]);
+    expect(publishIssues(multiple({ minSelected: 3, maxSelected: 2 }))).toEqual([
+      ["config", "maxSelected"],
+    ]);
+  });
+});
+
 describe("boolean", () => {
   const boolean = { type: "boolean", config: {} };
 

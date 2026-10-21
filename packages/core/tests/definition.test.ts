@@ -111,6 +111,39 @@ describe("validateForPublish", () => {
     ]);
   });
 
+  test("publishes a definition holding all seven question types", () => {
+    const configs = {
+      text: { display: "single_line" },
+      email: {},
+      number: { integer: true, min: 0, max: 10 },
+      date: { min: "2026-01-01" },
+      single_choice: {
+        display: "dropdown",
+        options: [
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ],
+      },
+      multiple_choice: { options: [{ value: "a", label: "A" }], minSelected: 1, maxSelected: 1 },
+      boolean: {},
+    };
+    const questions = Object.entries(configs).map(([type, config], i) => ({
+      id: `00000000-0000-4000-8000-00000000000${i}`,
+      type,
+      label: type,
+      required: i % 2 === 0,
+      config,
+    }));
+    expect(validateForPublish(definition({ questions }), []).ok).toBe(true);
+  });
+
+  test("rejects an unknown question type", () => {
+    const unknown = { ...textQuestion, type: "rating", config: {} };
+    expect(issuePaths(validateForPublish(definition({ questions: [unknown] }), []))).toEqual([
+      ["questions", 0, "type"],
+    ]);
+  });
+
   test("rejects a question identity whose type differs from an earlier version's", () => {
     const earlier = parsed(
       definition({
