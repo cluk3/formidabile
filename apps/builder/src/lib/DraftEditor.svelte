@@ -48,6 +48,8 @@
   let notice = $state<string | null>(null);
   let conflict = $state<string | null>(null);
   let issues = $state.raw<Issue[]>([]);
+  /** What `issues` stopped. */
+  let refused = $state<"saved" | "published">("saved");
   let newType = $state<QuestionTypeName>("text");
 
   const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
@@ -209,8 +211,10 @@
       const { error } = result;
       if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
       else if (error._tag === "NoDraft") conflict = "This draft was discarded since you opened it.";
-      else if (error._tag === "ValidationFailed") issues = error.issues;
-      else notice = "This form no longer exists.";
+      else if (error._tag === "ValidationFailed") {
+        refused = "saved";
+        issues = error.issues;
+      } else notice = "This form no longer exists.";
     } else if (result.kind === "tooLarge") {
       notice = "This form is too large to save";
     } else if (result.kind === "unknown") {
@@ -218,6 +222,44 @@
       notice = "We couldn't confirm the draft was saved, so it has been reloaded.";
     } else if (result.kind === "signIn") {
       signedOut = true;
+    } else {
+      notice = tokenUnavailable;
+    }
+  };
+
+  /** Publishes the saved draft as the form's next version; the editor then shows that version. */
+  const publish = async () => {
+    if (revision === null) return;
+    const expectedRevision = revision;
+    begin();
+    const result = await outcome(() =>
+      client.POST("/forms/{formId}/draft/publish", {
+        params: { path: { formId } },
+        body: { expectedRevision },
+      }),
+    );
+    busy = false;
+    if (result.kind === "ok") {
+      await load();
+      notice = `Published version ${result.data.version.number}`;
+    } else if (result.kind === "rejected") {
+      const { error } = result;
+      if (error._tag === "ValidationFailed") {
+        refused = "published";
+        issues = error.issues;
+      } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+      else if (error._tag === "NoDraft") {
+        await load();
+        notice = "This draft was already published or discarded, so the form has been reloaded.";
+      } else if (error._tag === "NotFound") missing = true;
+      else notice = "The draft couldn't be published.";
+    } else if (result.kind === "unknown") {
+      await load();
+      notice = "We couldn't confirm the draft was published, so the form has been reloaded.";
+    } else if (result.kind === "signIn") {
+      signedOut = true;
+    } else if (result.kind === "tooLarge") {
+      notice = "The draft couldn't be published.";
     } else {
       notice = tokenUnavailable;
     }
@@ -249,6 +291,12 @@
       <Button onclick={save} disabled={busy || definition === saved}>Save</Button>
       <Button variant="outline" aria-pressed={previewing} onclick={() => (previewing = !previewing)}
         >Preview</Button
+      >
+      <Button
+        variant="outline"
+        disabled={busy || revision === null || definition !== saved}
+        title={definition === saved ? undefined : "Save the draft before publishing it"}
+        onclick={publish}>Publish</Button
       >
       {#if form.currentVersion === null}
         <Button
@@ -289,7 +337,7 @@
     {/if}
     {#if issues.length > 0}
       <div role="alert" class="rounded-md border p-3">
-        <p>The draft couldn't be saved:</p>
+        <p>The draft couldn't be {refused}:</p>
         <ul class="list-disc pl-5">
           {#each issues as issue, i (i)}
             <li>{issue.message}</li>

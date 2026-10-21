@@ -157,3 +157,31 @@ test("the preview shows the unsaved definition and validates it without calling 
     .toBeVisible();
   expect(host.requests.slice(loads)).toEqual([]);
 });
+
+test("a refused publish lists every problem at once", async () => {
+  const host = publishHost(
+    {
+      versions: [],
+      draft: { definition: definitionOf("Survey"), revision: "r0", basedOnVersionId: null },
+    },
+    () =>
+      json(422, {
+        _tag: "ValidationFailed",
+        issues: [
+          { path: ["questions"], message: "A form needs at least one question" },
+          { path: ["title"], message: "The title is too short" },
+        ],
+      }),
+  );
+  const screen = await renderEditor(host.fetch);
+
+  await screen.getByRole("button", { name: "Publish" }).click();
+
+  const alert = screen.getByRole("alert");
+  await expect.element(alert.getByText("The draft couldn't be published:")).toBeVisible();
+  await expect.element(alert.getByText("A form needs at least one question")).toBeVisible();
+  await expect.element(alert.getByText("The title is too short")).toBeVisible();
+  expect(host.requests.filter((r) => r.startsWith("POST"))).toEqual([
+    `POST /forms/${formId}/draft/publish`,
+  ]);
+});
