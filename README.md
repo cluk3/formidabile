@@ -37,10 +37,12 @@ A reusable, host-agnostic module for defining forms, publishing immutable versio
 ## Run the API server
 
 ```bash
-DATABASE_URL=postgres://formidabile:formidabile@localhost:5432/formidabile vp run @fb/api-server#dev
+DATABASE_URL=postgres://formidabile:formidabile@localhost:5432/formidabile \
+JWT_ISSUER=http://localhost JWT_AUDIENCE=form-module JWT_SECRET=dev-secret \
+vp run @fb/api-server#dev
 ```
 
-It starts Postgres if it isn't running, applies migrations, listens on `PORT` (default 3000), and restarts when files change.
+It starts Postgres if it isn't running, applies migrations, listens on `PORT` (default 3000), and restarts when files change. It accepts bearer tokens signed for `JWT_ISSUER` and `JWT_AUDIENCE`, with the HS256 secret `JWT_SECRET`, or with the keys at `JWT_JWKS_URL` when there's no secret.
 
 ## Check and test
 

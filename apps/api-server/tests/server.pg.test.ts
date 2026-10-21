@@ -1,12 +1,27 @@
+import { JwtActorResolver } from "@fb/http-api";
 import { DatabaseLive } from "@fb/server/database";
 import { Effect, Layer } from "effect";
 import { HttpServer } from "effect/http";
 import { SqlClient } from "effect/sql";
+import { SignJWT } from "jose";
 import { expect, test } from "vite-plus/test";
 import { ServerLive } from "../server.ts";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("test:pg needs DATABASE_URL");
+
+const jwt = { issuer: "https://host.test", audience: "form-module", secret: "smoke-test-secret" };
+
+const adminToken = new SignJWT({
+  sub: "acme-admin",
+  tenant: "acme",
+  capabilities: ["forms:manage"],
+})
+  .setProtectedHeader({ alg: "HS256" })
+  .setIssuer(jwt.issuer)
+  .setAudience(jwt.audience)
+  .setExpirationTime("5m")
+  .sign(new TextEncoder().encode(jwt.secret));
 
 // A database of its own, so the startup migration runs against an empty one.
 const freshDatabaseUrl = Effect.acquireRelease(
@@ -28,6 +43,12 @@ const probeRunningServer = Effect.gen(function* () {
   const { address } = yield* HttpServer.HttpServer;
   if (address._tag === "UnixPathAddress") throw new Error("expected an internet address");
   const response = yield* Effect.promise(() => fetch(`http://localhost:${address.port}/`));
+  const forms = yield* Effect.promise(async () => {
+    const response = await fetch(`http://localhost:${address.port}/forms`, {
+      headers: { authorization: `Bearer ${await adminToken}` },
+    });
+    return { status: response.status, body: await response.json() };
+  });
 
   const sql = yield* SqlClient.SqlClient;
   const [migrations] = yield* sql<{ count: number }>`
@@ -38,22 +59,29 @@ const probeRunningServer = Effect.gen(function* () {
   }>`SHOW statement_timeout`;
   return {
     status: response.status,
+    forms,
     appliedMigrations: migrations?.count,
     statementTimeout: setting?.statement_timeout,
   };
 });
 
-test("the server migrates at startup, answers HTTP, and its connections time statements out at 30 s", async () => {
+test("the server migrates at startup, answers an authenticated request, and its connections time statements out at 30 s", async () => {
   const started = await Effect.runPromise(
     Effect.gen(function* () {
       const { url } = yield* freshDatabaseUrl;
       return yield* probeRunningServer.pipe(
-        Effect.provide(ServerLive({ port: 0 }).pipe(Layer.provideMerge(DatabaseLive(url)))),
+        Effect.provide(
+          ServerLive({ port: 0 }).pipe(
+            Layer.provide(JwtActorResolver(jwt)),
+            Layer.provideMerge(DatabaseLive(url)),
+          ),
+        ),
       );
     }).pipe(Effect.scoped, Effect.provide(DatabaseLive(databaseUrl))),
   );
 
   expect(started.status).toBe(404);
+  expect(started.forms).toEqual({ status: 200, body: { forms: [] } });
   expect(started.appliedMigrations).toBeGreaterThan(0);
   expect(started.statementTimeout).toBe("30s");
 });
