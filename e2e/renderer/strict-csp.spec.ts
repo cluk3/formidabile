@@ -53,6 +53,13 @@ test("the element renders styled under a strict CSP with no violations", async (
   }));
   expect(shadowState).toEqual({ adoptedSheets: 1, styleElements: 0 });
 
+  // The states a respondent reaches later render under the same policy: errors, then the confirmation.
+  await element.locator("[part=submit]").click();
+  await expect(element.locator("[part=error]")).toHaveCSS("color", "rgb(180, 20, 20)");
+  await element.getByRole("radio", { name: "Yes" }).check();
+  await element.locator("[part=submit]").click();
+  await expect(element.getByText("Thank you, your response was received.")).toBeVisible();
+
   expect(violations).toEqual([]);
   expect(problems).toEqual([]);
 });
