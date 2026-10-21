@@ -15,11 +15,14 @@ test("the project page's getToken asks /token for the project, whatever form it'
   expect(fetch.mock.calls).toEqual([["/token?project=acme-spring%20orders"]]);
 });
 
-test("the project page's getToken gives no token when /token refuses", async () => {
+// ADR 0011: `getToken` returns a string, never `null`, so a refusal fails the renderer's request.
+test("the project page's getToken rejects when /token refuses", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => Response.json({ error: "No single open form" }, { status: 404 })),
   );
 
-  expect(await projectGetToken("acme-gone")({ formId: "f" })).toBeNull();
+  await expect(projectGetToken("acme-gone")({ formId: "f" })).rejects.toThrow(
+    "/token refused with 404",
+  );
 });

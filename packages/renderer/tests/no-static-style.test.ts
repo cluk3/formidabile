@@ -26,7 +26,9 @@ export const staticStyleAttributes = (source: string): string[] => {
 };
 
 const libDirectory = fileURLToPath(new URL("../lib/", import.meta.url));
-const components = readdirSync(libDirectory).filter((name) => name.endsWith(".svelte"));
+const components = readdirSync(libDirectory, { recursive: true, encoding: "utf8" }).filter((name) =>
+  name.endsWith(".svelte"),
+);
 
 test("the detector flags a plain-text style attribute", () => {
   expect(staticStyleAttributes('<p style="color: red">x</p>')).toEqual(["color: red"]);

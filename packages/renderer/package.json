@@ -19,6 +19,8 @@
     }
   },
   "dependencies": {
+    "@fb/api-client": "workspace:*",
+    "@fb/core": "workspace:*",
     "svelte": "catalog:"
   },
   "devDependencies": {

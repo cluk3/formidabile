@@ -116,7 +116,7 @@ const formPage = (shell: string, form: ProjectFormCandidate, projectId: string) 
     200,
     shell.replace(
       element,
-      `<form-renderer title="${escapeHtml(form.title)}" form-id="${escapeHtml(form.id)}" ` +
+      `<form-renderer api-base-url="${apiPrefix}" form-id="${escapeHtml(form.id)}" ` +
         `data-project="${escapeHtml(projectId)}"></form-renderer>`,
     ),
   );

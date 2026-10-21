@@ -4,8 +4,8 @@
  */
 export const projectGetToken =
   (projectId: string) =>
-  async (_request: { readonly formId: string }): Promise<string | null> => {
+  async (_request: { readonly formId: string }): Promise<string> => {
     const response = await fetch(`/token?project=${encodeURIComponent(projectId)}`);
-    if (!response.ok) return null;
+    if (!response.ok) throw new Error(`/token refused with ${response.status}`);
     return ((await response.json()) as { token: string }).token;
   };
