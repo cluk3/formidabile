@@ -185,3 +185,34 @@ test("a refused publish lists every problem at once", async () => {
     `POST /forms/${formId}/draft/publish`,
   ]);
 });
+
+test("an unknown outcome on publish says so and reloads the form", async () => {
+  const host = publishHost(
+    {
+      versions: [],
+      draft: { definition: definitionOf("Survey"), revision: "r0", basedOnVersionId: null },
+    },
+    (host) => {
+      host.commitPublish();
+      return json(502, { message: "Bad gateway" });
+    },
+  );
+  const screen = await renderEditor(host.fetch);
+  await expect.element(screen.getByRole("button", { name: "Delete form" })).toBeVisible();
+
+  await screen.getByRole("button", { name: "Publish" }).click();
+
+  await expect
+    .element(
+      screen.getByText(
+        "We couldn't confirm the draft was published, so the form has been reloaded.",
+      ),
+    )
+    .toBeVisible();
+  const publishAt = host.requests.indexOf(`POST /forms/${formId}/draft/publish`);
+  expect(host.requests.slice(publishAt + 1)).toEqual(
+    expect.arrayContaining([`GET /forms/${formId}/draft`, `GET /forms/${formId}`]),
+  );
+  await expect.element(screen.getByRole("button", { name: "Delete form" })).not.toBeInTheDocument();
+  await expect.element(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+});
