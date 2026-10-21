@@ -89,6 +89,8 @@ export const outcome = async <R extends FetchResult>(
   }
   const { data, error, response }: { data?: R["data"]; error?: R["error"]; response: Response } =
     result;
+  // Only endpoints whose contract declares no body answer 204, so their `data` type is empty too.
+  if (response.status === 204) return { kind: "ok", data: data as NonNullable<R["data"]> };
   if (response.ok) {
     return typeof data === "object" && data !== null ? { kind: "ok", data } : { kind: "unknown" };
   }

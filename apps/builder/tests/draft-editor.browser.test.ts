@@ -34,6 +34,14 @@ const draftOf = (definition: unknown, revision: string) => ({
   updatedAt: "2026-10-21T08:00:00.000Z",
 });
 
+const detailOf = (currentVersion: { id: string; number: number } | null) => ({
+  id: formId,
+  availability: "closed",
+  responseLimit: "unlimited",
+  currentVersion,
+  externalRefs: [],
+});
+
 type SaveBody = { expectedRevision: string | null; definition: FormDefinition };
 
 type DraftHost = {
@@ -64,6 +72,7 @@ const draftHost = (
         host.draftReads += 1;
         return json(200, { draft });
       }
+      if (route === `GET /forms/${formId}`) return json(200, detailOf(null));
       if (route === `PUT /forms/${formId}/draft`) {
         const body: SaveBody = await request.json();
         host.saves.push(body);
@@ -82,6 +91,7 @@ const renderEditor = (fetch: typeof globalThis.fetch) =>
     client: createBuilderClient(config, fetch),
     formId,
     signInHref: config.loginUrl,
+    onDeleted: () => {},
   });
 
 const question = (screen: Awaited<ReturnType<typeof renderEditor>>, n: number) =>
@@ -220,8 +230,7 @@ test("a published form without a draft is edited from its current version", asyn
   const saves: SaveBody[] = [];
   const fetch = fakeHost(async (route, request) => {
     if (route === `GET /forms/${formId}/draft`) return json(200, { draft: null });
-    if (route === `GET /forms/${formId}`)
-      return json(200, { id: formId, currentVersion: { id: versionId, number: 1 }, draft: null });
+    if (route === `GET /forms/${formId}`) return json(200, detailOf({ id: versionId, number: 1 }));
     if (route === `GET /forms/${formId}/versions/${versionId}`)
       return json(200, { id: versionId, number: 1, isCurrent: true, definition: published });
     if (route === `PUT /forms/${formId}/draft`) {

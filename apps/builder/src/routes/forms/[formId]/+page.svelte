@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { createBuilderClient, signInUrl } from "#lib/api.ts";
   import DraftEditor from "#lib/DraftEditor.svelte";
@@ -15,6 +16,7 @@
       client={createBuilderClient(data.config)}
       formId={params.formId}
       signInHref={signInUrl(data.config.loginUrl, page.url.href)}
+      onDeleted={() => goto("/")}
     />
   {/key}
 </main>
