@@ -4,12 +4,15 @@ import { expect, test } from "@playwright/test";
 // fully styled with no violation, from the outer tree, from a nested component, and through the host's theming.
 test("the element renders styled under a strict CSP with no violations", async ({ page }) => {
   const problems: string[] = [];
+  const violations: string[] = [];
+  // The page reports each violation to this Node-side array, so nothing is read back off `window`.
+  await page.exposeFunction("reportViolation", (description: string) => {
+    violations.push(description);
+  });
   await page.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (event) => {
-      (window as unknown as { __violations: string[] }).__violations ??= [];
-      (window as unknown as { __violations: string[] }).__violations.push(
-        `${event.violatedDirective}: ${event.blockedURI}`,
-      );
+      // `exposeFunction` adds `reportViolation` to the page's globals, and the init script can't see its type.
+      Reflect.get(window, "reportViolation")(`${event.violatedDirective}: ${event.blockedURI}`);
     });
   });
   page.on("console", (message) => {
@@ -39,9 +42,6 @@ test("the element renders styled under a strict CSP with no violations", async (
   }));
   expect(shadowState).toEqual({ adoptedSheets: 1, styleElements: 0 });
 
-  const violations = await page.evaluate(
-    () => (window as unknown as { __violations?: string[] }).__violations ?? [],
-  );
   expect(violations).toEqual([]);
   expect(problems).toEqual([]);
 });
