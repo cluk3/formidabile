@@ -12,7 +12,7 @@
 - [x] The app reads the runtime `config.json` at startup.
 - [x] `check:svelte` covers the builder.
 - [x] The root Playwright project gains a builder project in Chromium, running against `vp preview` of the builder, with one test that the shell loads.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

@@ -18,4 +18,4 @@
 - [x] `apps/api-server` runs on `@effect/platform-node`, migrates at startup, and runs with `node --conditions=source --watch`. It builds its own `createServer(...)` with `headersTimeout` 10 s and `requestTimeout` 30 s.
 - [x] A smoke test under `test:pg` migrates, serves, and checks that `SHOW statement_timeout` on a module connection returns `30s`.
 - [x] The `test-pg` CI job gets Postgres from `docker compose up --wait postgres`.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
