@@ -53,10 +53,12 @@
     padding: 0;
     border: 0;
   }
+  /* Radios and checkboxes are smaller than WCAG 2.2's 24px target, so each row keeps them 24px apart (2.5.8). */
   .question :global(.choice) {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    min-block-size: 1.5rem;
     padding: 0.125rem 0;
   }
   .question :global(.control) {
