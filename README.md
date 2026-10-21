@@ -64,7 +64,7 @@ It serves the same API as `createFormModuleHandler` from `@fb/http-api/web`, the
 vp run @fb/reference-host#seed:reset
 ```
 
-It wipes the module's schema in the compose database (or `DATABASE_URL`'s) and seeds a demo project each for the `acme` and `globex` dev tenants: one open form carrying the project's reference, with a response from a dev user and one from the anonymous user. `vp run e2e` runs it first.
+It wipes the module's schema in the compose database (or `DATABASE_URL`'s) and seeds a demo project each for the `acme` and `globex` dev tenants: one open form carrying the project's reference, with a response from a dev user and one from the anonymous user. `acme` also gets the "Onboarding survey", whose four versions drop a question, add and relabel options, widen a number range and replace a question with a new one, with responses from `alice`, `bob` and anonymous respondents: open its analytics in the builder to see the per-version breakdown. `vp run e2e` runs it first.
 
 The reference host shows "the form for project X" at `http://localhost:4173/projects/<id>`, for the demo projects `acme-spring-orders` and `globex-partner-summit`. A project's id starts with its tenant and a `-`, so any `acme-…` id is an `acme` project: attach one to forms as the `project` reference to try the "no open form" and "ambiguous" pages.
 

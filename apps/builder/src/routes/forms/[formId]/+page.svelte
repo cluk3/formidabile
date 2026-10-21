@@ -12,6 +12,7 @@
   <nav class="flex gap-4 text-sm text-muted-foreground">
     <a class="hover:underline" href="/">All forms</a>
     <a class="hover:underline" href={`/forms/${params.formId}/responses`}>Responses</a>
+    <a class="hover:underline" href={`/forms/${params.formId}/analytics`}>Analytics</a>
   </nav>
   <h1 class="mt-2 mb-6 text-2xl font-semibold">Edit form</h1>
   {#key params.formId}

@@ -109,6 +109,9 @@
               <a class="text-sm font-medium hover:underline" href={`/forms/${form.id}/responses`}
                 >Responses</a
               >
+              <a class="text-sm font-medium hover:underline" href={`/forms/${form.id}/analytics`}
+                >Analytics</a
+              >
             {/if}
           </li>
         {/each}

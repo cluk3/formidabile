@@ -54,7 +54,7 @@ test("each listed form links to its editor", async () => {
     .toHaveAttribute("href", `/forms/${form.id}`);
 });
 
-test("a published form links to its responses, and an analyst isn't offered a create", async () => {
+test("a published form links to its responses and analytics, and an analyst isn't offered a create", async () => {
   const published = {
     ...summary("Published survey"),
     currentVersion: { id: crypto.randomUUID(), number: 1 },
@@ -76,9 +76,15 @@ test("a published form links to its responses, and an analyst isn't offered a cr
   await expect
     .element(item.getByRole("link", { name: "Responses" }))
     .toHaveAttribute("href", `/forms/${published.id}/responses`);
+  await expect
+    .element(item.getByRole("link", { name: "Analytics" }))
+    .toHaveAttribute("href", `/forms/${published.id}/analytics`);
   const unpublished = screen.getByRole("listitem").filter({ hasText: "Draft survey" });
   await expect
     .element(unpublished.getByRole("link", { name: "Responses" }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(unpublished.getByRole("link", { name: "Analytics" }))
     .not.toBeInTheDocument();
   await expect.element(screen.getByRole("button", { name: "Create form" })).not.toBeInTheDocument();
 });

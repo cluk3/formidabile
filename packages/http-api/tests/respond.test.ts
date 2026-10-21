@@ -403,6 +403,39 @@ describe("references and the form binding", () => {
     ).toBe(200);
   });
 
+  test("an acme token bound to a globex form gets 404 on its load, answer schema and submit", async () => {
+    const form = await openForm("Globex", as(devUsers["globex-admin"]));
+    const bound = as({ ...alice, form: form.formId, refs });
+
+    const loaded = await load(bound, form.formId);
+    const schema = await answerSchema(bound, form);
+    const submitted = await submit(bound, form);
+
+    expect(loaded.response.status).toBe(404);
+    expect(loaded.error).toEqual({ _tag: "NotFound" });
+    expect(schema.response.status).toBe(404);
+    expect(schema.error).toEqual({ _tag: "NotFound" });
+    expect(submitted.response.status).toBe(404);
+    expect(submitted.error).toEqual({ _tag: "NotFound" });
+    expect(await responseCount(form.formId)).toBe(0);
+  });
+
+  test("an edit under a token carrying different refs leaves the stored references unchanged", async () => {
+    const form = await openForm();
+    const { data: submitted } = await submit(as({ ...alice, form: form.formId, refs }), form);
+    const otherRefs = [{ namespace: "project", refId: "gemini" }];
+
+    const edited = await editResponse(
+      as({ ...alice, form: form.formId, refs: otherRefs }),
+      submitted!.responseId,
+      { answers: { [readyId]: false } },
+    );
+
+    expect(edited.response.status).toBe(200);
+    expect(edited.data?.revision).toBe("2");
+    expect(await storedRefs(submitted!.responseId)).toEqual(refs);
+  });
+
   test("a custom resolver returning refs gets them stored", async () => {
     const form = await openForm();
     resolved = Actor.Identified({
