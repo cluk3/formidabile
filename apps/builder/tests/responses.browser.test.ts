@@ -161,3 +161,74 @@ test("the list shows the newest responses first and loads older ones on request"
   await expect.element(screen.getByRole("button", { name: "Load more" })).not.toBeInTheDocument();
   expect(host.queries.map((q) => q.get("cursor"))).toEqual([null, stored[1]!.id]);
 });
+
+test("filters by version, respondent and reference narrow the list from its first page", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const v2 = version(2, [textQuestion("Name")]);
+  const ref = { namespace: "project", refId: "spring" };
+  const host = responsesHost(
+    [v1, v2],
+    [
+      response(v1, "alice", {}, [ref]),
+      response(v1, "bob"),
+      response(v2, "alice"),
+      response(v2, null, {}, [ref]),
+    ],
+  );
+  const screen = await renderPage(host.fetch);
+  const list = screen.getByRole("list", { name: "Responses" });
+  await expect.element(list.getByText("Anonymous", { exact: true })).toBeVisible();
+  expect(list.getByRole("listitem").elements()).toHaveLength(4);
+
+  await screen.getByLabelText("Version").selectOptions("Version 1");
+  await screen.getByRole("button", { name: "Filter" }).click();
+  await expect.element(list.getByText("Anonymous", { exact: true })).not.toBeInTheDocument();
+  expect(list.getByRole("listitem").elements()).toHaveLength(2);
+
+  await screen.getByLabelText("Version").selectOptions("All versions");
+  await screen.getByLabelText("Respondent").fill("alice");
+  await screen.getByRole("button", { name: "Filter" }).click();
+  await expect.element(list.getByText("bob", { exact: true })).not.toBeInTheDocument();
+  expect(list.getByRole("listitem").elements()).toHaveLength(2);
+
+  await screen.getByLabelText("Respondent").fill("");
+  await screen.getByLabelText("Reference namespace").fill("project");
+  await screen.getByRole("button", { name: "Filter" }).click();
+  await expect
+    .element(screen.getByText("Give both the reference namespace and its id, or neither."))
+    .toBeVisible();
+  await screen.getByLabelText("Reference id").fill("spring");
+  await screen.getByRole("button", { name: "Filter" }).click();
+  await expect.element(list.getByText("Anonymous", { exact: true })).toBeVisible();
+  await expect.element(list.getByText("alice", { exact: true })).toBeVisible();
+  expect(list.getByRole("listitem").elements()).toHaveLength(2);
+
+  expect(host.queries.map((q) => Object.fromEntries(q))).toEqual([
+    { formId },
+    { formId, versionId: v1.id },
+    { formId, respondentId: "alice" },
+    { formId, refNamespace: "project", refId: "spring" },
+  ]);
+});
+
+test("a filter the API refuses lists its problems", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const host = responsesHost([v1], [response(v1, "alice")], {
+    answer: (route, request) =>
+      route === "GET /responses" && new URL(request.url).searchParams.has("respondentId")
+        ? json(422, {
+            _tag: "ValidationFailed",
+            issues: [{ path: ["respondentId"], message: "Expected at most 255 characters" }],
+          })
+        : undefined,
+  });
+  const screen = await renderPage(host.fetch);
+  await expect.element(screen.getByText("alice", { exact: true })).toBeVisible();
+
+  await screen.getByLabelText("Respondent").fill("x".repeat(256));
+  await screen.getByRole("button", { name: "Filter" }).click();
+
+  await expect
+    .element(screen.getByText("These filters aren't valid: Expected at most 255 characters"))
+    .toBeVisible();
+});
