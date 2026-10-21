@@ -8,9 +8,18 @@
 
 **Status:** ready-for-agent
 
-- [ ] Each of these gives 401 `invalid`: `anonymous` with `sub`; `anonymous` with `capabilities`; `anonymous` without `form`; neither `sub` nor `anonymous`; `refs` without `form`; more than 20 `refs`; a duplicate `refs` entry; a `refs` entry with a bad shape; a `refs` entry with an extra key; a 256-code-point `sub` or `tenant`; a non-UUID `form`.
-- [ ] A `sub` of 255 emoji passes, and one of 256 emoji fails.
-- [ ] A custom resolver whose `subject` is 256 code points is rejected by the post-resolver check.
-- [ ] An integration test proves a custom `resolveActor` produces the same `Identified` and `Anonymous` actors as the JWT resolver, and that they pass the same checks.
-- [ ] An anonymous grant on any admin endpoint gives 403.
+- [x] Each of these gives 401 `invalid`: `anonymous` with `sub`; `anonymous` with `capabilities`; `anonymous` without `form`; neither `sub` nor `anonymous`; `refs` without `form`; more than 20 `refs`; a duplicate `refs` entry; a `refs` entry with a bad shape; a `refs` entry with an extra key; a 256-code-point `sub` or `tenant`; a non-UUID `form`.
+- [x] A `sub` of 255 emoji passes, and one of 256 emoji fails.
+- [x] A custom resolver whose `subject` is 256 code points is rejected by the post-resolver check.
+- [x] An integration test proves a custom `resolveActor` produces the same `Identified` and `Anonymous` actors as the JWT resolver, and that they pass the same checks.
+- [x] An anonymous grant on any admin endpoint gives 403.
 - [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+
+## Comments
+
+**2026-10-21, implementing agent:** Built on branch `t13-token-claims`. The last box stays open until the PR's CI jobs report. Notes for later tickets:
+
+- `JwtActorResolver` now accepts exactly two claim sets. Identified: `sub`, `tenant`, `capabilities`, optional `form`, optional `refs` (which requires `form`, even when empty), and no `anonymous` key (`anonymous: false` is refused too). Anonymous grant: `anonymous: true`, `tenant`, `form`, optional `refs`, and no `sub` or `capabilities`. Other top-level claims are ignored; a `refs` entry with any key besides `namespace` and `refId` is refused. Identified tokens map `form` to `formId: Option.some(...)`; a missing `refs` becomes `[]`.
+- The limits live in `authenticate` (`packages/server/lib/authorization/actor.ts`), so custom resolvers are held to them too: `subject`/`tenant` 1 to 255 code points, `formId` a UUID, at most 20 unique `refs` with `namespace` 1 to 64 code points matching `^[a-z][a-z0-9_.-]*$` and `refId` 1 to 255 code points (the `*_external_refs` check constraints), and an `Identified` actor with `refs` must have a `formId`. The code-point filter (`codePoints(min, max)`) is the one shared check; reuse it for any later Effect Schema cap.
+- Nothing enforces the form binding yet. Phase 2's respondent use cases must check `formId` (404 on another form) and refuse grants on responses (`identityRequired`). Admin endpoints already refuse grants with 403.
+- Claim tests are in `packages/http-api/tests/token-claims.test.ts`; the custom-versus-JWT parity is in `tests/web.test.ts`.
