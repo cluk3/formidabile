@@ -74,7 +74,7 @@ dependency-cruiser compiles a `.svelte` file before it reads it, which erases `i
 
 ## The renderer element and strict CSPs
 
-`@fb/renderer` has two entry points. `index.ts` is the Svelte component, consumed from source. `element.ts` defines `<form-renderer>`, and its `./element` export points only at the built `dist/form-renderer.js`, so build it with `vp run @fb/renderer#build` first. The wrapper is listed in `sideEffects`, because otherwise the bundler silently tree-shakes it out.
+`@fb/renderer` has two entry points. `index.ts` is the Svelte component, consumed from source. `element.ts` defines `<form-renderer>`, and its `./element` export points only at the built `dist/form-renderer.js`, so build it with `vp run @fb/renderer#build` first. The wrapper is listed in `sideEffects`, because otherwise the bundler silently tree-shakes it out. The element takes the `api-base-url` and `form-id` attributes and a `getToken` property, renders nothing until it has all three, and fires `submitted` with `{ responseId }`. The component also has a `preview` mode, given a definition, that never calls the API.
 
 ADR 0008's mechanism lives in `packages/renderer/vite.config.ts` and `lib/FormRendererElement.svelte`. Only the wrapper is compiled as a custom element. In a build, inner components emit external CSS, a small plugin inlines it into the one bundled module, and the wrapper's `extend` hook adopts it as a shared constructable stylesheet. In dev and tests, Svelte injects `<style>` elements instead, so only a test against the built bundle covers the production path. Static `style="..."` attributes are banned in `lib/**/*.svelte` and enforced by a test.
 
