@@ -104,6 +104,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PayloadTooLargeEncoded: {
+            /** @enum {string} */
+            _tag: "PayloadTooLarge";
+            limit: number;
+        };
+        LengthRequiredEncoded: {
+            /** @enum {string} */
+            _tag: "LengthRequired";
+        };
         UnauthenticatedEncoded: {
             /** @enum {string} */
             _tag: "Unauthenticated";
@@ -353,6 +362,24 @@ export interface operations {
                     "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
             /** @description ValidationFailed */
             422: {
                 headers: {
@@ -407,6 +434,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */
@@ -465,6 +510,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */
@@ -532,6 +595,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FormPublishedEncoded"] | components["schemas"]["RevisionConflictEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */
@@ -605,6 +686,24 @@ export interface operations {
                     "application/json": components["schemas"]["FormNotPublishedEncoded"];
                 };
             };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
             /** @description ValidationFailed */
             422: {
                 headers: {
@@ -663,6 +762,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */
@@ -739,6 +856,24 @@ export interface operations {
                     "application/json": components["schemas"]["RevisionConflictEncoded"] | components["schemas"]["NoDraftEncoded"];
                 };
             };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
             /** @description ValidationFailed */
             422: {
                 headers: {
@@ -804,6 +939,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FormNotPublishedEncoded"] | components["schemas"]["NoDraftEncoded"] | components["schemas"]["RevisionConflictEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */
@@ -882,6 +1035,24 @@ export interface operations {
                     "application/json": components["schemas"]["NoDraftEncoded"] | components["schemas"]["RevisionConflictEncoded"];
                 };
             };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
             /** @description ValidationFailed */
             422: {
                 headers: {
@@ -942,6 +1113,24 @@ export interface operations {
                     "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
+                };
+            };
             /** @description ValidationFailed */
             422: {
                 headers: {
@@ -999,6 +1188,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description LengthRequired */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LengthRequiredEncoded"];
+                };
+            };
+            /** @description PayloadTooLarge */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayloadTooLargeEncoded"];
                 };
             };
             /** @description ValidationFailed */

@@ -1,4 +1,5 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
+import { declareLength } from "@fb/http-api/web";
 import { type DevUser, mintDevToken } from "../server/dev-users.ts";
 
 type Fetch = (request: Request) => Promise<Response>;
@@ -6,8 +7,13 @@ type Fetch = (request: Request) => Promise<Response>;
 // The module's routes have no prefix, and its handler never looks at the host.
 const baseUrl = "http://localhost";
 
+// The handler is called in-process, so no transport declares the bodies' lengths.
 const clientFor = (user: DevUser, fetch: Fetch) =>
-  createFormApiClient({ baseUrl, getToken: () => mintDevToken(user), fetch });
+  createFormApiClient({
+    baseUrl,
+    getToken: () => mintDevToken(user),
+    fetch: async (request) => fetch(await declareLength(request)),
+  });
 
 const ok = <T>(result: { data?: T; error?: unknown; response: Response }): T => {
   if (result.data === undefined) {

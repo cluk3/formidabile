@@ -61,6 +61,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -146,6 +166,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -219,6 +259,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -304,6 +364,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FormNotPublishedEncoded"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -411,6 +491,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -504,6 +604,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -592,6 +712,26 @@
                       "$ref": "#/components/schemas/NoDraftEncoded"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -722,6 +862,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -825,6 +985,26 @@
                       "$ref": "#/components/schemas/RevisionConflictEncoded"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
                 }
               }
             }
@@ -937,6 +1117,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -1024,6 +1224,26 @@
               }
             }
           },
+          "411": {
+            "description": "LengthRequired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LengthRequiredEncoded"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PayloadTooLarge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayloadTooLargeEncoded"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ValidationFailed",
             "content": {
@@ -1040,6 +1260,42 @@
   },
   "components": {
     "schemas": {
+      "PayloadTooLargeEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "PayloadTooLarge"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "_tag",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "LengthRequiredEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": [
+              "LengthRequired"
+            ]
+          }
+        },
+        "required": [
+          "_tag"
+        ],
+        "additionalProperties": false
+      },
       "UnauthenticatedEncoded": {
         "type": "object",
         "properties": {

@@ -1,6 +1,6 @@
 import { createFormApiClient } from "@fb/api-client";
 import { JwtActorResolver } from "@fb/http-api";
-import { createFormModuleHandler } from "@fb/http-api/web";
+import { createFormModuleHandler, declareLength } from "@fb/http-api/web";
 import { Actor, authenticate, TenantId } from "@fb/server/actor";
 import { Effect, Option } from "effect";
 import type { JWTPayload } from "jose";
@@ -41,9 +41,9 @@ const createAs = (actor: Actor | null) => {
   return createFormApiClient({
     baseUrl,
     getToken: () => null,
-    fetch: (request) => {
+    fetch: async (request) => {
       request.headers.set("cookie", "session=host");
-      return custom.fetch(request);
+      return custom.fetch(await declareLength(request));
     },
   }).POST("/forms", { body: { definition: {} as never } });
 };
@@ -80,10 +80,11 @@ describe("a custom resolver and the JWT resolver", () => {
 
   const createWithToken = async (claims: JWTPayload) => {
     const token = await signToken(claims);
-    return createFormApiClient({ baseUrl, getToken: () => token, fetch: viaJwt.fetch }).POST(
-      "/forms",
-      { body: { definition: {} as never } },
-    );
+    return createFormApiClient({
+      baseUrl,
+      getToken: () => token,
+      fetch: async (request) => viaJwt.fetch(await declareLength(request)),
+    }).POST("/forms", { body: { definition: {} as never } });
   };
 
   const jwtActor = (claims: JWTPayload) =>

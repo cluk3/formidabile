@@ -1,5 +1,6 @@
 import { createFormApiClient, type FormApiClient } from "@fb/api-client";
 import { FormApiLive, JwtActorResolver } from "@fb/http-api";
+import { declareLength } from "@fb/http-api/web";
 import { DatabaseTest } from "@fb/server/testing";
 import { Layer } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
@@ -57,7 +58,11 @@ export const startApi = () => {
   );
   const fetch = (request: Request) => handler(request);
   const clientWithToken = (getToken: () => string | null | Promise<string | null>): FormApiClient =>
-    createFormApiClient({ baseUrl, getToken, fetch });
+    createFormApiClient({
+      baseUrl,
+      getToken,
+      fetch: async (request) => fetch(await declareLength(request)),
+    });
   return {
     fetch,
     dispose,
