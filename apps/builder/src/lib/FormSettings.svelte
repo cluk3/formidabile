@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FormApiClient, Schemas } from "@fb/api-client";
   import { outcome, settleWrite } from "#lib/api.ts";
-  import { checkClass, fieldClass, nativeInputClass } from "#lib/editors/props.ts";
+  import { checkClass, fieldClass, nativeInputClass } from "#lib/fields.ts";
 
   type Settings = Pick<Schemas["Form"], "availability" | "responseLimit">;
 

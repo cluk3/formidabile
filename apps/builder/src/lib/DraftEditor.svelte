@@ -12,7 +12,7 @@
   import { outcome, settleWrite, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
+  import { fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
   import PublicationHistory from "#lib/PublicationHistory.svelte";

@@ -4,7 +4,7 @@
   import { outcome, settleWrite, type BuilderClient } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { fieldClass, nativeInputClass } from "#lib/editors/props.ts";
+  import { fieldClass, nativeInputClass } from "#lib/fields.ts";
   import ResponseDetail from "#lib/ResponseDetail.svelte";
 
   let {
