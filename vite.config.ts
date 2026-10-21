@@ -77,17 +77,19 @@ export default defineConfig({
         test: {
           name: "workspace",
           include: testPostgres ? [postgresTests] : configDefaults.include,
-          // The renderer's tests need its own config (Svelte, and a browser), so it is a project of its own.
+          // The renderer's and the builder's tests need their own configs (Svelte, and a browser), so each is a
+          // project of its own.
           exclude: [
             ...configDefaults.exclude,
             "e2e/**",
             "packages/renderer/**",
+            "apps/builder/**",
             ...(testPostgres ? [] : [postgresTests]),
           ],
         },
       },
       // Browser tests need no Docker, so they stay out of the Postgres run.
-      ...(testPostgres ? [] : ["packages/renderer"]),
+      ...(testPostgres ? [] : ["packages/renderer", "apps/builder"]),
     ],
   },
   run: {
