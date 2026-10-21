@@ -68,6 +68,8 @@ It wipes the module's schema in the compose database (or `DATABASE_URL`'s) and s
 
 The reference host shows "the form for project X" at `http://localhost:4173/projects/<id>`, for the demo projects `acme-spring-orders` and `globex-partner-summit`. A project's id starts with its tenant and a `-`, so any `acme-…` id is an `acme` project: attach one to forms as the `project` reference to try the "no open form" and "ambiguous" pages.
 
+Signed in as `acme-admin` or `globex-admin`, `http://localhost:4173/admin` manages your tenant's demo project: add the project's reference to a form or remove it, and list the responses submitted under the project. `/admin?project=<id>` does the same for any project in your tenant.
+
 ## Without the global `vp`
 
 The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`, so `pnpm vp <command>` works too.
