@@ -95,8 +95,11 @@ test("the analytics view counts each version's responses and keeps a dropped que
   await page.goto("/");
   await page.getByRole("link", { name: "Sign in" }).click();
   await page.getByRole("button", { name: "acme-admin" }).click();
-  await page.getByRole("link", { name: title }).click();
-  await page.getByRole("link", { name: "Analytics", exact: true }).click();
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("link", { name: "Analytics", exact: true })
+    .click();
 
   const versions = page.getByRole("table", { name: "Responses by version" });
   await expect(cellsOf(versions, "Version 1").first()).toHaveText("2");
