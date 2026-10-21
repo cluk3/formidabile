@@ -7,6 +7,7 @@
     type QuestionTypeName,
   } from "@fb/core/definition";
   import { addQuestion, QUESTIONS_CAP } from "@fb/core/editing";
+  import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
   import { outcome, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
@@ -43,6 +44,7 @@
   let missing = $state(false);
   let busy = $state(false);
   let confirmingDelete = $state(false);
+  let previewing = $state(false);
   let notice = $state<string | null>(null);
   let conflict = $state<string | null>(null);
   let issues = $state.raw<Issue[]>([]);
@@ -245,6 +247,9 @@
   {:else}
     <div class="flex flex-wrap items-center gap-4">
       <Button onclick={save} disabled={busy || definition === saved}>Save</Button>
+      <Button variant="outline" aria-pressed={previewing} onclick={() => (previewing = !previewing)}
+        >Preview</Button
+      >
       {#if form.currentVersion === null}
         <Button
           variant="destructive"
@@ -291,6 +296,13 @@
           {/each}
         </ul>
       </div>
+    {/if}
+
+    {#if previewing}
+      <section class="rounded-md border" aria-labelledby={`${uid}-preview`}>
+        <h2 id={`${uid}-preview`} class="px-4 pt-4 text-lg font-semibold">Preview</h2>
+        <FormRenderer preview={definition} />
+      </section>
     {/if}
 
     <label class={fieldClass}>
