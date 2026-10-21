@@ -203,10 +203,10 @@ export const AnalyticsSummary = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("number"),
     count: Count,
-    min: Schema.NullOr(Schema.Number),
-    max: Schema.NullOr(Schema.Number),
-    mean: Schema.NullOr(Schema.Number),
-    median: Schema.NullOr(Schema.Number),
+    min: Schema.NullOr(Schema.Finite),
+    max: Schema.NullOr(Schema.Finite),
+    mean: Schema.NullOr(Schema.Finite),
+    median: Schema.NullOr(Schema.Finite),
   }),
   Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
 ]).annotate({ identifier: "AnalyticsSummary" });
@@ -217,8 +217,8 @@ export const AnalyticsConstraints = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("number"),
     integer: Schema.Boolean,
-    min: Schema.NullOr(Schema.Number),
-    max: Schema.NullOr(Schema.Number),
+    min: Schema.NullOr(Schema.Finite),
+    max: Schema.NullOr(Schema.Finite),
   }),
   Schema.Struct({
     type: Schema.Literal("multiple_choice"),

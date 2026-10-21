@@ -1,4 +1,12 @@
-import { Drafts, FormModuleLive, Forms, Publication, Responses, Submission } from "@fb/server";
+import {
+  Analytics,
+  Drafts,
+  FormModuleLive,
+  Forms,
+  Publication,
+  Responses,
+  Submission,
+} from "@fb/server";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { answerJsonSchema } from "./answer-schema.ts";
@@ -151,6 +159,17 @@ const ResponsesHandlers = HttpApiBuilder.group(
   }),
 );
 
+const AnalyticsHandlers = HttpApiBuilder.group(
+  FormApi,
+  "analytics",
+  Effect.fn(function* (handlers) {
+    const analytics = yield* Analytics;
+    return handlers.handle("form", ({ params }) =>
+      CurrentActor.use((actor) => analytics.form(actor, params.formId)),
+    );
+  }),
+);
+
 /**
  * Router options for serving `FormApiLive`. The router 404s a path parameter longer than `maxParamLength` UTF-16
  * units (100 by default) before its schema sees it, which would refuse a valid 255-code-point `respondentId`.
@@ -166,6 +185,7 @@ export const FormApiLive = HttpApiBuilder.layer(FormApi).pipe(
     VersionsHandlers,
     RespondHandlers,
     ResponsesHandlers,
+    AnalyticsHandlers,
   ]),
   Layer.provide([FormModuleLive, AuthenticationLive, EdgeValidationLive, BodyLimitsLive]),
 );
