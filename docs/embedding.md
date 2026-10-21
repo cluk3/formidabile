@@ -276,3 +276,15 @@ The module's personal data is each response (answers, references and timestamps)
 - **Tenants are opaque.**
 - **Form content holds no personal data**: definitions are frozen into immutable versions.
 - **The host owns retention**: the module has no retention periods, schedules or anonymisation. The host enforces its retention period through the module's delete endpoints.
+
+### Erasing a person
+
+Erasure is hard deletion of responses, with their answers and references, and needs `responses:delete`:
+
+- `DELETE /respondents/{respondentId}/responses` deletes every response the subject gave to any form in the caller's tenant, and answers 200 `{ deleted: n }`, or `{ deleted: 0 }` when there was nothing to delete. `respondentId` is the subject the respondent's tokens carried as `sub`, 1 to 255 code points (otherwise 422). Erasure stops at the tenant: a person known in several tenants is erased by calling once per tenant, with an admin token for each.
+- Anonymous responses have no respondent, so they're erased only by response id. A host that must be able to erase them asserts a reference in each grant's `refs`, lists `GET /responses?refNamespace=…&refId=…` (with `responses:read`), and deletes each response it finds with `DELETE /responses/{responseId}` (204, or 404 when it's already gone or in another tenant). A grant without `refs` leaves its response erasable only by an id the host recorded itself, for example from the `submitted` event.
+- Published versions stay readable and unchanged, publisher included. Afterwards the same subject can respond again to a one-per-respondent form, and an idempotency key from before the erasure creates a new response.
+
+### Answering an access request
+
+With `responses:read`, `GET /responses?respondentId=…` and no other filter lists the subject's responses across every form in the tenant, newest first: up to 50 per page unless `limit` (1 to 200) says otherwise, with `nextCursor` passed back as `cursor` until it's null. The list carries summaries, so read each one with `GET /responses/{responseId}`, which gives `{ response, version }`: the raw answers and the version they were submitted under. `interpretAnswers(version.definition, response.answers)` from `@fb/core/answers` pairs each answer with its question and a display string. As with erasure, ask once per tenant, and find anonymous responses through the references their grants asserted.
