@@ -3,10 +3,217 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = Record<string, never>;
+export interface paths {
+    "/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["forms.list"];
+        put?: never;
+        post: operations["forms.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forms/{formId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["forms.detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        UnauthenticatedEncoded: {
+            /** @enum {string} */
+            _tag: "Unauthenticated";
+            /** @enum {string} */
+            reason: "missing" | "invalid" | "identityRequired";
+        };
+        ValidationFailedEncoded: {
+            /** @enum {string} */
+            _tag: "ValidationFailed";
+            issues: {
+                path: (string | (number | ("Infinity" | "-Infinity" | "NaN")))[];
+                message: string;
+            }[];
+        };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
+        };
+        ForbiddenEncoded: {
+            /** @enum {string} */
+            _tag: "Forbidden";
+            /** @enum {string} */
+            capability: "forms:manage" | "responses:read" | "responses:delete";
+        };
+        FormDetail: {
+            id: string;
+            /** @enum {string} */
+            availability: "open" | "closed";
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            currentVersion: components["schemas"]["VersionSummary"] | null;
+            draft: components["schemas"]["DraftSummary"] | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DraftSummary: {
+            revision: string;
+            basedOnVersionId: string | null;
+            updatedAt: string;
+        };
+        VersionSummary: {
+            id: string;
+            number: number;
+            publishedAt: string;
+            publishedBy: string;
+            derivedFromVersionId: string | null;
+            isCurrent: boolean;
+        };
+        FormSummary: {
+            id: string;
+            title: string;
+            /** @enum {string} */
+            availability: "open" | "closed";
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            currentVersion: components["schemas"]["VersionSummary"] | null;
+            hasDraft: boolean;
+            updatedAt: string;
+        };
+        Draft: {
+            formId: string;
+            revision: string;
+            basedOnVersionId: string | null;
+            definition: components["schemas"]["FormDefinition"];
+            updatedAt: string;
+        };
+        FormDefinition: {
+            /** @constant */
+            format: 1;
+            title: string;
+            description?: string;
+            questions: ({
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "text";
+                config: {
+                    maxLength?: number;
+                    /** @enum {string} */
+                    display: "single_line" | "multi_line";
+                };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "email";
+                config: Record<string, never>;
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "number";
+                config: {
+                    integer: boolean;
+                    min?: number;
+                    max?: number;
+                };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "date";
+                config: {
+                    /** Format: date */
+                    min?: string;
+                    /** Format: date */
+                    max?: string;
+                };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "single_choice";
+                config: {
+                    options: {
+                        value: string;
+                        label: string;
+                    }[];
+                    /** @enum {string} */
+                    display: "radio" | "dropdown";
+                };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "multiple_choice";
+                config: {
+                    options: {
+                        value: string;
+                        label: string;
+                    }[];
+                    minSelected?: number;
+                    maxSelected?: number;
+                };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                /** @constant */
+                type: "boolean";
+                config: Record<string, never>;
+            })[];
+        };
+        Form: {
+            id: string;
+            /** @enum {string} */
+            availability: "open" | "closed";
+            /** @enum {string} */
+            responseLimit: "unlimited" | "one_per_respondent";
+            currentVersionId: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -14,4 +221,168 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    "forms.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        forms: components["schemas"]["FormSummary"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "forms.create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    definition: components["schemas"]["FormDefinition"];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        form: components["schemas"]["Form"];
+                        draft: components["schemas"]["Draft"];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "forms.detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description FormDetail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormDetail"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+}

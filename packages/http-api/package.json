@@ -7,8 +7,11 @@
     "./web": "./web.ts"
   },
   "dependencies": {
+    "@fb/core": "workspace:*",
     "@fb/server": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "jose": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@fb/api-client": "workspace:*",

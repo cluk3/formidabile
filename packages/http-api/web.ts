@@ -1,12 +1,22 @@
+import { type Actor, ActorResolver, Unauthenticated } from "@fb/server/actor";
 import { DatabaseLive } from "@fb/server/database";
 import { migrate } from "@fb/server/migrate";
-import { Layer, ManagedRuntime } from "effect";
+import { Effect, Layer, ManagedRuntime } from "effect";
 import { HttpRouter, HttpServer } from "effect/http";
-import { FormApiLive } from "./index.ts";
+import { FormApiLive, JwtActorResolver, type JwtOptions } from "./index.ts";
 
-export interface FormModuleHandlerOptions {
+export type FormModuleHandlerOptions = {
   readonly databaseUrl: string;
-}
+  /** Browser origins allowed to call the API, with credentials. */
+  readonly cors?: ReadonlyArray<string>;
+} & (
+  | { readonly jwt: JwtOptions; readonly resolveActor?: undefined }
+  | {
+      /** The host's own resolver, for example one reading its session cookie. `null` means no credentials. */
+      readonly resolveActor: (request: Request) => Promise<Actor | null>;
+      readonly jwt?: undefined;
+    }
+);
 
 export interface FormModuleHandler {
   readonly fetch: (request: Request) => Promise<Response>;
@@ -14,18 +24,45 @@ export interface FormModuleHandler {
   readonly dispose: () => Promise<void>;
 }
 
+const hostResolver = (resolveActor: (request: Request) => Promise<Actor | null>) =>
+  Layer.succeed(ActorResolver, {
+    // The Fetch handler hands every resolver the `Request` it was given.
+    resolve: (request) =>
+      Effect.promise(() => resolveActor(request.source as Request)).pipe(
+        Effect.flatMap((actor) =>
+          actor === null
+            ? Effect.fail(new Unauthenticated({ reason: "missing" }))
+            : Effect.succeed(actor),
+        ),
+      ),
+  });
+
 export const createFormModuleHandler = (options: FormModuleHandlerOptions): FormModuleHandler => {
-  const database = ManagedRuntime.make(DatabaseLive(options.databaseUrl));
+  // One memo map, so `migrate()` and the handler share one connection pool.
+  const memoMap = Layer.makeMemoMapUnsafe();
+  const database = DatabaseLive(options.databaseUrl);
+  const runtime = ManagedRuntime.make(database, { memoMap });
+  const resolver =
+    options.resolveActor === undefined
+      ? JwtActorResolver(options.jwt)
+      : hostResolver(options.resolveActor);
+  const routes =
+    options.cors === undefined
+      ? FormApiLive
+      : Layer.merge(
+          FormApiLive,
+          HttpRouter.cors({ allowedOrigins: options.cors, credentials: true }),
+        );
   const { handler, dispose } = HttpRouter.toWebHandler(
-    FormApiLive.pipe(Layer.provide(HttpServer.layerServices)),
-    { disableLogger: true },
+    routes.pipe(Layer.provide([resolver, database]), Layer.provide(HttpServer.layerServices)),
+    { memoMap, disableLogger: true },
   );
   return {
-    fetch: handler,
-    migrate: () => database.runPromise(migrate),
+    fetch: (request) => handler(request),
+    migrate: () => runtime.runPromise(migrate),
     dispose: async () => {
       await dispose();
-      await database.dispose();
+      await runtime.dispose();
     },
   };
 };
