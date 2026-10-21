@@ -13,6 +13,7 @@
     "@effect/sql-pg": "catalog:",
     "@effect/sql-pglite": "catalog:",
     "@electric-sql/pglite": "catalog:",
+    "@fb/core": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:"
   },

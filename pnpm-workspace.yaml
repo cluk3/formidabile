@@ -58,3 +58,4 @@ peerDependencyRules:
 
 minimumReleaseAgeExclude:
   - "@lucide/svelte@1.60.0"
+  - jose@6.2.13

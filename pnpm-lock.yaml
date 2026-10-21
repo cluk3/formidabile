@@ -224,6 +224,9 @@ catalogs:
     effect:
       specifier: 4.0.5
       version: 4.0.5
+    jose:
+      specifier: 6.2.13
+      version: 6.2.13
     openapi-fetch:
       specifier: 0.17.0
       version: 0.17.0
@@ -305,6 +308,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      jose:
+        specifier: 'catalog:'
+        version: 6.2.13
       vite-plus:
         specifier: 'catalog:'
         version: 1.3.0(@types/node@24.19.2)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(jiti@2.7.0)(playwright@1.64.1)(svelte@5.57.2)(typescript@6.0.3)
@@ -417,12 +423,21 @@ importers:
 
   packages/http-api:
     dependencies:
+      '@fb/core':
+        specifier: workspace:*
+        version: link:../core
       '@fb/server':
         specifier: workspace:*
         version: link:../server
       effect:
         specifier: 'catalog:'
         version: 4.0.5
+      jose:
+        specifier: 'catalog:'
+        version: 6.2.13
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@fb/api-client':
         specifier: workspace:*
@@ -473,6 +488,9 @@ importers:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.5.10
+      '@fb/core':
+        specifier: workspace:*
+        version: link:../core
       drizzle-orm:
         specifier: 'catalog:'
         version: 1.0.0-rc.5-5935859(@effect/sql-pg@4.0.5(effect@4.0.5))(@effect/sql-pglite@4.0.5(effect@4.0.5))(@electric-sql/pglite@0.5.10)(effect@4.0.5)(zod@4.6.7)
@@ -1918,6 +1936,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jose@6.2.13:
+    resolution: {integrity: sha512-7TIg10ZE1x82YediN+lcrPNvGMKge9yFHQD+Qho/b8y2adfugU3AsvvHfxV0fzyFllT6l9xCjf4RWY9g/Z9PJQ==}
 
   js-levenshtein@1.1.6:
     resolution: {integrity: sha512-X2BB11YZtrRqY4EnQcLX5Rh373zbK4alC1FW7D7MBhL2gtcC17cTnr6DmfHZeS0s2rTHjUTMMHfG7gO8SSdw+g==}
@@ -3468,6 +3489,8 @@ snapshots:
       '@types/estree': 1.0.9
 
   jiti@2.7.0: {}
+
+  jose@6.2.13: {}
 
   js-levenshtein@1.1.6: {}
 

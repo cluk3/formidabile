@@ -13,6 +13,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { Schema } from "effect";
 
 export const formManagement = pgSchema("form_management");
 
@@ -62,7 +63,7 @@ export const drafts = formManagement.table(
       .notNull()
       .default(sql`nextval('form_management.draft_revisions')`),
     basedOnVersionId: uuid("based_on_version_id"),
-    definition: jsonb("definition").notNull(),
+    definition: jsonb("definition").$type<Schema.Json>().notNull(),
     updatedAt: instant("updated_at").notNull(),
   },
   (table) => [
@@ -82,7 +83,7 @@ export const formVersions = formManagement.table(
       .notNull()
       .references((): AnyPgColumn => forms.id),
     number: integer("number").notNull(),
-    definition: jsonb("definition").notNull(),
+    definition: jsonb("definition").$type<Schema.Json>().notNull(),
     publishedAt: instant("published_at").notNull(),
     publishedBy: text("published_by").notNull(),
     derivedFromVersionId: uuid("derived_from_version_id"),
