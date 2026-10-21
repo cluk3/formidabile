@@ -93,6 +93,8 @@ Points the spike left unverified, settled in phase 0:
 
 `apps/builder` is a SvelteKit 3 static SPA (`adapter-static`, `fallback: "index.html"`, `ssr = false`). Kit's options live in the `sveltekit()` plugin in its `vite.config.ts`, and there is no `svelte.config.js`. App-internal imports use `#lib/...`, declared in its `package.json` `imports`. It starts by fetching `/config.json` (`apiBaseUrl`, `tokenUrl`, `loginUrl`) from `static/`, so one build runs against any host.
 
+Every API call goes through `createBuilderClient(config)` and `outcome(call)` in `src/lib/api.ts`. The client fetches a fresh token from `tokenUrl` (with `credentials: "include"`) before each call. `outcome` sorts the result into `ok`, `rejected` (a tagged 4xx), `signIn` (a 401, or a token or 403 without `forms:manage`: show the "Sign in" link from `signInUrl`), `tokenUnavailable` (the call was never sent) and `unknown` (a rejected `fetch`, a 5xx, or a reply outside the contract). On `unknown` a page says it couldn't confirm the action and reloads what it affected (ADR 0016). Components take the client as a prop, so the `builder-browser` Vitest project (`tests/*.browser.test.ts`, Chromium) renders them against a fake `fetch`.
+
 shadcn-svelte is initialised (`components.json`, Tailwind 4 theme in `src/routes/layout.css`) and `vp exec shadcn-svelte add <component>` writes into `src/lib/components/ui/`, which is vendored: Oxlint ignores it. `vp run @fb/builder#check:svelte` runs `svelte-check` with `--fail-on-warnings`, and the e2e `builder-chromium` project runs against `vp preview` on port 4174.
 
 ## Browser-safe code

@@ -1,5 +1,8 @@
 import createClient, { type Client } from "openapi-fetch";
-import type { paths } from "./lib/schema.d.ts";
+import type { components, paths } from "./lib/schema.d.ts";
+
+/** The contract's schemas, such as `Schemas["FormSummary"]`. */
+export type Schemas = components["schemas"];
 
 export interface FormApiClientOptions {
   readonly baseUrl: string;
