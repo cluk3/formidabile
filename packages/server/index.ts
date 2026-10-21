@@ -17,6 +17,7 @@ export {
   VersionSummary,
 } from "./lib/envelopes.ts";
 export {
+  ExternalRefLimitReached,
   Forbidden,
   FormNotPublished,
   FormPublished,

@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { ExternalRef } from "./authorization/actor.ts";
 
 /**
  * A definition as JSON: `@fb/core` parses it, and `@fb/http-api` documents it with core's JSON Schema under
@@ -79,6 +80,8 @@ export const FormDetail = Schema.Struct({
   responseLimit: ResponseLimit,
   currentVersion: Schema.NullOr(VersionSummary),
   draft: Schema.NullOr(DraftSummary),
+  /** Sorted by namespace, then `refId`. */
+  externalRefs: Schema.Array(ExternalRef),
   createdAt: Schema.Date,
   updatedAt: Schema.Date,
 }).annotate({ identifier: "FormDetail" });

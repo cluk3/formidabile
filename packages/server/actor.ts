@@ -4,7 +4,7 @@ export {
   ActorResolver,
   authenticate,
   Capability,
-  type ExternalRef,
+  ExternalRef,
   TenantId,
   Unauthenticated,
 } from "./lib/authorization/actor.ts";

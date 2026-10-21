@@ -151,6 +151,7 @@ describe("reading forms", () => {
       responseLimit: "unlimited",
       currentVersion: null,
       draft: { revision: draft.revision, basedOnVersionId: null, updatedAt: draft.updatedAt },
+      externalRefs: [],
       createdAt: form.createdAt,
       updatedAt: form.updatedAt,
     });
