@@ -42,6 +42,8 @@
       signedOut = true;
     } else if (result.kind === "tokenUnavailable") {
       notice = tokenUnavailable;
+    } else if (result.kind === "tooLarge") {
+      notice = "This form is too large to save";
     } else {
       const { error } = result;
       notice =
