@@ -26,6 +26,8 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
 
+export const QUESTIONS_CAP = 200;
+
 /** The content of a draft and of a form version: the same type for both. */
 export const FormDefinition = z
   .strictObject({
@@ -34,7 +36,7 @@ export const FormDefinition = z
     title: DraftText(200),
     description: z.optional(DraftText(5000)),
     /** Array order is display order. */
-    questions: z.array(QuestionSnapshot).check(z.maxLength(200)),
+    questions: z.array(QuestionSnapshot).check(z.maxLength(QUESTIONS_CAP)),
   })
   .check(
     z.superRefine((definition, ctx) => {
