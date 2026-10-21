@@ -115,9 +115,11 @@ const formPage = (shell: string, form: ProjectFormCandidate, projectId: string) 
   if (!shell.includes(element)) throw new Error(`The project page has no empty ${element}`);
   return html(
     200,
+    // A replacer function, so a `$` in a project id is never read as a replacement pattern.
     shell.replace(
       element,
-      `<form-renderer api-base-url="${apiPrefix}" form-id="${escapeHtml(form.id)}" ` +
+      () =>
+        `<form-renderer api-base-url="${apiPrefix}" form-id="${escapeHtml(form.id)}" ` +
         `data-project="${escapeHtml(projectId)}"></form-renderer>`,
     ),
   );

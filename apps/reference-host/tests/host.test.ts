@@ -220,6 +220,20 @@ describe("/projects/<id>", () => {
     );
   });
 
+  test("copies a project id with replacement patterns into the page as written", async () => {
+    const suffix = crypto.randomUUID();
+    const projectId = `acme-${suffix}-$'$&$$`;
+    const form = await projectForm(admin, projectId, "open");
+
+    const { html } = await page(projectId);
+
+    expect(html).toBe(
+      `<!doctype html><title>Project form</title><main>` +
+        `<form-renderer api-base-url="/api" form-id="${form.id}" ` +
+        `data-project="acme-${suffix}-$&#39;$&#38;$$"></form-renderer></main>`,
+    );
+  });
+
   test("shows a static page with no element when the project has no open form", async () => {
     const projectId = `acme-${crypto.randomUUID()}`;
     await projectForm(admin, projectId, "closed");
