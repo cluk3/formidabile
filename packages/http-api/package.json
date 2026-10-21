@@ -16,6 +16,8 @@
   "devDependencies": {
     "@fb/api-client": "workspace:*",
     "@types/node": "catalog:",
+    "ajv": "catalog:",
+    "ajv-formats": "catalog:",
     "vite-plus": "catalog:"
   }
 }
