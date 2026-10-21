@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AnswerProps } from "./props.ts";
+  import type { AnswerProps } from "#lib/answers/props.ts";
 
   let { value }: AnswerProps<"text"> = $props();
 </script>

@@ -1,6 +1,6 @@
 import { ValidationFailed } from "@fb/server";
 import { ActorResolver, authenticate } from "@fb/server/actor";
-import { Context, Effect, Layer, SchemaIssue } from "effect";
+import { Context, Effect, Layer, Option, Schema, SchemaIssue, SchemaTransformation } from "effect";
 import { HttpServerRequest } from "effect/http";
 import { HttpApiMiddleware } from "effect/http-api";
 import {
@@ -27,21 +27,28 @@ export const AuthenticationLive = Layer.effect(
   }),
 );
 
-const decimal = /^\d+$/;
+/** `Content-Length` is one or more decimal digits (RFC 9110 §8.6). */
+const contentLength = Schema.decodeUnknownOption(
+  Schema.String.check(Schema.isPattern(/^\d+$/)).pipe(
+    Schema.decodeTo(Schema.Number, SchemaTransformation.numberFromString),
+  ),
+);
 
-export const BodyLimitsLive = Layer.succeed(BodyLimits, (httpEffect, { endpoint }) =>
-  Effect.gen(function* () {
+export const BodyLimitsLive = Layer.succeed(
+  BodyLimits,
+  Effect.fnUntraced(function* (httpEffect, { endpoint }) {
     const { headers } = yield* HttpServerRequest.HttpServerRequest;
-    const length = headers["content-length"];
+    const declared = headers["content-length"];
     // A request carries a body if its endpoint takes one or its framing headers announce one.
     if (
       endpoint.payload.size > 0 ||
-      length !== undefined ||
+      declared !== undefined ||
       headers["transfer-encoding"] !== undefined
     ) {
-      if (length === undefined || !decimal.test(length)) return yield* new LengthRequired();
+      const length = contentLength(declared);
+      if (Option.isNone(length)) return yield* new LengthRequired();
       const limit = Context.get(endpoint.annotations, BodyLimit);
-      if (Number(length) > limit) return yield* new PayloadTooLarge({ limit });
+      if (length.value > limit) return yield* new PayloadTooLarge({ limit });
     }
     return yield* httpEffect;
   }),

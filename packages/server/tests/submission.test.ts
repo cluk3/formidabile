@@ -763,6 +763,27 @@ describe("an anonymous grant", () => {
     expect(count).toBe(2);
   });
 
+  test("a replay after the form becomes one-per-respondent returns the original response", async () => {
+    const { original, replayed, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const idempotencyKey = crypto.randomUUID();
+        const send = Submission.use((submission) =>
+          submission.submit(grant(formId), formId, { versionId: v1.id, answers, idempotencyKey }),
+        );
+        const original = yield* send;
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { responseLimit: "one_per_respondent" }),
+        );
+        const replayed = yield* send;
+        return { original, replayed, count: yield* responseCount(formId) };
+      }),
+    );
+
+    expect(replayed).toEqual(original);
+    expect(count).toBe(1);
+  });
+
   test("loads a limited form as anonymous, and submitting to it gives identityRequired", async () => {
     const { loaded, refused, count } = await run(
       Effect.gen(function* () {

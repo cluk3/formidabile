@@ -9,10 +9,10 @@
   import { addQuestion, QUESTIONS_CAP } from "@fb/core/editing";
   import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
-  import { outcome, type Outcome } from "#lib/api.ts";
+  import { outcome, settleWrite, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
+  import { fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
   import PublicationHistory from "#lib/PublicationHistory.svelte";
@@ -53,8 +53,12 @@
   let refused = $state<"saved" | "published">("saved");
   let newType = $state<QuestionTypeName>("text");
 
-  const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
   const changedSinceOpened = "This draft has changed since you opened it.";
+  /** What every write does on a sign-in prompt or a notice. */
+  const written = {
+    signIn: () => (signedOut = true),
+    notice: (message: string) => (notice = message),
+  };
 
   /** `data` on success. Otherwise the editor shows the sign-in prompt, that the form is gone, or the load failure. */
   const read = async <T>(call: () => Promise<Outcome<T, { _tag: string }>>) => {
@@ -130,25 +134,25 @@
       }),
     );
     busy = false;
-    if (result.kind === "ok") {
-      await load();
-      notice = "Draft discarded";
-    } else if (result.kind === "rejected") {
-      const { error } = result;
-      if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
-      else if (error._tag === "NoDraft") {
+    await settleWrite(result, {
+      ...written,
+      ok: async () => {
         await load();
-        notice = "This draft was already discarded.";
-      } else if (error._tag === "NotFound") missing = true;
-      else notice = "The draft couldn't be discarded.";
-    } else if (result.kind === "unknown") {
-      await load();
-      notice = "We couldn't confirm the draft was discarded, so the form has been reloaded.";
-    } else if (result.kind === "signIn") {
-      signedOut = true;
-    } else {
-      notice = tokenUnavailable;
-    }
+        notice = "Draft discarded";
+      },
+      rejected: async (error) => {
+        if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+        else if (error._tag === "NoDraft") {
+          await load();
+          notice = "This draft was already discarded.";
+        } else if (error._tag === "NotFound") missing = true;
+        else notice = "The draft couldn't be discarded.";
+      },
+      unknown: async () => {
+        await load();
+        notice = "We couldn't confirm the draft was discarded, so the form has been reloaded.";
+      },
+    });
   };
 
   /** Deletes a never-published form, with its draft (ADR 0014). */
@@ -163,25 +167,23 @@
     );
     busy = false;
     confirmingDelete = false;
-    if (result.kind === "ok") {
-      onDeleted();
-    } else if (result.kind === "rejected") {
-      const { error } = result;
-      if (error._tag === "FormPublished") {
-        await reloadForm();
-        notice =
-          "This form was published since you opened it, so it can't be deleted. You can discard its draft instead.";
-      } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
-      else if (error._tag === "NotFound") missing = true;
-      else notice = "The form couldn't be deleted.";
-    } else if (result.kind === "unknown") {
-      await load();
-      notice = "We couldn't confirm the form was deleted, so it has been reloaded.";
-    } else if (result.kind === "signIn") {
-      signedOut = true;
-    } else {
-      notice = tokenUnavailable;
-    }
+    await settleWrite(result, {
+      ...written,
+      ok: onDeleted,
+      rejected: async (error) => {
+        if (error._tag === "FormPublished") {
+          await reloadForm();
+          notice =
+            "This form was published since you opened it, so it can't be deleted. You can discard its draft instead.";
+        } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+        else if (error._tag === "NotFound") missing = true;
+        else notice = "The form couldn't be deleted.";
+      },
+      unknown: async () => {
+        await load();
+        notice = "We couldn't confirm the form was deleted, so it has been reloaded.";
+      },
+    });
   };
 
   const edit = (change: (definition: FormDefinition) => FormDefinition) => {
@@ -201,33 +203,32 @@
       }),
     );
     busy = false;
-    if (result.kind === "ok") {
-      // The API stores the definition as core parsed it (trimmed), so the editor catches up unless it changed since.
-      const parsed = parseDefinition(result.data.definition);
-      saved = parsed.ok ? parsed.value : sent;
-      if (definition === sent) definition = saved;
-      const { revision: at, basedOnVersionId, updatedAt } = result.data;
-      revision = at;
-      if (form !== null) form = { ...form, draft: { revision: at, basedOnVersionId, updatedAt } };
-      notice = "Draft saved";
-    } else if (result.kind === "rejected") {
-      const { error } = result;
-      if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
-      else if (error._tag === "NoDraft") conflict = "This draft was discarded since you opened it.";
-      else if (error._tag === "ValidationFailed") {
-        refused = "saved";
-        issues = error.issues;
-      } else notice = "This form no longer exists.";
-    } else if (result.kind === "tooLarge") {
-      notice = "This form is too large to save";
-    } else if (result.kind === "unknown") {
-      await load();
-      notice = "We couldn't confirm the draft was saved, so it has been reloaded.";
-    } else if (result.kind === "signIn") {
-      signedOut = true;
-    } else {
-      notice = tokenUnavailable;
-    }
+    await settleWrite(result, {
+      ...written,
+      ok: (draft) => {
+        // The API stores the definition as core parsed it (trimmed), so the editor catches up unless it changed since.
+        const parsed = parseDefinition(draft.definition);
+        saved = parsed.ok ? parsed.value : sent;
+        if (definition === sent) definition = saved;
+        const { revision: at, basedOnVersionId, updatedAt } = draft;
+        revision = at;
+        if (form !== null) form = { ...form, draft: { revision: at, basedOnVersionId, updatedAt } };
+        notice = "Draft saved";
+      },
+      rejected: (error) => {
+        if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+        else if (error._tag === "NoDraft")
+          conflict = "This draft was discarded since you opened it.";
+        else if (error._tag === "ValidationFailed") {
+          refused = "saved";
+          issues = error.issues;
+        } else notice = "This form no longer exists.";
+      },
+      unknown: async () => {
+        await load();
+        notice = "We couldn't confirm the draft was saved, so it has been reloaded.";
+      },
+    });
   };
 
   /** Publishes the saved draft as the form's next version; the editor then shows that version. */
@@ -242,30 +243,28 @@
       }),
     );
     busy = false;
-    if (result.kind === "ok") {
-      await load();
-      notice = `Published version ${result.data.version.number}`;
-    } else if (result.kind === "rejected") {
-      const { error } = result;
-      if (error._tag === "ValidationFailed") {
-        refused = "published";
-        issues = error.issues;
-      } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
-      else if (error._tag === "NoDraft") {
+    await settleWrite(result, {
+      ...written,
+      ok: async ({ version }) => {
         await load();
-        notice = "This draft was already published or discarded, so the form has been reloaded.";
-      } else if (error._tag === "NotFound") missing = true;
-      else notice = "The draft couldn't be published.";
-    } else if (result.kind === "unknown") {
-      await load();
-      notice = "We couldn't confirm the draft was published, so the form has been reloaded.";
-    } else if (result.kind === "signIn") {
-      signedOut = true;
-    } else if (result.kind === "tooLarge") {
-      notice = "The draft couldn't be published.";
-    } else {
-      notice = tokenUnavailable;
-    }
+        notice = `Published version ${version.number}`;
+      },
+      rejected: async (error) => {
+        if (error._tag === "ValidationFailed") {
+          refused = "published";
+          issues = error.issues;
+        } else if (error._tag === "RevisionConflict") conflict = changedSinceOpened;
+        else if (error._tag === "NoDraft") {
+          await load();
+          notice = "This draft was already published or discarded, so the form has been reloaded.";
+        } else if (error._tag === "NotFound") missing = true;
+        else notice = "The draft couldn't be published.";
+      },
+      unknown: async () => {
+        await load();
+        notice = "We couldn't confirm the draft was published, so the form has been reloaded.";
+      },
+    });
   };
 
   onMount(load);

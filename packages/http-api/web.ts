@@ -2,8 +2,8 @@ import { type Actor, ActorResolver, Unauthenticated } from "@fb/server/actor";
 import { type Database, DatabaseLive } from "@fb/server/database";
 import { migrate } from "@fb/server/migrate";
 import { Effect, Layer, ManagedRuntime } from "effect";
-import { HttpRouter, HttpServer } from "effect/http";
-import { FormApiLive, FormApiRouterConfig, JwtActorResolver, type JwtOptions } from "./index.ts";
+import { HttpRouter } from "effect/http";
+import { JwtActorResolver, type JwtOptions, toFormApiWebHandler } from "./index.ts";
 
 export type FormModuleHandlerOptions = {
   /** Browser origins allowed to call the API, with credentials. */
@@ -71,11 +71,8 @@ export const createFormModuleHandler = (options: FormModuleHandlerOptions): Form
       : hostResolver(options.resolveActor);
   const routes =
     options.cors === undefined
-      ? FormApiLive
-      : Layer.merge(
-          FormApiLive,
-          HttpRouter.cors({ allowedOrigins: options.cors, credentials: true }),
-        );
+      ? undefined
+      : HttpRouter.cors({ allowedOrigins: options.cors, credentials: true });
   // Built on the first request: building opens the pool, which would keep a process that never serves alive.
   let web:
     | {
@@ -84,10 +81,7 @@ export const createFormModuleHandler = (options: FormModuleHandlerOptions): Form
       }
     | undefined;
   const app = () =>
-    (web ??= HttpRouter.toWebHandler(
-      routes.pipe(Layer.provide([resolver, database]), Layer.provide(HttpServer.layerServices)),
-      { memoMap, routerConfig: FormApiRouterConfig, disableLogger: true },
-    ));
+    (web ??= toFormApiWebHandler(Layer.merge(resolver, database), { routes, memoMap }));
   return {
     fetch: (request) => app().handler(request),
     migrate: () => runtime.runPromise(migrate),

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { QuestionSnapshotOf } from "@fb/core/definition";
-  import type { EditorProps } from "./props.ts";
+  import type { EditorProps } from "#lib/editors/props.ts";
 
   let { question }: EditorProps<QuestionSnapshotOf<"email">> = $props();
 </script>

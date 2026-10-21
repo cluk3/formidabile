@@ -3,7 +3,7 @@ import type { Actor } from "../authorization/actor.ts";
 import { requireCapability } from "../authorization/authorization.ts";
 import type { FormAnalytics } from "../envelopes.ts";
 import { type Forbidden, NotFound } from "../errors.ts";
-import { Database, dieOnDatabaseError } from "../persistence/database.ts";
+import { Database, dieOnDatabaseError, readOnlySnapshot } from "../persistence/database.ts";
 import { storedDefinition } from "../persistence/versions.ts";
 import { mergeAnalytics } from "./merge.ts";
 import {
@@ -14,9 +14,6 @@ import {
   responsesPerVersion,
   valueCounts,
 } from "./queries.ts";
-
-/** One snapshot for all six queries, so concurrent submissions and edits can't make `answered` exceed `responses`. */
-const readOnly = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 
 export class Analytics extends Context.Service<
   Analytics,
@@ -72,7 +69,9 @@ export class Analytics extends Context.Service<
                     combinedNumbers,
                   });
                 }),
-              readOnly,
+              // One snapshot for all six queries, so concurrent submissions and edits can't make `answered`
+              // exceed `responses`.
+              readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);
         }),

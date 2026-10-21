@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FormApiClient, Schemas } from "@fb/api-client";
-  import { outcome } from "#lib/api.ts";
-  import { checkClass, fieldClass, nativeInputClass } from "#lib/editors/props.ts";
+  import { outcome, settleWrite } from "#lib/api.ts";
+  import { checkClass, fieldClass, nativeInputClass } from "#lib/fields.ts";
 
   type Settings = Pick<Schemas["Form"], "availability" | "responseLimit">;
 
@@ -33,27 +33,28 @@
       client.PATCH("/forms/{formId}", { params: { path: { formId: form.id } }, body: settings }),
     );
     busy = false;
-    if (result.kind === "ok") {
-      const { availability, responseLimit } = result.data;
-      saved({ availability, responseLimit });
-      notice = "Settings saved";
-    } else if (result.kind === "rejected") {
-      if (result.error._tag === "FormNotPublished") {
-        notice = "This form has no published version, so it can't be opened.";
+    await settleWrite(result, {
+      ok: ({ availability, responseLimit }) => {
+        saved({ availability, responseLimit });
+        notice = "Settings saved";
+      },
+      rejected: async (error) => {
+        if (error._tag === "FormNotPublished") {
+          notice = "This form has no published version, so it can't be opened.";
+          await reload();
+        } else if (error._tag === "NotFound") {
+          await reload();
+        } else {
+          notice = "The settings couldn't be changed.";
+        }
+      },
+      unknown: async () => {
         await reload();
-      } else if (result.error._tag === "NotFound") {
-        await reload();
-      } else {
-        notice = "The settings couldn't be changed.";
-      }
-    } else if (result.kind === "unknown") {
-      await reload();
-      notice = "We couldn't confirm the settings were changed, so they have been reloaded.";
-    } else if (result.kind === "signIn") {
-      signIn();
-    } else {
-      notice = "Couldn't get a sign-in token from the host. Try again.";
-    }
+        notice = "We couldn't confirm the settings were changed, so they have been reloaded.";
+      },
+      signIn,
+      notice: (message) => (notice = message),
+    });
   };
 </script>
 

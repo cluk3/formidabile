@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AnswerProps } from "./props.ts";
+  import type { AnswerProps } from "#lib/answers/props.ts";
 
   let { question, value }: AnswerProps<"multiple_choice"> = $props();
 

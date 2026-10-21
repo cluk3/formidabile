@@ -44,6 +44,14 @@ test("the adopted stylesheet styles the outer tree and the nested components' ma
   expect(getComputedStyle(shadowRoot.querySelector(".label")!).fontWeight).toBe("600");
 });
 
+test("the title takes the host's --form-renderer-text", async () => {
+  fakeApi(definitionOf([questions.name]));
+  const element = await mounted();
+  element.style.setProperty("--form-renderer-text", "rgb(1, 2, 3)");
+
+  expect(getComputedStyle(element.shadowRoot.querySelector(".title")!).color).toBe("rgb(1, 2, 3)");
+});
+
 test("every element shares the same adopted stylesheet", async () => {
   fakeApi(definitionOf([questions.name]));
   const [first, second] = [await mounted(), await mounted()];

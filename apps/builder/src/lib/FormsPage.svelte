@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
   import { onMount } from "svelte";
-  import { outcome, type BuilderClient } from "#lib/api.ts";
+  import { outcome, settleWrite, type BuilderClient } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
@@ -16,8 +16,6 @@
   let notice = $state<string | null>(null);
   let title = $state("");
   let creating = $state(false);
-
-  const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
 
   const load = async () => {
     const result = await outcome(() => client.GET("/forms"));
@@ -34,25 +32,24 @@
     const result = await outcome(() =>
       client.POST("/forms", { body: { definition: { format: 1, title, questions: [] } } }),
     );
-    if (result.kind === "ok") {
-      title = "";
-      await load();
-    } else if (result.kind === "unknown") {
-      notice = "We couldn't confirm the form was created, so the list has been reloaded.";
-      await load();
-    } else if (result.kind === "signIn") {
-      signedOut = true;
-    } else if (result.kind === "tokenUnavailable") {
-      notice = tokenUnavailable;
-    } else if (result.kind === "tooLarge") {
-      notice = "This form is too large to save";
-    } else {
-      const { error } = result;
-      notice =
-        error._tag === "ValidationFailed"
-          ? `The form couldn't be created: ${error.issues.map((issue) => issue.message).join("; ")}`
-          : "The form couldn't be created.";
-    }
+    await settleWrite(result, {
+      ok: async () => {
+        title = "";
+        await load();
+      },
+      rejected: (error) => {
+        notice =
+          error._tag === "ValidationFailed"
+            ? `The form couldn't be created: ${error.issues.map((issue) => issue.message).join("; ")}`
+            : "The form couldn't be created.";
+      },
+      unknown: async () => {
+        notice = "We couldn't confirm the form was created, so the list has been reloaded.";
+        await load();
+      },
+      signIn: () => (signedOut = true),
+      notice: (message) => (notice = message),
+    });
     creating = false;
   };
 

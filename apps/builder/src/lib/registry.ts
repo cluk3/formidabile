@@ -1,21 +1,21 @@
 import type { QuestionSnapshot, QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 import type { Component } from "svelte";
-import BooleanAnswer from "./answers/BooleanAnswer.svelte";
-import ChoiceAnswer from "./answers/ChoiceAnswer.svelte";
-import DateAnswer from "./answers/DateAnswer.svelte";
-import EmailAnswer from "./answers/EmailAnswer.svelte";
-import MultipleChoiceAnswer from "./answers/MultipleChoiceAnswer.svelte";
-import NumberAnswer from "./answers/NumberAnswer.svelte";
-import type { AnswerProps } from "./answers/props.ts";
-import TextAnswer from "./answers/TextAnswer.svelte";
-import BooleanEditor from "./editors/BooleanEditor.svelte";
-import DateEditor from "./editors/DateEditor.svelte";
-import EmailEditor from "./editors/EmailEditor.svelte";
-import MultipleChoiceEditor from "./editors/MultipleChoiceEditor.svelte";
-import NumberEditor from "./editors/NumberEditor.svelte";
-import type { EditorProps } from "./editors/props.ts";
-import SingleChoiceEditor from "./editors/SingleChoiceEditor.svelte";
-import TextEditor from "./editors/TextEditor.svelte";
+import BooleanAnswer from "#lib/answers/BooleanAnswer.svelte";
+import ChoiceAnswer from "#lib/answers/ChoiceAnswer.svelte";
+import DateAnswer from "#lib/answers/DateAnswer.svelte";
+import EmailAnswer from "#lib/answers/EmailAnswer.svelte";
+import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
+import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
+import type { AnswerProps } from "#lib/answers/props.ts";
+import TextAnswer from "#lib/answers/TextAnswer.svelte";
+import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
+import DateEditor from "#lib/editors/DateEditor.svelte";
+import EmailEditor from "#lib/editors/EmailEditor.svelte";
+import MultipleChoiceEditor from "#lib/editors/MultipleChoiceEditor.svelte";
+import NumberEditor from "#lib/editors/NumberEditor.svelte";
+import type { EditorProps } from "#lib/editors/props.ts";
+import SingleChoiceEditor from "#lib/editors/SingleChoiceEditor.svelte";
+import TextEditor from "#lib/editors/TextEditor.svelte";
 
 /**
  * Every question type in the builder, keyed by core's type name: its name, its editor, and how a response's answer

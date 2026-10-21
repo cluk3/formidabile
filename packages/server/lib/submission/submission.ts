@@ -151,10 +151,6 @@ export class Submission extends Context.Service<
               Effect.gen(function* () {
                 const form = yield* shareForm(tx, actor.tenant, formId);
                 if (form === undefined) return yield* new NotFound();
-                // The limit counts responses per respondent, so a grant can't answer a limited form (ADR 0011).
-                if (respondentId === null && form.responseLimit === "one_per_respondent") {
-                  return yield* new Unauthenticated({ reason: "identityRequired" });
-                }
                 // A retry reports the response its key already made, whatever changed since (ADR 0016).
                 const replayed = yield* findByIdempotencyKey(
                   tx,
@@ -164,6 +160,10 @@ export class Submission extends Context.Service<
                 );
                 if (replayed !== undefined) {
                   return { responseId: replayed.id, revision: String(replayed.revision) };
+                }
+                // The limit counts responses per respondent, so a grant can't answer a limited form (ADR 0011).
+                if (respondentId === null && form.responseLimit === "one_per_respondent") {
+                  return yield* new Unauthenticated({ reason: "identityRequired" });
                 }
                 // Only a published form opens, so an open form has a current version.
                 if (form.availability === "closed" || form.currentVersionId === null) {

@@ -67,43 +67,55 @@ const toCurrentVersionSummary = (
 });
 
 /** A new form is closed, unlimited and unpublished, with its first draft. */
-export const insertFormWithDraft = (db: Db, tenant: TenantId, definition: Schema.Json) =>
-  Effect.gen(function* () {
-    const id = yield* newId;
-    const now = yield* currentInstant;
-    return yield* db.transaction((tx) =>
-      Effect.gen(function* () {
-        const [form] = yield* tx
-          .insert(forms)
-          .values({
-            id,
-            tenant,
-            availability: "closed",
-            responseLimit: "unlimited",
-            createdAt: now,
-            updatedAt: now,
-          })
-          .returning();
-        const [draft] = yield* tx
-          .insert(drafts)
-          .values({ formId: id, definition, updatedAt: now })
-          .returning();
-        return { form: toForm(form!), draft: toDraft(draft!) };
-      }),
-    );
-  });
+export const insertFormWithDraft = Effect.fnUntraced(function* (
+  db: Db,
+  tenant: TenantId,
+  definition: Schema.Json,
+) {
+  const id = yield* newId;
+  const now = yield* currentInstant;
+  return yield* db.transaction((tx) =>
+    Effect.gen(function* () {
+      const [form] = yield* tx
+        .insert(forms)
+        .values({
+          id,
+          tenant,
+          availability: "closed",
+          responseLimit: "unlimited",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      const [draft] = yield* tx
+        .insert(drafts)
+        .values({ formId: id, definition, updatedAt: now })
+        .returning();
+      return { form: toForm(form!), draft: toDraft(draft!) };
+    }),
+  );
+});
 
 /** A form row locked `FOR UPDATE` in the actor's tenant, which every draft write takes first. */
 export type LockedForm = Form & Brand.Brand<"LockedForm">;
 
-/** Must run inside the write's transaction, which holds the lock until it ends. */
-export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
+/** The tenant's form row under a row lock, held until the caller's transaction ends. */
+const lockedForm = <F extends Form>(
+  db: Db,
+  tenant: TenantId,
+  formId: string,
+  strength: "update" | "share",
+) =>
   db
     .select()
     .from(forms)
     .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
-    .for("update")
-    .pipe(Effect.map(([row]) => row && (toForm(row) as LockedForm)));
+    .for(strength)
+    .pipe(Effect.map(([row]) => row && (toForm(row) as F)));
+
+/** Must run inside the write's transaction, which holds the lock until it ends. */
+export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
+  lockedForm<LockedForm>(db, tenant, formId, "update");
 
 /**
  * A form row locked `FOR SHARE` in the actor's tenant, which responses are read and written under: it waits
@@ -113,30 +125,28 @@ export type SharedForm = Form & Brand.Brand<"SharedForm">;
 
 /** Must run inside the transaction, which holds the lock until it ends. */
 export const shareForm = (db: Db, tenant: TenantId, formId: string) =>
-  db
-    .select()
-    .from(forms)
-    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
-    .for("share")
-    .pipe(Effect.map(([row]) => row && (toForm(row) as SharedForm)));
+  lockedForm<SharedForm>(db, tenant, formId, "share");
 
 /** Its draft goes by cascade; a trigger refuses the delete once the form has any version. */
 export const deleteForm = (db: Db, form: LockedForm) =>
   db.delete(forms).where(eq(forms.id, form.id));
 
-export const updateFormSettings = (db: Db, form: LockedForm, settings: FormSettings) =>
-  Effect.gen(function* () {
-    const [row] = yield* db
-      .update(forms)
-      .set({
-        availability: settings.availability ?? undefined,
-        responseLimit: settings.responseLimit ?? undefined,
-        updatedAt: yield* currentInstant,
-      })
-      .where(eq(forms.id, form.id))
-      .returning();
-    return toForm(row!);
-  });
+export const updateFormSettings = Effect.fnUntraced(function* (
+  db: Db,
+  form: LockedForm,
+  settings: FormSettings,
+) {
+  const [row] = yield* db
+    .update(forms)
+    .set({
+      availability: settings.availability ?? undefined,
+      responseLimit: settings.responseLimit ?? undefined,
+      updatedAt: yield* currentInstant,
+    })
+    .where(eq(forms.id, form.id))
+    .returning();
+  return toForm(row!);
+});
 
 const currentVersion = and(
   eq(formVersions.id, forms.currentVersionId),
@@ -185,26 +195,29 @@ export const listForms = (db: Db, tenant: TenantId, ref?: ExternalRef) =>
       ),
     );
 
-export const findFormDetail = (db: Db, tenant: TenantId, formId: string) =>
-  Effect.gen(function* () {
-    const [row] = yield* db
-      .select({ form: forms, draft: draftSummaryColumns, currentVersion: versionSummaryColumns })
-      .from(forms)
-      .leftJoin(drafts, eq(drafts.formId, forms.id))
-      .leftJoin(formVersions, currentVersion)
-      .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)));
-    if (row === undefined) return undefined;
-    return {
-      id: row.form.id,
-      availability: row.form.availability,
-      responseLimit: row.form.responseLimit,
-      currentVersion: row.currentVersion && toCurrentVersionSummary(row.currentVersion),
-      draft: row.draft && toDraftSummary(row.draft),
-      externalRefs: yield* findFormExternalRefs(db, row.form.id),
-      createdAt: row.form.createdAt,
-      updatedAt: row.form.updatedAt,
-    } satisfies FormDetail;
-  });
+export const findFormDetail = Effect.fnUntraced(function* (
+  db: Db,
+  tenant: TenantId,
+  formId: string,
+) {
+  const [row] = yield* db
+    .select({ form: forms, draft: draftSummaryColumns, currentVersion: versionSummaryColumns })
+    .from(forms)
+    .leftJoin(drafts, eq(drafts.formId, forms.id))
+    .leftJoin(formVersions, currentVersion)
+    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)));
+  if (row === undefined) return undefined;
+  return {
+    id: row.form.id,
+    availability: row.form.availability,
+    responseLimit: row.form.responseLimit,
+    currentVersion: row.currentVersion && toCurrentVersionSummary(row.currentVersion),
+    draft: row.draft && toDraftSummary(row.draft),
+    externalRefs: yield* findFormExternalRefs(db, row.form.id),
+    createdAt: row.form.createdAt,
+    updatedAt: row.form.updatedAt,
+  } satisfies FormDetail;
+});
 
 /** Sorted by namespace, then `refId`, byte-wise, so both drivers agree whatever their collation. */
 export const findFormExternalRefs = (db: Db, formId: string) =>

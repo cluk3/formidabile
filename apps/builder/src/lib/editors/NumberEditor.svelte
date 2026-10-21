@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { QuestionSnapshotOf } from "@fb/core/definition";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { checkClass, fieldClass, optionalNumber, type EditorProps } from "./props.ts";
+  import type { EditorProps } from "#lib/editors/props.ts";
+  import { checkClass, fieldClass, optionalNumber } from "#lib/fields.ts";
 
   let { question, setConfig }: EditorProps<QuestionSnapshotOf<"number">> = $props();
 </script>

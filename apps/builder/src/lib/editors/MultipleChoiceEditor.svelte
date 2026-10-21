@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { QuestionSnapshotOf } from "@fb/core/definition";
   import { Input } from "#lib/components/ui/input/index.js";
-  import ChoiceOptions from "./ChoiceOptions.svelte";
-  import { fieldClass, optionalNumber, type EditorProps } from "./props.ts";
+  import ChoiceOptions from "#lib/editors/ChoiceOptions.svelte";
+  import type { EditorProps } from "#lib/editors/props.ts";
+  import { fieldClass, optionalNumber } from "#lib/fields.ts";
 
   let {
     question,

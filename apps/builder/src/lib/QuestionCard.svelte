@@ -12,7 +12,7 @@
   import { tick } from "svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { checkClass, fieldClass, nativeInputClass, optionalText } from "#lib/editors/props.ts";
+  import { checkClass, fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import { editorOf, questionTypeNames, registry } from "#lib/registry.ts";
 
   let {

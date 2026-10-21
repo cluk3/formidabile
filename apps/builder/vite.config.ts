@@ -41,9 +41,11 @@ export default defineConfig({
         cache: { input: [{ auto: true }, "!.svelte-kit/**", "!build/**"], output: ["build/**"] },
       },
       preview: { command: "vp preview", dependsOn: ["build"], cache: false },
-      // `svelte-kit sync` rewrites `.svelte-kit/`, which would make the task miss the cache every time.
+      // `svelte-kit sync` rewrites `.svelte-kit/`, which would make the task miss the cache every time. The build
+      // rewrites `.svelte-kit/types` too, so the check waits for it rather than read them mid-write.
       "check:svelte": {
         command: "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+        dependsOn: ["build"],
         cache: { input: [{ auto: true }, "!.svelte-kit/**"], output: [] },
       },
     },
