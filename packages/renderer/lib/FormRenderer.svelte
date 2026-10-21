@@ -64,14 +64,13 @@
   let formElement = $state<HTMLFormElement>();
   const controls = "input, select, textarea";
 
-  const report = (code: ProblemCode) => onerror?.({ code, message: messages[code] });
   const stop = (code: ProblemCode) => {
     loaded = { state: "stopped", code };
-    report(code);
+    onerror?.({ code, message: messages[code] });
   };
   const warn = (next: Notice) => {
     notice = next;
-    report(next.code);
+    onerror?.({ code: next.code, message: messages[next.code] });
   };
 
   const answer = (form: Loaded, initial: Record<string, Draft>) => {
