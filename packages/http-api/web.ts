@@ -12,7 +12,10 @@ export type FormModuleHandlerOptions = {
 } & (
   | { readonly jwt: JwtOptions; readonly resolveActor?: undefined }
   | {
-      /** The host's own resolver, for example one reading its session cookie. `null` means no credentials. */
+      /**
+       * The host's own resolver, for example one reading its session cookie. `null` means no credentials.
+       * Its actor is held to the same limits as a token's: otherwise 401 `invalid`.
+       */
       readonly resolveActor: (request: Request) => Promise<Actor | null>;
       readonly jwt?: undefined;
     }
