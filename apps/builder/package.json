@@ -11,6 +11,9 @@
       "./src/lib/*/index.js"
     ]
   },
+  "scripts": {
+    "prepare": "svelte-kit sync"
+  },
   "dependencies": {
     "@fb/api-client": "workspace:*",
     "@fb/core": "workspace:*",
