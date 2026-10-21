@@ -203,8 +203,9 @@ describe("/projects/<id>", () => {
   };
 
   test("mounts the element for the project's one open form, in the page's shell", async () => {
-    const projectId = `acme-${crypto.randomUUID()}`;
-    const form = await projectForm(admin, projectId, "open", `Feedback & "more"`);
+    const suffix = crypto.randomUUID();
+    const projectId = `acme-${suffix}&"more"`;
+    const form = await projectForm(admin, projectId, "open");
     await projectForm(admin, projectId, "closed");
 
     const { status, html } = await page(projectId);
@@ -212,8 +213,8 @@ describe("/projects/<id>", () => {
     expect(status).toBe(200);
     expect(html).toBe(
       `<!doctype html><title>Project form</title><main>` +
-        `<form-renderer title="Feedback &#38; &#34;more&#34;" form-id="${form.id}" data-project="${projectId}">` +
-        `</form-renderer></main>`,
+        `<form-renderer api-base-url="/api" form-id="${form.id}" ` +
+        `data-project="acme-${suffix}&#38;&#34;more&#34;"></form-renderer></main>`,
     );
   });
 

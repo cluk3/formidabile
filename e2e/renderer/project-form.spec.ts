@@ -1,45 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { type APIRequestContext, expect, test } from "@playwright/test";
-
-// Seeds a project of the test's own through the host, signed in as `acme-admin`: each form carries the project's
-// reference, and is published and opened or left closed.
-const seedProject = async (
-  request: APIRequestContext,
-  forms: ReadonlyArray<{ readonly title: string; readonly availability: "open" | "closed" }>,
-) => {
-  const projectId = `acme-e2e-${randomUUID()}`;
-  await request.post("/login", { form: { user: "acme-admin" } });
-  const { token } = (await (await request.get("/token")).json()) as { token: string };
-  const api = async (method: "POST" | "PATCH", path: string, data: unknown) => {
-    const response = await request.fetch(`/api${path}`, {
-      method,
-      data,
-      headers: { authorization: `Bearer ${token}` },
-    });
-    expect(response.ok(), `${method} ${path}`).toBe(true);
-    return response.json();
-  };
-  const ids: string[] = [];
-  for (const { title, availability } of forms) {
-    const { form, draft } = await api("POST", "/forms", {
-      definition: {
-        format: 1,
-        title,
-        questions: [
-          { id: randomUUID(), type: "boolean", label: "Ready?", required: true, config: {} },
-        ],
-      },
-    });
-    await api("POST", `/forms/${form.id}/external-refs`, {
-      namespace: "project",
-      refId: projectId,
-    });
-    await api("POST", `/forms/${form.id}/draft/publish`, { expectedRevision: draft.revision });
-    if (availability === "open") await api("PATCH", `/forms/${form.id}`, { availability });
-    ids.push(form.id);
-  }
-  return { projectId, ids };
-};
+import { expect, test } from "@playwright/test";
+import { seedProject } from "./projects.ts";
 
 test("the form for project X mounts the element for the project's one open form", async ({
   page,

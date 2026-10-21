@@ -1,8 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { seedProject } from "./projects.ts";
 
-// The reference host serves its page under the strict CSP from ADR 0008 in `vp preview`. The element must render
+// The reference host serves its pages under the strict CSP from ADR 0008 in `vp preview`. The element must render
 // fully styled with no violation, from the outer tree, from a nested component, and through the host's theming.
-test("the element renders styled under a strict CSP with no violations", async ({ page }) => {
+test("the element renders styled under a strict CSP with no violations", async ({
+  page,
+  request,
+}) => {
   const problems: string[] = [];
   const violations: string[] = [];
   // The page reports each violation to this Node-side array, so nothing is read back off `window`.
@@ -20,7 +25,10 @@ test("the element renders styled under a strict CSP with no violations", async (
   });
   page.on("pageerror", (error) => problems.push(error.message));
 
-  const response = await page.goto("/");
+  const { projectId } = await seedProject(request, [
+    { title: `Styled form ${randomUUID()}`, availability: "open" },
+  ]);
+  const response = await page.goto(`/projects/${projectId}`);
   expect(response?.headers()["content-security-policy"]).toContain(
     "require-trusted-types-for 'script'",
   );
@@ -28,11 +36,14 @@ test("the element renders styled under a strict CSP with no violations", async (
   const element = page.locator("form-renderer");
   await expect(element.locator("[part=submit]")).toBeVisible();
 
-  // The outer tree: the wrapper's own markup and its styles.
+  // The outer tree: the renderer's own markup and its styles.
   await expect(element.locator(".title")).toHaveCSS("color", "rgb(10, 20, 30)");
-  // A nested component, with a host custom property flowing in through the shadow boundary.
-  await expect(element.locator(".value")).toHaveCSS("color", "rgb(200, 0, 100)");
-  await expect(element.locator(".card")).toHaveCSS("border-top-color", "rgb(0, 100, 200)");
+  // Nested components, with host custom properties flowing in through the shadow boundary.
+  await expect(element.locator(".required")).toHaveCSS("color", "rgb(200, 0, 100)");
+  await expect(element.locator("[part=question]")).toHaveCSS(
+    "border-top-color",
+    "rgb(0, 100, 200)",
+  );
   // The host's `::part()` rule.
   await expect(element.locator("[part=submit]")).toHaveCSS("background-color", "rgb(255, 200, 0)");
 
