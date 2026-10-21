@@ -34,8 +34,24 @@ export default defineConfig({
     ignorePatterns,
   },
   test: {
-    include: testPostgres ? [postgresTests] : configDefaults.include,
-    exclude: [...configDefaults.exclude, "e2e/**", ...(testPostgres ? [] : [postgresTests])],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "workspace",
+          include: testPostgres ? [postgresTests] : configDefaults.include,
+          // The renderer's tests need its own config (Svelte, and a browser), so it is a project of its own.
+          exclude: [
+            ...configDefaults.exclude,
+            "e2e/**",
+            "packages/renderer/**",
+            ...(testPostgres ? [] : [postgresTests]),
+          ],
+        },
+      },
+      // Browser tests need no Docker, so they stay out of the Postgres run.
+      ...(testPostgres ? [] : ["packages/renderer"]),
+    ],
   },
   run: {
     cache: true,
@@ -47,7 +63,18 @@ export default defineConfig({
         dependsOn: ["@fb/api-client#generate"],
         cache: false,
       },
-      test: "vp test",
+      // The renderer's browser test imports its built bundle.
+      test: { command: "vp test", dependsOn: ["@fb/renderer#build"] },
+      "check:svelte": {
+        command: "true",
+        dependsOn: ["@fb/renderer#check:svelte"],
+      },
+      // Runs Playwright against `vp preview` of the reference host, which `playwright.config.ts` starts.
+      e2e: {
+        command: "playwright test --config e2e/playwright.config.ts",
+        dependsOn: ["@fb/reference-host#build"],
+        cache: false,
+      },
       postgres: {
         command: "docker compose up --wait postgres",
         cache: false,
@@ -60,7 +87,15 @@ export default defineConfig({
       // Runs the same task names as the CI jobs. Vite Task requires a command, so the gates are dependencies.
       ready: {
         command: "true",
-        dependsOn: ["check", "check:generated", "@fb/server#check:migrations", "test", "test:pg"],
+        dependsOn: [
+          "check",
+          "check:svelte",
+          "check:generated",
+          "@fb/server#check:migrations",
+          "test",
+          "test:pg",
+          "e2e",
+        ],
       },
     },
   },

@@ -6,6 +6,7 @@
     "prepare": "vp config"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "svelte": "catalog:",
     "typescript": "catalog:",

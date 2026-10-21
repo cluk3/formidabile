@@ -1,0 +1,30 @@
+{
+  "name": "@fb/renderer",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "./element.ts",
+    "./dist/form-renderer.js",
+    "./lib/FormRendererElement.svelte"
+  ],
+  "exports": {
+    ".": {
+      "source": "./index.ts",
+      "svelte": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./element": "./dist/form-renderer.js"
+  },
+  "dependencies": {
+    "svelte": "catalog:"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "playwright": "catalog:",
+    "svelte-check": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest-browser-svelte": "catalog:"
+  }
+}

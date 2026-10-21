@@ -1,0 +1,9 @@
+/* The host themes the element only through custom properties and ::part(), as the embedding contract says. */
+form-renderer {
+  --form-renderer-accent: rgb(200, 0, 100);
+  --form-renderer-border: rgb(0, 100, 200);
+}
+
+form-renderer::part(submit) {
+  background-color: rgb(255, 200, 0);
+}
