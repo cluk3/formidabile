@@ -63,6 +63,83 @@ export const fakeApi = (
   return { requests, fetch };
 };
 
+const id = (n: number) => `0192f0c4-0000-7000-8000-0000000001${String(n).padStart(2, "0")}`;
+
+/** One question of every type and display, each required unless its label says otherwise. */
+export const questions = {
+  name: {
+    id: id(1),
+    type: "text",
+    label: "Your name",
+    description: "As it should appear on your badge",
+    required: true,
+    config: { display: "single_line", maxLength: 40 },
+  },
+  comments: {
+    id: id(2),
+    type: "text",
+    label: "Comments (optional)",
+    required: false,
+    config: { display: "multi_line" },
+  },
+  email: { id: id(3), type: "email", label: "Email", required: true, config: {} },
+  guests: {
+    id: id(4),
+    type: "number",
+    label: "Guests",
+    required: true,
+    config: { integer: true, min: 1, max: 10 },
+  },
+  arrival: {
+    id: id(5),
+    type: "date",
+    label: "Arrival date",
+    required: true,
+    config: { min: "2026-01-01", max: "2026-12-31" },
+  },
+  meal: {
+    id: id(6),
+    type: "single_choice",
+    label: "Meal",
+    required: true,
+    config: {
+      display: "radio",
+      options: [
+        { value: "veg", label: "Vegetarian" },
+        { value: "fish", label: "Fish" },
+      ],
+    },
+  },
+  size: {
+    id: id(7),
+    type: "single_choice",
+    label: "T-shirt size",
+    required: true,
+    config: {
+      display: "dropdown",
+      options: [
+        { value: "s", label: "Small" },
+        { value: "m", label: "Medium" },
+      ],
+    },
+  },
+  workshops: {
+    id: id(8),
+    type: "multiple_choice",
+    label: "Workshops",
+    required: true,
+    config: {
+      options: [
+        { value: "svelte", label: "Svelte" },
+        { value: "effect", label: "Effect" },
+        { value: "zod", label: "Zod" },
+      ],
+      maxSelected: 2,
+    },
+  },
+  parking: { id: id(9), type: "boolean", label: "Need parking?", required: true, config: {} },
+} satisfies Record<string, FormDefinition["questions"][number]>;
+
 export const definitionOf = (
   questions: FormDefinition["questions"],
   title = "Event feedback",
