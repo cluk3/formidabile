@@ -36,6 +36,22 @@ export interface paths {
         patch: operations["forms.updateSettings"];
         trace?: never;
     };
+    "/forms/{formId}/external-refs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["forms.addExternalRef"];
+        delete: operations["forms.removeExternalRef"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forms/{formId}/draft": {
         parameters: {
             query?: never;
@@ -271,6 +287,15 @@ export interface components {
             definition: components["schemas"]["FormDefinition"];
             updatedAt: string;
         };
+        ExternalRef: {
+            namespace: string;
+            refId: string;
+        };
+        ExternalRefLimitReachedEncoded: {
+            /** @enum {string} */
+            _tag: "ExternalRefLimitReached";
+            limit: number;
+        };
         FormPublishedEncoded: {
             /** @enum {string} */
             _tag: "FormPublished";
@@ -287,6 +312,7 @@ export interface components {
             responseLimit: "unlimited" | "one_per_respondent";
             currentVersion: components["schemas"]["VersionSummary"] | null;
             draft: components["schemas"]["DraftSummary"] | null;
+            externalRefs: components["schemas"]["ExternalRef"][];
             createdAt: string;
             updatedAt: string;
         };
@@ -317,7 +343,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     "forms.list": {
         parameters: {
-            query?: never;
+            query?: {
+                refNamespace?: string;
+                refId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -603,6 +632,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FormNotPublishedEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "forms.addExternalRef": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExternalRef"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        externalRefs: components["schemas"]["ExternalRef"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description ExternalRefLimitReached */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalRefLimitReachedEncoded"];
+                };
+            };
+            /** @description ValidationFailed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationFailedEncoded"];
+                };
+            };
+        };
+    };
+    "forms.removeExternalRef": {
+        parameters: {
+            query: {
+                namespace: string;
+                refId: string;
+            };
+            header?: never;
+            path: {
+                formId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        externalRefs: components["schemas"]["ExternalRef"][];
+                    };
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthenticatedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description ValidationFailed */
