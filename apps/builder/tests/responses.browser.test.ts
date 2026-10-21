@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
 import ResponsesPage from "#lib/ResponsesPage.svelte";
-import { admin, config, fakeHost, json } from "./fake-host.ts";
+import { admin, analyst, config, fakeHost, json } from "./fake-host.ts";
 
 const formId = crypto.randomUUID();
 const at = "2026-10-21T08:00:00.000Z";
@@ -314,4 +314,125 @@ test("an opened response reads as its own version's questions and answers, not t
   await expect.element(answerTo("Comments")).toHaveTextContent("Not answered");
   expect(detail.getByRole("textbox").elements()).toEqual([]);
   expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);
+});
+
+const openResponseFrom = async (screen: Awaited<ReturnType<typeof renderPage>>, who: string) => {
+  const list = screen.getByRole("list", { name: "Responses" });
+  await list.getByRole("listitem").filter({ hasText: who }).first().getByRole("button").click();
+  const detail = screen.getByRole("region", { name: `Response from ${who}` });
+  await expect.element(detail).toBeVisible();
+  return { list, detail };
+};
+
+test("an admin deletes one response after confirming", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const doomed = response(v1, "alice");
+  const host = responsesHost([v1], [doomed, response(v1, "bob")]);
+  const screen = await renderPage(host.fetch);
+  const { list, detail } = await openResponseFrom(screen, "alice");
+
+  await detail.getByRole("button", { name: "Delete response" }).click();
+  const confirm = screen.getByRole("alert");
+  await expect
+    .element(confirm.getByText("Delete this response? Its answers are removed for good."))
+    .toBeVisible();
+  await confirm.getByRole("button", { name: "Delete permanently" }).click();
+
+  await expect.element(screen.getByText("Response deleted", { exact: true })).toBeVisible();
+  await expect.element(detail).not.toBeInTheDocument();
+  await expect.element(list.getByText("alice", { exact: true })).not.toBeInTheDocument();
+  await expect.element(list.getByText("bob", { exact: true })).toBeVisible();
+  expect(host.requests.filter((r) => r.startsWith("DELETE"))).toEqual([
+    `DELETE /responses/${doomed.id}`,
+  ]);
+});
+
+test("an admin deletes every response from a respondent across the tenant", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const host = responsesHost(
+    [v1],
+    [response(v1, "alice"), response(v1, "bob"), response(v1, "alice")],
+  );
+  const screen = await renderPage(host.fetch);
+  const { list, detail } = await openResponseFrom(screen, "alice");
+
+  await detail.getByRole("button", { name: "Delete all responses from alice" }).click();
+  const confirm = screen.getByRole("alert");
+  await expect
+    .element(
+      confirm.getByText(
+        "Delete every response from alice, in every form of this tenant? They're removed for good.",
+      ),
+    )
+    .toBeVisible();
+  await confirm.getByRole("button", { name: "Delete permanently" }).click();
+
+  await expect
+    .element(screen.getByText("Deleted 2 responses from alice", { exact: true }))
+    .toBeVisible();
+  await expect.element(list.getByText("alice", { exact: true })).not.toBeInTheDocument();
+  await expect.element(list.getByText("bob", { exact: true })).toBeVisible();
+  expect(host.requests.filter((r) => r.startsWith("DELETE"))).toEqual([
+    "DELETE /respondents/alice/responses",
+  ]);
+});
+
+test("an unknown outcome on a delete says so and reloads the list", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const doomed = response(v1, "alice");
+  const host = responsesHost([v1], [doomed, response(v1, "bob")], {
+    answer: (route) => {
+      if (route !== `DELETE /responses/${doomed.id}`) return undefined;
+      host.stored = host.stored.filter((r) => r !== doomed);
+      return new Response("Bad Gateway", { status: 502 });
+    },
+  });
+  const screen = await renderPage(host.fetch);
+  const { list, detail } = await openResponseFrom(screen, "alice");
+
+  await detail.getByRole("button", { name: "Delete response" }).click();
+  await screen.getByRole("button", { name: "Delete permanently" }).click();
+
+  await expect
+    .element(
+      screen.getByText(
+        "We couldn't confirm the response was deleted, so the list has been reloaded.",
+      ),
+    )
+    .toBeVisible();
+  await expect.element(list.getByText("alice", { exact: true })).not.toBeInTheDocument();
+  expect(host.queries).toHaveLength(2);
+});
+
+test("an analyst reads responses but is offered no delete", async () => {
+  const v1 = version(1, [textQuestion("Name")]);
+  const host = responsesHost(
+    [v1],
+    [response(v1, "alice", { [v1.definition.questions[0]!.id]: "Ada" })],
+    {
+      capabilities: analyst,
+    },
+  );
+  const screen = await renderPage(host.fetch);
+  const { detail } = await openResponseFrom(screen, "alice");
+
+  await expect.element(detail.getByText("Ada", { exact: true })).toBeVisible();
+  expect(screen.getByRole("button", { name: /Delete/ }).elements()).toEqual([]);
+});
+
+test("someone without responses:read is asked to sign in", async () => {
+  const host = responsesHost([], [], {
+    answer: (route) =>
+      route === "GET /responses"
+        ? json(403, { _tag: "Forbidden", capability: "responses:read" })
+        : undefined,
+  });
+  const screen = await renderPage(host.fetch);
+
+  await expect
+    .element(screen.getByText(/^Sign in as someone who can read responses\./))
+    .toBeVisible();
+  await expect
+    .element(screen.getByRole("link", { name: "Sign in" }))
+    .toHaveAttribute("href", config.loginUrl);
 });

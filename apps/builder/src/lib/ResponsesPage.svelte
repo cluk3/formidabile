@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { FormApiClient, Schemas } from "@fb/api-client";
+  import type { Schemas } from "@fb/api-client";
   import { onMount } from "svelte";
-  import { outcome } from "#lib/api.ts";
+  import { outcome, type BuilderClient, type Outcome } from "#lib/api.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { fieldClass, nativeInputClass } from "#lib/editors/props.ts";
@@ -11,7 +11,7 @@
     client,
     formId,
     signInHref,
-  }: { client: FormApiClient; formId: string; signInHref: string } = $props();
+  }: { client: BuilderClient; formId: string; signInHref: string } = $props();
   const uid = $props.id();
 
   type Filters = {
@@ -35,6 +35,12 @@
   let loading = $state(false);
   let notice = $state<string | null>(null);
   let opened = $state.raw<Schemas["ResponseDetail"] | null>(null);
+  /** Whether to offer the deletes: only with `responses:delete`. */
+  let canDelete = $state(false);
+  let confirming = $state<"response" | "respondent" | null>(null);
+  let busy = $state(false);
+
+  const tokenUnavailable = "Couldn't get a sign-in token from the host. Try again.";
 
   /** One page of the list under `filters`, newest first: the first one, or the page after `cursor`. */
   const loadPage = async (filters: Filters, cursor?: string) => {
@@ -52,11 +58,13 @@
     } else if (result.kind === "signIn") signedOut = true;
     else if (result.kind === "rejected" && result.error._tag === "ValidationFailed") {
       notice = `These filters aren't valid: ${result.error.issues.map((issue) => issue.message).join("; ")}`;
-    } else loadFailed = true;
+    } else if (result.kind === "rejected" && result.error._tag === "Forbidden") signedOut = true;
+    else loadFailed = true;
   };
 
   const open = async (summary: Schemas["ResponseSummary"]) => {
     notice = null;
+    confirming = null;
     const result = await outcome(() =>
       client.GET("/responses/{responseId}", { params: { path: { responseId: summary.id } } }),
     );
@@ -74,6 +82,59 @@
     if (opened?.response.id === responseId) opened = null;
   };
 
+  /** What a refused or unconfirmed delete leaves on screen; `ok` is handled by each delete. */
+  const deleteFailed = async (
+    result: Exclude<Outcome<unknown, { _tag: string }>, { kind: "ok" }>,
+    unconfirmed: string,
+  ) => {
+    if (result.kind === "unknown") {
+      opened = null;
+      await loadPage(applied);
+      notice = `We couldn't confirm ${unconfirmed} deleted, so the list has been reloaded.`;
+    } else if (result.kind === "signIn") signedOut = true;
+    else if (result.kind === "tokenUnavailable") notice = tokenUnavailable;
+    else if (result.kind === "rejected" && result.error._tag === "Forbidden") {
+      canDelete = false;
+      notice = "You can't delete responses. Sign in as someone who can.";
+    } else notice = "The responses couldn't be deleted.";
+  };
+
+  const deleteResponse = async (responseId: string) => {
+    busy = true;
+    notice = null;
+    const result = await outcome(() =>
+      client.DELETE("/responses/{responseId}", { params: { path: { responseId } } }),
+    );
+    busy = false;
+    confirming = null;
+    if (result.kind === "ok") {
+      forget(responseId);
+      notice = "Response deleted";
+    } else if (result.kind === "rejected" && result.error._tag === "NotFound") {
+      forget(responseId);
+      notice = "This response was already deleted.";
+    } else await deleteFailed(result, "the response was");
+  };
+
+  /** Erasure (ADR 0013): every response the respondent submitted to any form in the tenant. */
+  const deleteRespondent = async (respondentId: string) => {
+    busy = true;
+    notice = null;
+    const result = await outcome(() =>
+      client.DELETE("/respondents/{respondentId}/responses", {
+        params: { path: { respondentId } },
+      }),
+    );
+    busy = false;
+    confirming = null;
+    if (result.kind === "ok") {
+      opened = null;
+      await loadPage(applied);
+      const { deleted } = result.data;
+      notice = `Deleted ${deleted} ${deleted === 1 ? "response" : "responses"} from ${respondentId}`;
+    } else await deleteFailed(result, "the respondent's responses were");
+  };
+
   const loadVersions = async () => {
     const result = await outcome(() =>
       client.GET("/forms/{formId}/versions", { params: { path: { formId } } }),
@@ -81,7 +142,8 @@
     if (result.kind === "ok") versions = result.data.versions;
   };
 
-  const optional = (value: string) => (value.trim() === "" ? undefined : value.trim());
+  // Respondent ids and references are opaque, so only an empty field leaves its filter out.
+  const optional = (value: string) => (value === "" ? undefined : value);
 
   const filter = (event: SubmitEvent) => {
     event.preventDefault();
@@ -100,6 +162,9 @@
   };
 
   onMount(() => {
+    void client.capabilities().then((capabilities) => {
+      canDelete = capabilities.includes("responses:delete");
+    });
     void loadVersions();
     void loadPage({});
   });
@@ -175,8 +240,58 @@
       {/if}
     {/if}
     {#if opened !== null}
+      {@const { id, respondentId: respondent } = opened.response}
       {#key opened}
-        <ResponseDetail detail={opened} close={() => (opened = null)} />
+        <ResponseDetail
+          detail={opened}
+          close={() => {
+            opened = null;
+            confirming = null;
+          }}
+        >
+          {#snippet actions()}
+            {#if canDelete}
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={busy}
+                  onclick={() => (confirming = "response")}>Delete response</Button
+                >
+                {#if respondent !== null}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={busy}
+                    onclick={() => (confirming = "respondent")}
+                    >Delete all responses from {respondent}</Button
+                  >
+                {/if}
+              </div>
+              {#if confirming !== null}
+                <div role="alert" class="flex flex-wrap items-center gap-2 rounded-md border p-3">
+                  <p class="grow">
+                    {confirming === "response"
+                      ? "Delete this response? Its answers are removed for good."
+                      : `Delete every response from ${respondent}, in every form of this tenant? They're removed for good.`}
+                  </p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={busy}
+                    onclick={() =>
+                      confirming === "response" || respondent === null
+                        ? deleteResponse(id)
+                        : deleteRespondent(respondent)}>Delete permanently</Button
+                  >
+                  <Button variant="outline" size="sm" onclick={() => (confirming = null)}
+                    >Cancel</Button
+                  >
+                </div>
+              {/if}
+            {/if}
+          {/snippet}
+        </ResponseDetail>
       {/key}
     {/if}
   {/if}
