@@ -15,6 +15,47 @@ packages/<name>/
 - **No barrels.** Don't add an `index.ts` that re-exports a subtree. Add another root file and list it in `exports`.
 - **Root config files aren't public.** `vite.config.ts`, `drizzle.config.ts` and `tsconfig.json` at a package root belong to that package's tooling. Nothing imports them.
 
+## The workspace
+
+| Workspace             | Entry points                                                  | Runs in         |
+| --------------------- | ------------------------------------------------------------- | --------------- |
+| `@fb/core`            | `definition`, `answers`, `editing`                            | browser, server |
+| `@fb/api-client`      | `.`                                                           | browser         |
+| `@fb/renderer`        | `.` (Svelte component), `./element` (built `<form-renderer>`) | browser         |
+| `@fb/server`          | `.`, `actor`, `database`, `migrate`, `testing`                | server          |
+| `@fb/http-api`        | `.`, `web`                                                    | server          |
+| `apps/api-server`     | none: nothing imports an app                                  | server          |
+| `apps/builder`        | none                                                          | browser         |
+| `apps/reference-host` | none. `src/` is the page, `server/` the Vite plugin           | browser, server |
+
+## Boundaries
+
+`vp run boundaries` runs dependency-cruiser with `.dependency-cruiser.cjs` over `packages/`, `apps/` and `e2e/`. It is part of `vp run ready` and the `static` CI job. A violation names its rule, and the rule's `comment` in the config says why it exists.
+
+- **Deep imports.** `entrypoint-boundary-from-app`, `entrypoint-boundary-across-packages`, `tests-through-entrypoints` and `tests-folder-is-private` enforce the import rules above. A package's tests are held to them too.
+- **No config imports.** `no-config-imports` bans importing any `*.config.ts`.
+- **No cycles.** `no-circular` applies everywhere except shadcn-svelte's vendored `components/ui/`.
+- **Browser-safe code.** The `browser-safe-*` rules apply the list below. Tests and `*.config.ts` files run in Node, so they are exempt.
+- **Who may import whom.** One `dependency-matrix-*` rule per row. Any workspace dependency not in the table is forbidden, and tests may import any package.
+
+  | From                         | May import                                                     |
+  | ---------------------------- | -------------------------------------------------------------- |
+  | `core`                       | no workspace packages                                          |
+  | `api-client`                 | no workspace packages                                          |
+  | `renderer`                   | `core` (`definition`, `answers`), `api-client`                 |
+  | `server`                     | `core`                                                         |
+  | `http-api`                   | `server`, `core`                                               |
+  | `apps/api-server`            | `http-api`, `server`                                           |
+  | `apps/builder`               | `core`, `api-client`, the `renderer` component (not `element`) |
+  | `apps/reference-host/src`    | `renderer/element`, `api-client`                               |
+  | `apps/reference-host/server` | `http-api/web` only                                            |
+
+  Nothing imports from `apps/` (`no-import-of-apps-from-outside`, `no-import-between-apps`).
+
+The rules are tested, not trusted. `boundaries/fixtures/` is a miniature of this layout with one forbidden import per rule and the allowed ones beside them, and `boundaries/boundaries.test.ts` asserts that exactly the expected rules fire on exactly the expected imports. Changing a rule means changing that list.
+
+dependency-cruiser compiles a `.svelte` file before it reads it, which erases `import type`, so a type-only deep import in a `.svelte` file gets past it. Oxlint's `no-restricted-imports` backstops that for `@fb/<pkg>/<subfolder>` and `packages/` paths in `.svelte` files (see `vite.config.ts`). It cannot see a relative path into a sibling package that doesn't mention `packages/`, so import by package name.
+
 ## Generated files
 
 `packages/http-api/openapi.json` is generated from `FormApi`, and `packages/api-client/lib/schema.d.ts` from that file. Both are committed and never edited by hand. After changing the API, run `vp run @fb/api-client#generate` (it regenerates both) and commit the result. `vp run check:generated` regenerates them and fails if either differs from the committed copy, and CI runs it.
@@ -58,6 +99,6 @@ These paths run in the browser:
 - `apps/builder`
 - `apps/reference-host/src`
 
-Browser-safe code never imports `effect` or `@effect/*`, `drizzle-orm`, `jose`, Node built-ins, `@fb/server` or `@fb/http-api`. Everything else is server code. A new package is server code until it's added to this list on purpose.
+Browser-safe code never imports `effect` or `@effect/*`, `drizzle-orm`, `jose`, Node built-ins, `@fb/server` or `@fb/http-api`. Everything else is server code. A new package is server code until it's added to this list on purpose: add it to `BROWSER_SAFE` in `.dependency-cruiser.cjs` and to the list here.
 
 `@fb/core` runs in both: its tsconfig sets `lib: ["ES2024"]` and `types: []`, so DOM or Node usage fails to compile.

@@ -44,12 +44,13 @@ It starts Postgres if it isn't running, applies migrations, listens on `PORT` (d
 
 ## Check and test
 
-| Command          | What it runs                                                                  |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `vp check`       | Format, lint and type-check                                                   |
-| `vp test`        | Unit tests on an in-process PGlite database, with no Docker                   |
-| `vp run test:pg` | The `*.pg.test.ts` tests on real Postgres, starting the compose service first |
-| `vp run ready`   | Every CI gate. Run it before opening a PR                                     |
+| Command             | What it runs                                                                  |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `vp check`          | Format, lint and type-check                                                   |
+| `vp run boundaries` | The package boundary rules (dependency-cruiser)                               |
+| `vp test`           | Unit tests on an in-process PGlite database, with no Docker                   |
+| `vp run test:pg`    | The `*.pg.test.ts` tests on real Postgres, starting the compose service first |
+| `vp run ready`      | Every CI gate. Run it before opening a PR                                     |
 
 `test:pg` uses the compose database unless you set `DATABASE_URL`.
 
