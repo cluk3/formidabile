@@ -1,5 +1,5 @@
 import type { Answers } from "@fb/core/answers";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { Effect } from "effect";
 import type { ExternalRef } from "../authorization/actor.ts";
 import type { Database } from "./database.ts";
@@ -18,6 +18,27 @@ export const latestResponseId = (db: Db, form: SharedForm, respondentId: string)
     .orderBy(desc(responses.submittedAt), desc(responses.id))
     .limit(1)
     .pipe(Effect.map(([row]) => row?.id));
+
+/** The response an earlier attempt with this key stored, as `responses_idempotency_key_unique` scopes it. */
+export const findByIdempotencyKey = (
+  db: Db,
+  form: SharedForm,
+  respondentId: string | null,
+  idempotencyKey: string,
+) =>
+  db
+    .select({ id: responses.id, revision: responses.revision })
+    .from(responses)
+    .where(
+      and(
+        eq(responses.formId, form.id),
+        respondentId === null
+          ? isNull(responses.respondentId)
+          : eq(responses.respondentId, respondentId),
+        eq(responses.idempotencyKey, idempotencyKey),
+      ),
+    )
+    .pipe(Effect.map(([row]) => row));
 
 export interface NewResponse {
   readonly versionId: string;

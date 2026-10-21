@@ -141,6 +141,25 @@ describe("submit", () => {
     expect(stored).toEqual({ idempotencyKey: key });
   });
 
+  test("a replay gives a 201 body identical to the original, and stores nothing more", async () => {
+    const form = await openForm();
+    const body = { idempotencyKey: crypto.randomUUID() };
+    const send = () =>
+      as(alice).POST("/respond/forms/{formId}/responses", {
+        params: { path: { formId: form.formId } },
+        body: { versionId: form.versionId, answers, ...body },
+        parseAs: "text",
+      });
+
+    const original = await send();
+    const replayed = await send();
+
+    expect(original.response.status).toBe(201);
+    expect(replayed.response.status).toBe(201);
+    expect(replayed.data).toBe(original.data);
+    expect(await responseCount(form.formId)).toBe(1);
+  });
+
   test("externalRefs in the body gives 422, and nothing is stored", async () => {
     const form = await openForm();
 

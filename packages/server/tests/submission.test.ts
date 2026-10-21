@@ -367,6 +367,95 @@ describe("submit", () => {
   });
 });
 
+describe("a replay", () => {
+  const submitWithKey = (actor: Actor, formId: string, versionId: string, idempotencyKey: string) =>
+    Submission.use((submission) =>
+      submission.submit(actor, formId, { versionId, answers, idempotencyKey }),
+    );
+
+  test("returns the same response and inserts nothing, even after the form closes or a new version is published", async () => {
+    const { original, again, afterPublish, afterClose, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const key = crypto.randomUUID();
+        const original = yield* submitWithKey(alice, formId, v1.id, key);
+        const again = yield* submitWithKey(alice, formId, v1.id, key);
+        yield* publish(formId, "Survey, revised");
+        const afterPublish = yield* submitWithKey(alice, formId, v1.id, key);
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { availability: "closed" }),
+        );
+        const afterClose = yield* submitWithKey(alice, formId, v1.id, key);
+        return { original, again, afterPublish, afterClose, count: yield* responseCount(formId) };
+      }),
+    );
+
+    expect(again).toEqual(original);
+    expect(afterPublish).toEqual(original);
+    expect(afterClose).toEqual(original);
+    expect(count).toBe(1);
+  });
+
+  test("doesn't compare bodies, and carries the response's current revision", async () => {
+    const { original, replayed, storedAnswerRows } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const key = crypto.randomUUID();
+        const original = yield* submitWithKey(alice, formId, v1.id, key);
+        yield* SqlClient.SqlClient.use(
+          (sql) => sql`
+            UPDATE form_management.responses SET revision = 2 WHERE id = ${original.responseId}
+          `,
+        );
+        const replayed = yield* Submission.use((submission) =>
+          submission.submit(alice, formId, {
+            versionId: v1.id,
+            answers: { [nameId]: 42 },
+            idempotencyKey: key,
+          }),
+        );
+        return { original, replayed, storedAnswerRows: yield* storedAnswers(original.responseId) };
+      }),
+    );
+
+    expect(replayed).toEqual({ responseId: original.responseId, revision: "2" });
+    expect(storedAnswerRows).toEqual([{ questionId: readyId, value: true }]);
+  });
+
+  test("on a one-per-respondent form returns the response, not AlreadyResponded", async () => {
+    const { original, replayed, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        yield* Forms.use((forms) =>
+          forms.updateSettings(admin, formId, { responseLimit: "one_per_respondent" }),
+        );
+        const key = crypto.randomUUID();
+        const original = yield* submitWithKey(alice, formId, v1.id, key);
+        const replayed = yield* submitWithKey(alice, formId, v1.id, key);
+        return { original, replayed, count: yield* responseCount(formId) };
+      }),
+    );
+
+    expect(replayed).toEqual(original);
+    expect(count).toBe(1);
+  });
+
+  test("the same key from another identified respondent creates a second response", async () => {
+    const { alices, bobs, count } = await run(
+      Effect.gen(function* () {
+        const { formId, v1 } = yield* openForm;
+        const key = crypto.randomUUID();
+        const alices = yield* submitWithKey(alice, formId, v1.id, key);
+        const bobs = yield* submitWithKey(respondent("bob"), formId, v1.id, key);
+        return { alices, bobs, count: yield* responseCount(formId) };
+      }),
+    );
+
+    expect(bobs.responseId).not.toBe(alices.responseId);
+    expect(count).toBe(2);
+  });
+});
+
 describe("a form-bound actor", () => {
   test("reaches only its form: another one gives NotFound on load and submit", async () => {
     const { load, submitted, count, own } = await run(
