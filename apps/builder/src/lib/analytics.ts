@@ -24,6 +24,10 @@ export const otherLabelsText = (others: Schemas["QuestionAnalytics"]["otherLabel
     .map(({ label, versions }) => `“${label}” in ${versionsText(versions).toLowerCase()}`)
     .join(", ");
 
+/** Whether every option was offered in the same versions, so their shares share one base. */
+export const offeredEverywhere = (options: ReadonlyArray<{ offeredIn: ReadonlyArray<number> }>) =>
+  options.every(({ offeredIn }) => offeredIn.join() === options[0]?.offeredIn.join());
+
 /** One version's result, in a table cell. Text, email and date questions have none beyond their counts. */
 export const resultText = (summary: Summary) => {
   switch (summary.type) {

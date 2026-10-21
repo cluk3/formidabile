@@ -4,6 +4,7 @@
   import {
     constraintsText,
     numberText,
+    offeredEverywhere,
     otherLabelsText,
     resultText,
     share,
@@ -89,6 +90,12 @@
         {/each}
       </tbody>
     </table>
+    {#if !offeredEverywhere(summary.options)}
+      <p class="text-sm text-muted-foreground">
+        Some options weren't offered in every version. Each share counts only the answers from
+        versions that offered the option, so the shares don't add up to 100%.
+      </p>
+    {/if}
   {:else if summary.type === "boolean"}
     {@const answered = summary.trueCount + summary.falseCount}
     <table class={tableClass}>

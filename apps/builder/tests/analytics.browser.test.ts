@@ -229,6 +229,33 @@ test("an option's share counts only the versions that offered it, under its late
     "Versions 1 and 2 (“OK” in version 1)",
   ]);
   expect(await rowText(combined, "Great")).toEqual(["Great", "1", "33%", "Version 2"]);
+  await expect
+    .element(
+      question(await screen, "How was it?").getByText(
+        "Some options weren't offered in every version. Each share counts only the answers from versions that offered the option, so the shares don't add up to 100%.",
+      ),
+    )
+    .toBeVisible();
+});
+
+test("shares of options offered in the same versions carry no caveat", async () => {
+  const { summary } = rating.combined;
+  if (summary.type !== "single_choice") throw new Error("the rating is a single choice");
+  const options = summary.options.slice(0, 2);
+  const { screen } = renderAnalytics(
+    answering({
+      ...analytics,
+      questions: [
+        { ...rating, combined: { ...rating.combined, summary: { ...summary, options } } },
+      ],
+    }),
+  );
+  const choice = question(await screen, "How was it?");
+  await expect.element(choice.getByRole("table", { name: "All versions" })).toBeVisible();
+
+  await expect
+    .element(choice.getByText(/weren't offered in every version/))
+    .not.toBeInTheDocument();
 });
 
 test("each version's counts sit in their own row, and each version's option labels with them", async () => {
