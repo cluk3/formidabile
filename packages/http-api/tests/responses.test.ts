@@ -1,0 +1,240 @@
+import type { FormApiClient } from "@fb/api-client";
+import type { JWTPayload } from "jose";
+import { afterAll, describe, expect, test } from "vite-plus/test";
+import { type DevUser, signToken, startApi } from "./api.ts";
+
+const api = startApi();
+
+afterAll(() => api.dispose());
+
+const as = (claims: JWTPayload) => api.clientWithToken(() => signToken(claims));
+
+/** A respondent of its own, so tests sharing the database never see each other's responses. */
+const newRespondent = (tenant = "acme") => ({
+  sub: `respondent-${crypto.randomUUID()}`,
+  tenant,
+  capabilities: [],
+});
+
+const readyId = "0192f5a0-7c3e-7b1a-9d2e-000000000002";
+const colourId = "0192f5a0-7c3e-7b1a-9d2e-000000000003";
+
+const ready = { id: readyId, type: "boolean", label: "Ready?", required: true, config: {} };
+const colour = (green: string) => ({
+  id: colourId,
+  type: "single_choice",
+  label: "Colour",
+  required: true,
+  config: {
+    display: "radio",
+    options: [
+      { value: "red", label: "Red" },
+      { value: "green", label: green },
+    ],
+  },
+});
+const definition = (title: string, questions: ReadonlyArray<object> = [ready]) => ({
+  format: 1 as const,
+  title,
+  questions,
+});
+
+/** Saves and publishes `next` as the form's next version. */
+const publish = async (client: FormApiClient, formId: string, next: object) => {
+  const { data: current } = await client.GET("/forms/{formId}/draft", {
+    params: { path: { formId } },
+  });
+  const { data: draft } = await client.PUT("/forms/{formId}/draft", {
+    params: { path: { formId } },
+    body: { expectedRevision: current?.draft?.revision ?? null, definition: next as never },
+  });
+  const { data } = await client.POST("/forms/{formId}/draft/publish", {
+    params: { path: { formId } },
+    body: { expectedRevision: draft!.revision },
+  });
+  return data!.version;
+};
+
+/** An open, unlimited form with one published version. */
+const openForm = async (owner: DevUser = "acme-admin", first: object = definition("Survey")) => {
+  const client = api.clientAs(owner);
+  const { data } = await client.POST("/forms", { body: { definition: first as never } });
+  const formId = data!.form.id;
+  const v1 = await publish(client, formId, first);
+  await client.PATCH("/forms/{formId}", {
+    params: { path: { formId } },
+    body: { availability: "open" },
+  });
+  return { formId, v1 };
+};
+
+const submit = async (
+  claims: JWTPayload,
+  form: { formId: string; v1: { id: string } },
+  answers: Record<string, string | boolean> = { [readyId]: true },
+) => {
+  const { data, response } = await as(claims).POST("/respond/forms/{formId}/responses", {
+    params: { path: { formId: form.formId } },
+    body: { versionId: form.v1.id, answers, idempotencyKey: crypto.randomUUID() },
+  });
+  if (data === undefined) throw new Error(`submit gave ${response.status}`);
+  return data.responseId;
+};
+
+interface ListQuery {
+  formId?: string;
+  versionId?: string;
+  refNamespace?: string;
+  refId?: string;
+  respondentId?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+const list = (query: ListQuery, user: DevUser = "acme-admin") =>
+  api.clientAs(user).GET("/responses", { params: { query } });
+
+const listedIds = async (query: ListQuery, user?: DevUser) =>
+  (await list(query, user)).data!.responses.map((response) => response.id);
+
+const read = (responseId: string, user: DevUser = "acme-admin") =>
+  api.clientAs(user).GET("/responses/{responseId}", { params: { path: { responseId } } });
+
+/** UUIDv7 ids order by time only across milliseconds, so newest-first needs a gap between submits. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 2));
+
+describe("GET /responses/{responseId}", () => {
+  test("a v1 response after v2 dropped a question and relabelled an option gives v1's snapshots and the raw answers", async () => {
+    const v1Definition = definition("Survey", [ready, colour("Green")]);
+    const form = await openForm("acme-admin", v1Definition);
+    const alice = newRespondent();
+    const responseId = await submit(alice, form, { [readyId]: true, [colourId]: "green" });
+    await publish(
+      api.clientAs("acme-admin"),
+      form.formId,
+      definition("Survey, revised", [colour("Lime")]),
+    );
+
+    const { data, response } = await read(responseId, "acme-analyst");
+
+    expect(response.status).toBe(200);
+    expect(data).toEqual({
+      response: {
+        id: responseId,
+        formId: form.formId,
+        versionId: form.v1.id,
+        versionNumber: 1,
+        respondentId: alice.sub,
+        submittedAt: expect.any(String),
+        editedAt: null,
+        externalRefs: [],
+        answers: { [readyId]: true, [colourId]: "green" },
+      },
+      version: { id: form.v1.id, number: 1, definition: v1Definition },
+    });
+  });
+});
+
+describe("GET /responses", () => {
+  test("pagination is stable across edits", async () => {
+    const form = await openForm();
+    const alice = newRespondent();
+    const submitted: Array<string> = [];
+    for (let i = 0; i < 5; i++) {
+      submitted.unshift(await submit(alice, form));
+      await tick();
+    }
+
+    const first = await list({ formId: form.formId, limit: 2 });
+    for (const responseId of [submitted[1]!, submitted[3]!]) {
+      const edited = await as(alice).PUT("/respond/responses/{responseId}", {
+        params: { path: { responseId } },
+        body: { expectedRevision: "1", answers: { [readyId]: false } },
+      });
+      expect(edited.response.status).toBe(200);
+    }
+    const second = await list({ formId: form.formId, limit: 2, cursor: first.data!.nextCursor! });
+    const third = await list({ formId: form.formId, limit: 2, cursor: second.data!.nextCursor! });
+
+    expect(
+      [first, second, third].map(({ data }) => data!.responses.map((response) => response.id)),
+    ).toEqual([submitted.slice(0, 2), submitted.slice(2, 4), submitted.slice(4)]);
+    expect(third.data!.nextCursor).toBeNull();
+  });
+
+  test("respondentId with no formId lists that respondent's responses across every form in the tenant, and none from another tenant", async () => {
+    const a = await openForm();
+    const b = await openForm();
+    const g = await openForm("globex-admin");
+    const alice = newRespondent();
+    const onA = await submit(alice, a);
+    await tick();
+    await submit(newRespondent(), a);
+    const onB = await submit(alice, b);
+    const inGlobex = await submit({ ...alice, tenant: "globex" }, g);
+
+    const listed = await listedIds({ respondentId: alice.sub });
+
+    expect(listed).toEqual([onB, onA]);
+    expect(listed).not.toContain(inGlobex);
+  });
+
+  test("by reference, finds a response submitted under that refs claim", async () => {
+    const form = await openForm();
+    const ref = { namespace: "project", refId: crypto.randomUUID() };
+    const referenced = await submit({ ...newRespondent(), form: form.formId, refs: [ref] }, form);
+    await submit(newRespondent(), form);
+
+    const { data } = await list({ refNamespace: ref.namespace, refId: ref.refId });
+
+    expect(data!.responses).toEqual([
+      expect.objectContaining({ id: referenced, formId: form.formId, externalRefs: [ref] }),
+    ]);
+  });
+
+  test("respondentId counts code points: 255 is accepted and 256 gives 422", async () => {
+    const accepted = await list({ respondentId: "😀".repeat(255) });
+    const refused = await list({ respondentId: "😀".repeat(256) });
+
+    expect(accepted.response.status).toBe(200);
+    expect(refused.response.status).toBe(422);
+    expect(refused.error).toMatchObject({ _tag: "ValidationFailed" });
+  });
+
+  test("limit is 1 to 200, and refNamespace needs refId", async () => {
+    const statuses = await Promise.all(
+      [{ limit: 200 }, { limit: 0 }, { limit: 201 }, { refNamespace: "project" }].map(
+        async (query) => (await list(query)).response.status,
+      ),
+    );
+
+    expect(statuses).toEqual([200, 422, 422, 422]);
+  });
+});
+
+describe("authorization", () => {
+  test("without responses:read, listing and reading give 403", async () => {
+    const form = await openForm();
+    const responseId = await submit(newRespondent(), form);
+    const manager = as({ sub: "manager", tenant: "acme", capabilities: ["forms:manage"] });
+
+    const listed = await manager.GET("/responses", { params: { query: {} } });
+    const readOne = await manager.GET("/responses/{responseId}", {
+      params: { path: { responseId } },
+    });
+
+    expect(listed.response.status).toBe(403);
+    expect(readOne.response.status).toBe(403);
+    expect(readOne.error).toEqual({ _tag: "Forbidden", capability: "responses:read" });
+  });
+
+  test("another tenant's admin gets 404 on a read", async () => {
+    const form = await openForm();
+    const responseId = await submit(newRespondent(), form);
+
+    const { response, error } = await read(responseId, "globex-admin");
+
+    expect(response.status).toBe(404);
+    expect(error).toEqual({ _tag: "NotFound" });
+  });
+});
