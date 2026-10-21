@@ -6,6 +6,7 @@ import type {
   DraftSummary,
   Form,
   FormDetail,
+  FormSettings,
   FormSummary,
   VersionSummary,
 } from "../envelopes.ts";
@@ -107,6 +108,20 @@ export const lockForm = (db: Db, tenant: TenantId, formId: string) =>
 /** Its draft goes by cascade; a trigger refuses the delete once the form has any version. */
 export const deleteForm = (db: Db, form: LockedForm) =>
   db.delete(forms).where(eq(forms.id, form.id));
+
+export const updateFormSettings = (db: Db, form: LockedForm, settings: FormSettings) =>
+  Effect.gen(function* () {
+    const [row] = yield* db
+      .update(forms)
+      .set({
+        availability: settings.availability ?? undefined,
+        responseLimit: settings.responseLimit ?? undefined,
+        updatedAt: yield* currentInstant,
+      })
+      .where(eq(forms.id, form.id))
+      .returning();
+    return toForm(row!);
+  });
 
 const currentVersion = and(
   eq(formVersions.id, forms.currentVersionId),

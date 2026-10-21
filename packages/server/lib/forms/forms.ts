@@ -2,9 +2,10 @@ import { parseDefinition } from "@fb/core/definition";
 import { Context, Effect, Layer, type Schema } from "effect";
 import type { Actor } from "../authorization/actor.ts";
 import { requireAdminRead, requireCapability } from "../authorization/authorization.ts";
-import type { Draft, Form, FormDetail, FormSummary } from "../envelopes.ts";
+import type { Draft, Form, FormDetail, FormSettings, FormSummary } from "../envelopes.ts";
 import {
   type Forbidden,
+  FormNotPublished,
   FormPublished,
   NotFound,
   RevisionConflict,
@@ -18,6 +19,7 @@ import {
   insertFormWithDraft,
   listForms,
   lockForm,
+  updateFormSettings,
 } from "../persistence/forms.ts";
 
 export class Forms extends Context.Service<
@@ -43,6 +45,12 @@ export class Forms extends Context.Service<
       formId: string,
       expectedRevision: string,
     ) => Effect.Effect<void, Forbidden | NotFound | FormPublished | RevisionConflict>;
+    /** Sets at least one of availability and the response limit; only a published form opens. */
+    readonly updateSettings: (
+      actor: Actor,
+      formId: string,
+      settings: FormSettings,
+    ) => Effect.Effect<Form, Forbidden | ValidationFailed | NotFound | FormNotPublished>;
   }
 >()("@fb/server/Forms") {
   static readonly layer = Layer.effect(
@@ -83,6 +91,26 @@ export class Forms extends Context.Service<
                   yield* deleteForm(tx, form);
                 }),
               { isolationLevel: "read committed" },
+            )
+            .pipe(dieOnDatabaseError);
+        }),
+        updateSettings: Effect.fn("Forms.updateSettings")(function* (actor, formId, settings) {
+          const { tenant } = yield* requireCapability(actor, "forms:manage");
+          if (settings.availability == null && settings.responseLimit == null) {
+            return yield* new ValidationFailed({
+              issues: [{ path: [], message: "Set availability, responseLimit or both" }],
+            });
+          }
+          return yield* db
+            .transaction((tx) =>
+              Effect.gen(function* () {
+                const form = yield* lockForm(tx, tenant, formId);
+                if (form === undefined) return yield* new NotFound();
+                if (settings.availability === "open" && form.currentVersionId === null) {
+                  return yield* new FormNotPublished();
+                }
+                return yield* updateFormSettings(tx, form, settings);
+              }),
             )
             .pipe(dieOnDatabaseError);
         }),

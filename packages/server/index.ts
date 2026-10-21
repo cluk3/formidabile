@@ -10,6 +10,7 @@ export {
   Form,
   FormDefinitionJson,
   FormDetail,
+  FormSettings,
   FormSummary,
   FormVersion,
   ResponseLimit,

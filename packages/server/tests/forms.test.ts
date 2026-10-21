@@ -130,3 +130,78 @@ describe("deleting a form", () => {
     expect(detail.draft).not.toBeNull();
   });
 });
+
+describe("changing a form's settings", () => {
+  test("an admin opens a published form, then limits it to one response per respondent", async () => {
+    const { opened, limited, detail } = await run(
+      Effect.gen(function* () {
+        const { forms, publication } = yield* services;
+        const { form, draft } = yield* forms.create(admin, definition("Survey"));
+        yield* publication.publish(admin, form.id, draft.revision);
+        const opened = yield* forms.updateSettings(admin, form.id, { availability: "open" });
+        const limited = yield* forms.updateSettings(admin, form.id, {
+          availability: null,
+          responseLimit: "one_per_respondent",
+        });
+        return { opened, limited, detail: yield* forms.detail(admin, form.id) };
+      }),
+    );
+
+    expect(opened).toMatchObject({ availability: "open", responseLimit: "unlimited" });
+    expect(limited).toMatchObject({ availability: "open", responseLimit: "one_per_respondent" });
+    expect(detail).toMatchObject({ availability: "open", responseLimit: "one_per_respondent" });
+  });
+
+  test("opening a never-published form gives FormNotPublished, but its response limit still changes", async () => {
+    const { opening, limited } = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Unpublished"));
+        return {
+          opening: yield* Effect.flip(
+            forms.updateSettings(admin, form.id, {
+              availability: "open",
+              responseLimit: "one_per_respondent",
+            }),
+          ),
+          limited: yield* forms.updateSettings(admin, form.id, {
+            responseLimit: "one_per_respondent",
+          }),
+        };
+      }),
+    );
+
+    expect(opening._tag).toBe("FormNotPublished");
+    expect(limited).toMatchObject({ availability: "closed", responseLimit: "one_per_respondent" });
+  });
+
+  test.each([
+    ["no settings", {}],
+    ["only nulls", { availability: null, responseLimit: null }],
+  ])("a change with %s gives ValidationFailed", async (_, settings) => {
+    const error = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Unchanged"));
+        return yield* Effect.flip(forms.updateSettings(admin, form.id, settings));
+      }),
+    );
+
+    expect(error).toMatchObject({ _tag: "ValidationFailed", issues: [{ path: [] }] });
+  });
+
+  test("changing another tenant's form gives NotFound", async () => {
+    const globexAdmin = Actor.Identified({ ...admin, tenant: TenantId.make("globex") });
+    const error = await run(
+      Effect.gen(function* () {
+        const { forms } = yield* services;
+        const { form } = yield* forms.create(admin, definition("Acme only"));
+        return yield* Effect.flip(
+          forms.updateSettings(globexAdmin, form.id, { availability: "closed" }),
+        );
+      }),
+    );
+
+    expect(error._tag).toBe("NotFound");
+  });
+});
