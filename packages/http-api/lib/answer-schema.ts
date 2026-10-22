@@ -5,8 +5,8 @@ import { toJSONSchema } from "zod/mini";
 
 const authority =
   "Advisory: the server validates every submission and edit itself, and its answer is final. " +
-  "Send text trimmed. Dates must also fall within x-fb-minDate and x-fb-maxDate, which only the " +
-  "server checks.";
+  "Send text trimmed. Dates must also fall within x-fb-minDate and x-fb-maxDate, and a number " +
+  "must fall on x-fb-step, which only the server checks.";
 
 /** What `toJSONSchema` drops: Zod's `refine`s and its trimming before the length check. */
 const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
@@ -22,6 +22,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
         ...(max === undefined ? {} : { "x-fb-maxDate": max }),
       };
     }
+    case "number":
+      return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
     default:
       return {};
   }

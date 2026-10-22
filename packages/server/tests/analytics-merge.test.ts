@@ -73,6 +73,7 @@ const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "version
     choices: [],
     numbers: [],
     combinedNumbers: [],
+    nps: [],
     ...input,
   });
 

@@ -199,7 +199,7 @@ const ChoiceSummary = Schema.Struct({
 export const AnalyticsSummary = Schema.Union([
   ChoiceSummary,
   Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
-  // All but `count` are null when nothing was answered.
+  // All but `count` are null when nothing was answered. `nps` is set only for the NPS display.
   Schema.Struct({
     type: Schema.Literal("number"),
     count: Count,
@@ -207,6 +207,17 @@ export const AnalyticsSummary = Schema.Union([
     max: Schema.NullOr(Schema.Finite),
     mean: Schema.NullOr(Schema.Finite),
     median: Schema.NullOr(Schema.Finite),
+    nps: Schema.optionalKey(
+      Schema.Struct({
+        promoters: Count,
+        passives: Count,
+        detractors: Count,
+        /** Answered responses of the versions whose snapshot uses the NPS display. */
+        answered: Count,
+        /** Promoters' share minus detractors' share, in percentage points. Null when nobody answered. */
+        score: Schema.NullOr(Schema.Int),
+      }),
+    ),
   }),
   Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
 ]).annotate({ identifier: "AnalyticsSummary" });
