@@ -15,7 +15,7 @@ The other answers are unsurprising:
 
 - One draft per form.
 - Historical versions aren't reopened for new submissions.
-- Seven question types (text, email, number, date, single choice, multiple choice and boolean), with no file upload and no conditional visibility.
+- Seven question types (text, email, number, date, single choice, multiple choice and boolean), with no file upload and no conditional visibility (amended 2026-10-22, see ADR-017: questions may carry show conditions, and pages may carry forward jumps; and ADR-018: nine more question types join these seven).
 - External references as a mutable association set on forms and a fixed list on responses. A response's list comes from the host-signed token that submitted it, never from the browser (amended 2026-10-20, see ADR-012).
 - Analytics inside the module, combining compatible questions by default with the per-version breakdown always visible. Export of response data (ADR-001 §8.2) isn't in the MVP.
 - No form metadata or categorization (ADR-001 §4.1) in the MVP. External references already associate forms with host entities.

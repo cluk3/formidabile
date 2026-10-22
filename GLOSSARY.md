@@ -13,7 +13,7 @@ An immutable, self-contained snapshot of a form's definition, created at publica
 _Avoid_: Revision, release
 
 **Form definition**:
-The content a draft edits and a form version freezes: the form's title, description and ordered question snapshots.
+The content a draft edits and a form version freezes: the form's title, description, ordered pages of question snapshots, and the conditions that decide what each respondent is shown.
 _Avoid_: Form schema, template, form JSON
 
 **Draft**:
@@ -29,7 +29,7 @@ A form version that was once the current published version and has since been re
 _Avoid_: Old version, stale version, archived version
 
 **Question identity**:
-The stable logical identity of a question across form versions, held only while the question keeps its meaning.
+The stable logical identity of a question across the versions of one form, held only while the question keeps its meaning. Two forms never share a question identity's history, even when one was duplicated from the other.
 _Avoid_: Question ID, field key
 
 **Question snapshot**:
@@ -40,9 +40,21 @@ _Avoid_: Question, field
 The stable machine-readable value of a choice option, distinct from its display label.
 _Avoid_: Option key, option ID
 
+**Row value**:
+The stable machine-readable value of a matrix row, distinct from its display label, in the same way an option value is distinct from an option's label.
+_Avoid_: Row key, row ID, statement ID
+
 **Question type**:
-The kind of a question snapshot, which fixes its answer representation and validation. Presentation choices that leave the answer unchanged, such as a dropdown versus radio buttons or single-line versus multi-line text, are not question types.
+The kind of a question snapshot, which fixes its answer representation and the kind of value it accepts. Constraints and display settings are not question types.
 _Avoid_: Field type, widget
+
+**Constraint**:
+A setting on a question snapshot that narrows the values its question type accepts, such as a length, a range, a selection count, date bounds, or "must be yes".
+_Avoid_: Validation rule, validator
+
+**Display setting**:
+A setting on a question snapshot that changes only the control the respondent uses, never the answer, such as a dropdown versus radio buttons, single-line versus multi-line text, or stars versus numerals.
+_Avoid_: Variant, widget, appearance
 
 **Availability**:
 Whether a form currently accepts responses (open or closed), independent of its publication history.
@@ -56,9 +68,33 @@ _Avoid_: Editor, designer, admin
 The respondent-facing interface that displays one form version and collects or edits a response against it.
 _Avoid_: Viewer, player, form widget
 
+**Duplicate**:
+Creating a new, never-published form whose draft starts from the definition of another form's version or draft.
+_Avoid_: Clone, copy, template
+
+**Restore**:
+Replacing a form's draft with the definition of one of that form's own published versions.
+_Avoid_: Revert, rollback, roll back
+
 **Preview**:
 Rendering a draft so an editor can try it, without ever creating a response.
 _Avoid_: Test submission, dry run
+
+**Condition**:
+A test on a respondent's answers to earlier questions, naming them by question identity and option value, never by label or position. Conditions combine with "all" or "any", and groups of them can nest.
+_Avoid_: Expression, formula, predicate
+
+**Show condition**:
+A condition on a question snapshot that decides whether the question is on the path once its page is reached. A question without one is always shown there.
+_Avoid_: Visibility rule, display logic, show/hide
+
+**Page**:
+An ordered group of question snapshots that the respondent sees together. A form definition with no page breaks has a single page.
+_Avoid_: Section, step, block, screen
+
+**Jump**:
+A move from the end of one page to a later page, or to the end of the form, taken when its condition holds. Jumps only go forward.
+_Avoid_: Branch, skip, logic jump, go-to
 
 ## Collection
 
@@ -67,8 +103,16 @@ One submission against exactly one published form version.
 _Avoid_: Submission, entry, result
 
 **Answer**:
-A respondent's answer to one question snapshot within a response.
+A respondent's answer to one question snapshot within a response. Values the respondent doesn't give, such as hidden fields, calculated scores, payments or bookings, are never answers.
 _Avoid_: Value, field value
+
+**Path**:
+The questions one respondent is shown, in order, as decided by their form version's conditions and their own answers. A question off the path has no answer, and a required question is required only on the path.
+_Avoid_: Flow, route, visible questions
+
+**Skipped**:
+Said of a question that was on a respondent's path but left unanswered. A question off the path was not shown, which is different from skipped.
+_Avoid_: Unanswered, blank, hidden
 
 **Respondent**:
 The actor who fills in and submits a response.
