@@ -3764,7 +3764,11 @@
                     },
                     "config": {
                       "type": "object",
-                      "properties": {},
+                      "properties": {
+                        "mustBeYes": {
+                          "type": "boolean"
+                        }
+                      },
                       "additionalProperties": false
                     }
                   },

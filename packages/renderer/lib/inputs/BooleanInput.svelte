@@ -11,27 +11,46 @@
   ];
 </script>
 
-<!-- Two radios, not a checkbox: an unticked checkbox can't tell "No" from unanswered. -->
-<fieldset
-  class="group"
-  role="radiogroup"
-  aria-labelledby={`${field.id}-legend`}
-  aria-invalid={field.invalid ? "true" : undefined}
-  aria-describedby={field.describedBy}
->
-  <legend id={`${field.id}-legend`} class="label" part="label"><Prompt {question} /></legend>
+{#if question.config.mustBeYes}
+  <!-- One checkbox: the only accepted answer is yes, so an unticked box is unanswered. -->
   <Description {question} {field} />
-  {#each choices as choice, index (choice.label)}
-    <label class="choice">
-      <input
-        id={index === 0 ? field.id : `${field.id}-${index}`}
-        part="input"
-        type="radio"
-        name={field.id}
-        value={choice.value}
-        bind:group={value}
-      />
-      {choice.label}
-    </label>
-  {/each}
-</fieldset>
+  <label class="choice">
+    <input
+      id={field.id}
+      part="input"
+      type="checkbox"
+      checked={value === true}
+      aria-invalid={field.invalid ? "true" : undefined}
+      aria-describedby={field.describedBy}
+      onchange={(event) => {
+        value = event.currentTarget.checked ? true : undefined;
+      }}
+    />
+    <span class="label" part="label"><Prompt {question} /></span>
+  </label>
+{:else}
+  <!-- Two radios, not a checkbox: an unticked checkbox can't tell "No" from unanswered. -->
+  <fieldset
+    class="group"
+    role="radiogroup"
+    aria-labelledby={`${field.id}-legend`}
+    aria-invalid={field.invalid ? "true" : undefined}
+    aria-describedby={field.describedBy}
+  >
+    <legend id={`${field.id}-legend`} class="label" part="label"><Prompt {question} /></legend>
+    <Description {question} {field} />
+    {#each choices as choice, index (choice.label)}
+      <label class="choice">
+        <input
+          id={index === 0 ? field.id : `${field.id}-${index}`}
+          part="input"
+          type="radio"
+          name={field.id}
+          value={choice.value}
+          bind:group={value}
+        />
+        {choice.label}
+      </label>
+    {/each}
+  </fieldset>
+{/if}
