@@ -24,12 +24,15 @@
     formId,
     signInHref,
     onDeleted,
+    onDuplicated,
   }: {
     client: FormApiClient;
     formId: string;
     signInHref: string;
     /** The form was deleted: leave its editor. */
     onDeleted: () => void;
+    /** A duplicate was created: open that form. */
+    onDuplicated?: (formId: string) => void;
   } = $props();
   const uid = $props.id();
   const path = $derived({ params: { path: { formId } } });
@@ -420,7 +423,14 @@
       signIn={() => (signedOut = true)}
     />
 
-    <PublicationHistory {client} {form} signIn={() => (signedOut = true)} />
+    <PublicationHistory
+      {client}
+      {form}
+      signIn={() => (signedOut = true)}
+      onDuplicated={(id) => onDuplicated?.(id)}
+      onRestored={load}
+      onRevisionConflict={() => (conflict = changedSinceOpened)}
+    />
 
     <section class="flex flex-col gap-3" aria-labelledby={`${uid}-refs`}>
       <h2 id={`${uid}-refs`} class="text-lg font-semibold">External references</h2>
