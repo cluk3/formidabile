@@ -331,6 +331,99 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
       expect(commentView!.byVersion[1]).toEqual({ version: 2, present: false });
     });
 
+    test("an NPS display reports promoters, passives, detractors and the score, and only for versions that use it", async () => {
+      const recommendId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b1";
+      const starsId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b2";
+      const recommend = (display: "nps" | "scale") => ({
+        id: recommendId,
+        type: "number",
+        label: "Recommend?",
+        required: true,
+        config:
+          display === "nps"
+            ? {
+                integer: true,
+                min: 0,
+                max: 10,
+                display,
+                minLabel: "Not likely",
+                maxLabel: "Very likely",
+              }
+            : { integer: true, min: 0, max: 10, display },
+      });
+      const stars = {
+        id: starsId,
+        type: "number",
+        label: "Stars",
+        required: false,
+        config: { integer: true, min: 1, max: 5, display: "rating" },
+      };
+      const { result } = await run(
+        Effect.gen(function* () {
+          const { formId, v1 } = yield* openForm(admin, definition([recommend("nps"), stars]));
+          yield* submit(respondent("alice"), formId, v1.id, {
+            [recommendId]: 10,
+            [starsId]: 5,
+          });
+          yield* submit(respondent("bob"), formId, v1.id, { [recommendId]: 9, [starsId]: 1 });
+          yield* submit(respondent("carol"), formId, v1.id, { [recommendId]: 0 });
+          yield* submit(respondent("dave"), formId, v1.id, { [recommendId]: 7 });
+          const v2 = yield* publish(formId, definition([recommend("scale"), stars]));
+          yield* submit(respondent("erin"), formId, v2.id, { [recommendId]: 0 });
+          return { result: yield* analytics(formId) };
+        }),
+      );
+
+      const recommendView = result.questions.find((q) => q.questionId === recommendId)!;
+      expect(recommendView.combined.summary).toEqual({
+        type: "number",
+        count: 5,
+        min: 0,
+        max: 10,
+        mean: expect.closeTo(5.2, 5),
+        median: 7,
+        nps: { promoters: 2, passives: 1, detractors: 1, answered: 4, score: 25 },
+      });
+      expect(recommendView.byVersion).toEqual([
+        {
+          version: 1,
+          present: true,
+          responses: 4,
+          answered: 4,
+          skipped: 0,
+          summary: {
+            type: "number",
+            count: 4,
+            min: 0,
+            max: 10,
+            mean: expect.closeTo(6.5, 5),
+            median: 8,
+            nps: { promoters: 2, passives: 1, detractors: 1, answered: 4, score: 25 },
+          },
+          constraints: { type: "number", integer: true, min: 0, max: 10 },
+        },
+        {
+          version: 2,
+          present: true,
+          responses: 1,
+          answered: 1,
+          skipped: 0,
+          summary: { type: "number", count: 1, min: 0, max: 0, mean: 0, median: 0 },
+          constraints: { type: "number", integer: true, min: 0, max: 10 },
+        },
+      ]);
+
+      const starsView = result.questions.find((q) => q.questionId === starsId)!;
+      expect(starsView.combined.summary).toEqual({
+        type: "number",
+        count: 2,
+        min: 1,
+        max: 5,
+        mean: 3,
+        median: 3,
+      });
+    });
+
     test("an analyst with only responses:read gets the analytics", async () => {
       const analyst = Actor.Identified({ ...admin, capabilities: ["responses:read"] });
       const result = await run(

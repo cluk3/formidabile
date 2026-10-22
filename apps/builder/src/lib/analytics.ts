@@ -46,10 +46,15 @@ export const resultText = (summary: Summary) => {
       return summary.options.map((option) => `${option.label}: ${option.count}`).join(" · ");
     case "boolean":
       return `Yes: ${summary.trueCount} · No: ${summary.falseCount}`;
-    case "number":
-      return summary.count === 0
-        ? "No answers"
-        : `Min ${numberText(summary.min)} · Max ${numberText(summary.max)} · Mean ${numberText(summary.mean)} · Median ${numberText(summary.median)}`;
+    case "number": {
+      const stats =
+        summary.count === 0
+          ? "No answers"
+          : `Min ${numberText(summary.min)} · Max ${numberText(summary.max)} · Mean ${numberText(summary.mean)} · Median ${numberText(summary.median)}`;
+      const { nps } = summary;
+      if (nps === undefined) return stats;
+      return `NPS ${numberText(nps.score)} · Promoters ${nps.promoters} · Passives ${nps.passives} · Detractors ${nps.detractors}. ${stats}`;
+    }
     default:
       return "";
   }

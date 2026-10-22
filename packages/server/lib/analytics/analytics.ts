@@ -8,6 +8,7 @@ import { storedDefinition } from "../persistence/versions.ts";
 import { mergeAnalytics } from "./merge.ts";
 import {
   answeredPerQuestion,
+  npsCounts,
   numbersCombined,
   numbersPerVersion,
   optionCounts,
@@ -60,6 +61,7 @@ export class Analytics extends Context.Service<
                   const options = yield* optionCounts(tx, tenant, formId);
                   const numbers = yield* numbersPerVersion(tx, tenant, formId);
                   const combinedNumbers = yield* numbersCombined(tx, tenant, formId);
+                  const nps = yield* npsCounts(tx, tenant, formId);
                   return mergeAnalytics({
                     formId,
                     versions,
@@ -67,9 +69,10 @@ export class Analytics extends Context.Service<
                     choices: [...values, ...options],
                     numbers,
                     combinedNumbers,
+                    nps,
                   });
                 }),
-              // One snapshot for all six queries, so concurrent submissions and edits can't make `answered`
+              // One snapshot for every query, so concurrent submissions and edits can't make `answered`
               // exceed `responses`.
               readOnlySnapshot,
             )

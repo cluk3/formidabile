@@ -363,6 +363,13 @@ export interface components {
             max: number | null;
             mean: number | null;
             median: number | null;
+            nps?: {
+                promoters: number;
+                passives: number;
+                detractors: number;
+                answered: number;
+                score: number | null;
+            };
         } | {
             /** @enum {string} */
             type: "text" | "email" | "date";
@@ -739,6 +746,11 @@ export interface components {
                     integer: boolean;
                     min?: number;
                     max?: number;
+                    /** @enum {string} */
+                    display?: "input" | "rating" | "scale" | "slider" | "nps";
+                    step?: number;
+                    minLabel?: string;
+                    maxLabel?: string;
                 };
             } | {
                 /** Format: uuid */
@@ -1570,6 +1582,11 @@ export interface components {
                         integer: boolean;
                         min?: number;
                         max?: number;
+                        /** @enum {string} */
+                        display?: "input" | "rating" | "scale" | "slider" | "nps";
+                        step?: number;
+                        minLabel?: string;
+                        maxLabel?: string;
                     };
                 } | {
                     /** Format: uuid */

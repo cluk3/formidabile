@@ -3239,6 +3239,51 @@
                     "type": "null"
                   }
                 ]
+              },
+              "nps": {
+                "type": "object",
+                "properties": {
+                  "promoters": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "passives": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "detractors": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "answered": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "score": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "promoters",
+                  "passives",
+                  "detractors",
+                  "answered",
+                  "score"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -6044,6 +6089,27 @@
                             },
                             "max": {
                               "type": "number"
+                            },
+                            "display": {
+                              "type": "string",
+                              "enum": [
+                                "input",
+                                "rating",
+                                "scale",
+                                "slider",
+                                "nps"
+                              ]
+                            },
+                            "step": {
+                              "type": "number"
+                            },
+                            "minLabel": {
+                              "type": "string",
+                              "maxLength": 100
+                            },
+                            "maxLabel": {
+                              "type": "string",
+                              "maxLength": 100
                             }
                           },
                           "required": [
@@ -12350,6 +12416,27 @@
                                   },
                                   "max": {
                                     "type": "number"
+                                  },
+                                  "display": {
+                                    "type": "string",
+                                    "enum": [
+                                      "input",
+                                      "rating",
+                                      "scale",
+                                      "slider",
+                                      "nps"
+                                    ]
+                                  },
+                                  "step": {
+                                    "type": "number"
+                                  },
+                                  "minLabel": {
+                                    "type": "string",
+                                    "maxLength": 100
+                                  },
+                                  "maxLabel": {
+                                    "type": "string",
+                                    "maxLength": 100
                                   }
                                 },
                                 "required": [
