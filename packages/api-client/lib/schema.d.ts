@@ -482,7 +482,9 @@ export interface components {
                 required: boolean;
                 /** @constant */
                 type: "boolean";
-                config: Record<string, never>;
+                config: {
+                    mustBeYes?: boolean;
+                };
             })[];
         };
         AnyAnswers: {
