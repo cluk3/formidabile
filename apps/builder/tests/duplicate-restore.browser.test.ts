@@ -28,18 +28,25 @@ const draftOf = (title: string, questions: unknown[] = []): Definition => ({
   questions,
 });
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 const isDefinition = (value: unknown): value is Definition =>
-  isRecord(value) && typeof value.title === "string";
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  "title" in value &&
+  typeof value.title === "string";
 
 const isSave = (
   value: unknown,
 ): value is { expectedRevision: string | null; definition: Definition } => {
-  if (!isRecord(value) || !("expectedRevision" in value) || !("definition" in value)) return false;
+  if (typeof value !== "object" || value === null) return false;
+  if (!("expectedRevision" in value) || !("definition" in value)) return false;
   const revision = value.expectedRevision;
   return (revision === null || typeof revision === "string") && isDefinition(value.definition);
+};
+
+const postedDefinition = (value: unknown): Definition | undefined => {
+  if (typeof value !== "object" || value === null || !("definition" in value)) return undefined;
+  return isDefinition(value.definition) ? value.definition : undefined;
 };
 
 /** One form, plus whatever `POST /forms` creates. A draft save follows the API's revision rules. */
@@ -100,8 +107,8 @@ const formHost = (stored: Stored) => {
       );
       if (read !== undefined) return json(200, { ...summary(read), definition: read.definition });
       if (route === "POST /forms") {
-        const posted = isRecord(body) ? body.definition : undefined;
-        if (!isDefinition(posted)) return json(400, { _tag: "ValidationFailed" });
+        const posted = postedDefinition(body);
+        if (posted === undefined) return json(400, { _tag: "ValidationFailed" });
         return json(201, {
           form: {
             id: copyId,
