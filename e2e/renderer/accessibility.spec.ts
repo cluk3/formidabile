@@ -88,6 +88,61 @@ test("axe finds no WCAG 2.2 AA violation while answering or showing errors", asy
   expect(await axeViolations(page)).toEqual([]);
 });
 
+test("moving to the next page focuses that page's heading", async ({ page, request }) => {
+  const title = `Paged sign-up ${randomUUID()}`;
+  const seeded = await seedProject(request, [
+    {
+      title,
+      availability: "open",
+      definition: {
+        format: 2,
+        title,
+        pages: [
+          {
+            id: randomUUID(),
+            questions: [
+              {
+                id: randomUUID(),
+                type: "text",
+                label: "Your name",
+                required: true,
+                config: { display: "single_line" },
+              },
+            ],
+            jumps: [],
+          },
+          {
+            id: randomUUID(),
+            title: "The second page",
+            questions: [
+              {
+                id: randomUUID(),
+                type: "text",
+                label: "City",
+                required: true,
+                config: { display: "single_line" },
+              },
+            ],
+            jumps: [],
+          },
+        ],
+      },
+    },
+  ]);
+  await page.goto(`/projects/${seeded.projectId}`);
+  const element = page.locator("form-renderer");
+  await expect(element.getByRole("heading", { name: title })).toBeVisible();
+  await expect(element.getByText("Page 1")).toHaveCount(0);
+  await expect(element.getByText(/page \d+ of \d+/i)).toHaveCount(0);
+
+  await element.getByLabel("Your name").fill("Ada");
+  await element.getByRole("button", { name: "Next" }).click();
+
+  await expect(element.getByRole("heading", { name: "The second page" })).toBeFocused();
+  await expect(element.getByLabel("City")).toBeVisible();
+  await expect(element.getByText("Page 2")).toHaveCount(0);
+});
+
 test("a failed submit moves focus through the shadow root to the first error", async ({
   page,
   request,
