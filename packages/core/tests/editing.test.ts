@@ -23,9 +23,11 @@ const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0
 const idSource = () => {
   let questions = 100;
   let options = 0;
+  let pages = 1000;
   return {
     questionId: () => uuid(++questions),
     optionValue: () => `minted-${++options}`,
+    pageId: () => uuid(++pages),
   };
 };
 
@@ -38,9 +40,10 @@ const deepFreeze = <T>(value: T): T => {
 };
 
 /** Parsed and frozen, so an editing function that mutates its input throws. */
-const parsed = (input: unknown): FormDefinition => {
+const parsed = (input: unknown) => {
   const result = parseDefinition(input);
   if (!result.ok) throw new Error(JSON.stringify(result.issues));
+  if (result.value.format !== 1) throw new Error("expected a format 1 fixture");
   return deepFreeze(result.value);
 };
 
@@ -353,6 +356,37 @@ describe("removeQuestion", () => {
   test("refuses an identity the definition doesn't have", () => {
     expect(() => removeQuestion(survey, uuid(9))).toThrow(`No question ${uuid(9)}`);
   });
+});
+
+test("format 2 editing keeps each page and moves a question in display order", () => {
+  const result = parseDefinition({
+    format: 2,
+    title: "Survey",
+    pages: [
+      { id: uuid(7), title: "Start", questions: [name, colour], jumps: [] },
+      { id: uuid(8), questions: [age], jumps: [] },
+    ],
+  });
+  if (!result.ok || result.value.format !== 2) throw new Error(JSON.stringify(result));
+  const format2 = result.value;
+
+  const moved = moveQuestion(format2, age.id, 0);
+  if (moved.format !== 2) throw new Error("format");
+  expect(moved.pages.map((page) => page.questions.map((q) => q.id))).toEqual([
+    [age.id, name.id],
+    [colour.id],
+  ]);
+  expect(moved.pages[0]).toMatchObject({ id: uuid(7), title: "Start", jumps: [] });
+  expect(moved.pages[1]).toMatchObject({ id: uuid(8), jumps: [] });
+
+  const added = addQuestion(format2, "email", idSource());
+  if (added.format !== 2) throw new Error("format");
+  expect(added.pages[0]!.questions).toEqual(format2.pages[0]!.questions);
+  expect(added.pages[1]!.questions.map((q) => q.type)).toEqual(["number", "email"]);
+
+  const removed = removeQuestion(added, age.id);
+  if (removed.format !== 2) throw new Error("format");
+  expect(removed.pages[1]!.questions.map((q) => q.type)).toEqual(["email"]);
 });
 
 test("the caps the builder disables its actions at", () => {

@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import {
   moduleOf,
+  questionsOf,
   type FormDefinition,
   type QuestionSnapshot,
 } from "../definition/form-definition.ts";
@@ -23,7 +24,7 @@ export type Answers = z.output<typeof AnyAnswers>;
 export const buildAnswerSchema = (definition: FormDefinition): z.ZodMiniType<Answers, unknown> =>
   z.strictObject(
     Object.fromEntries(
-      definition.questions.map((q) => {
+      questionsOf(definition).map((q) => {
         const answer = moduleOf(q).answer(q);
         return [q.id, q.required ? answer : z.exactOptional(answer)];
       }),
@@ -51,7 +52,7 @@ export const interpretAnswers = (
   definition: FormDefinition,
   answers: Answers,
 ): InterpretedAnswer[] =>
-  definition.questions.map((question) => {
+  questionsOf(definition).map((question) => {
     const value = answers[question.id];
     return value === undefined
       ? { question }

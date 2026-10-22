@@ -1,4 +1,4 @@
-import type { FormDefinition, QuestionSnapshot } from "@fb/core/definition";
+import type { QuestionSnapshot } from "@fb/core/definition";
 import { expect, test } from "vite-plus/test";
 import type { LocatorSelectors } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
@@ -10,7 +10,11 @@ const formId = crypto.randomUUID();
 const at = "2026-10-21T08:00:00.000Z";
 
 type Answers = Record<string, string | number | boolean | string[]>;
-type Version = { id: string; number: number; definition: FormDefinition };
+type Version = {
+  id: string;
+  number: number;
+  definition: { format: 1; title: string; questions: QuestionSnapshot[] };
+};
 type Stored = {
   id: string;
   versionId: string;

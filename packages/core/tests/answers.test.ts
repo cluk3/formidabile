@@ -17,9 +17,10 @@ const ids = {
   bio: "00000000-0000-4000-8000-000000000002",
 };
 
-const define = (questions: object[]): FormDefinition => {
+const define = (questions: object[]) => {
   const parsed = parseDefinition({ format: 1, title: "Feedback", questions });
   if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
+  if (parsed.value.format !== 1) throw new Error("expected a format 1 fixture");
   return parsed.value;
 };
 

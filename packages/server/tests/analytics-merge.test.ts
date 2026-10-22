@@ -1,8 +1,8 @@
 import { mergeAnalytics, type AnalyticsCounts } from "@fb/server";
-import type { FormDefinition } from "@fb/core/definition";
+import type { QuestionSnapshot } from "@fb/core/definition";
 import { describe, expect, test } from "vite-plus/test";
 
-type Question = FormDefinition["questions"][number];
+type Question = QuestionSnapshot;
 
 const colourId = "0192f5a0-7c3e-7b1a-9d2e-0000000000c1";
 

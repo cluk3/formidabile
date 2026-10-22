@@ -7,6 +7,7 @@
     reidentifyQuestion,
     removeOption,
     removeQuestion,
+    replaceQuestion,
     type IdSource,
   } from "@fb/core/editing";
   import { tick } from "svelte";
@@ -35,7 +36,7 @@
   let moveDown = $state<HTMLElement | null>(null);
 
   const set = (next: QuestionSnapshot) =>
-    edit((definition) => ({ ...definition, questions: definition.questions.with(index, next) }));
+    edit((definition) => replaceQuestion(definition, question.id, () => next));
 
   /** Keyboard focus follows the question: the same button, or the other one once this one is disabled at an end. */
   const move = async (by: -1 | 1) => {
