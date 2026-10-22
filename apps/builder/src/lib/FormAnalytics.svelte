@@ -121,6 +121,36 @@
         {/each}
       </tbody>
     </table>
+    {#if summary.nps}
+      {@const nps = summary.nps}
+      <table class={tableClass}>
+        <caption class={captionClass}>NPS</caption>
+        <thead>
+          <tr><th>Group</th><th>Count</th><th>Share</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row" class="font-normal">Promoters</th>
+            <td>{nps.promoters}</td>
+            <td>{@render bar(share(nps.promoters, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Passives</th>
+            <td>{nps.passives}</td>
+            <td>{@render bar(share(nps.passives, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Detractors</th>
+            <td>{nps.detractors}</td>
+            <td>{@render bar(share(nps.detractors, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Score</th>
+            <td colspan="2">{numberText(nps.score)}</td>
+          </tr>
+        </tbody>
+      </table>
+    {/if}
   {/if}
 {/snippet}
 

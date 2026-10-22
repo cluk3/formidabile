@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { TenantId } from "../authorization/actor.ts";
 import type { Database } from "../persistence/database.ts";
 import {
@@ -127,4 +127,23 @@ export const numbersCombined = (db: Db, tenant: TenantId, formId: string) => {
     .from(rows)
     .where(eq(rows.type, "number"))
     .groupBy(rows.questionId);
+};
+
+/** Promoter, passive and detractor counts for every number question. The merge drops non-NPS versions. */
+export const npsCounts = (db: Db, tenant: TenantId, formId: string) => {
+  const rows = formAnswers(db, tenant, formId);
+  const numeric = sql`(${rows.value})::float8`;
+  const bucket = (when: SQL) =>
+    sql<number>`coalesce(sum(case when ${when} then 1 else 0 end), 0)::int`;
+  return db
+    .select({
+      versionId: rows.versionId,
+      questionId: rows.questionId,
+      promoters: bucket(sql`${numeric} >= 9 and ${numeric} <= 10`),
+      passives: bucket(sql`${numeric} >= 7 and ${numeric} < 9`),
+      detractors: bucket(sql`${numeric} >= 0 and ${numeric} < 7`),
+    })
+    .from(rows)
+    .where(eq(rows.type, "number"))
+    .groupBy(rows.versionId, rows.questionId);
 };

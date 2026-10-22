@@ -23,7 +23,7 @@ export interface NumberAggregate {
   readonly median: number | null;
 }
 
-/** The six per-form query results, with every version's definition (ADR 0009). */
+/** The per-form query results, with every version's definition (ADR 0009). */
 export interface AnalyticsCounts {
   readonly formId: string;
   /** Every version; the highest-numbered one is current. */
@@ -55,6 +55,17 @@ export interface AnalyticsCounts {
   >;
   /** Across every version: medians can't be combined from per-version medians. */
   readonly combinedNumbers: ReadonlyArray<NumberAggregate & { readonly questionId: string }>;
+  /**
+   * Promoter, passive and detractor counts for every number question. The merge keeps them only for
+   * versions whose snapshot uses the NPS display.
+   */
+  readonly nps: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly promoters: number;
+    readonly passives: number;
+    readonly detractors: number;
+  }>;
 }
 
 const noNumbers: NumberAggregate = { count: 0, min: null, max: null, mean: null, median: null };
@@ -123,6 +134,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   const answered = new Map(counts.answered.map((row) => [key(row.versionId, row.questionId), row]));
   const numbers = new Map(counts.numbers.map((row) => [key(row.versionId, row.questionId), row]));
   const combinedNumbers = new Map(counts.combinedNumbers.map((row) => [row.questionId, row]));
+  const nps = new Map(counts.nps.map((row) => [key(row.versionId, row.questionId), row]));
   const choices = new Map<string, Map<string, number>>();
   for (const row of counts.choices) {
     const at = key(row.versionId, row.questionId);
@@ -157,6 +169,26 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
       appearances.set(question.id, list);
     });
 
+  /** Promoters' share minus detractors' share, in percentage points. Null when nobody answered. */
+  const npsPercent = (promoters: number, detractors: number, answeredCount: number) =>
+    answeredCount === 0 ? null : Math.round(((promoters - detractors) / answeredCount) * 100);
+
+  /** Set only when this version's snapshot uses the NPS display. */
+  const npsOf = (question: Question, versionId: string, answeredCount: number) => {
+    if (question.type !== "number" || question.config.display !== "nps") return undefined;
+    const buckets = nps.get(key(versionId, question.id));
+    const promoters = buckets?.promoters ?? 0;
+    const passives = buckets?.passives ?? 0;
+    const detractors = buckets?.detractors ?? 0;
+    return {
+      promoters,
+      passives,
+      detractors,
+      answered: answeredCount,
+      score: npsPercent(promoters, detractors, answeredCount),
+    };
+  };
+
   /** A version's own choice summary lists only the options it offered. */
   const versionSummary = (
     number: number,
@@ -185,7 +217,9 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
       case "number": {
         const { count, min, max, mean, median } =
           numbers.get(key(versionId, question.id)) ?? noNumbers;
-        return { type: "number", count, min, max, mean, median };
+        const summary = { type: "number" as const, count, min, max, mean, median };
+        const score = npsOf(question, versionId, answered);
+        return score === undefined ? summary : { ...summary, nps: score };
       }
       default:
         return { type: question.type };
@@ -229,7 +263,26 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         };
       case "number": {
         const { count, min, max, mean, median } = combinedNumbers.get(question.id) ?? noNumbers;
-        return { type: "number", count, min, max, mean, median };
+        const summary = { type: "number" as const, count, min, max, mean, median };
+        const scores = snapshots.flatMap(({ item }) => {
+          const score = npsOf(item.question, item.versionId, item.answered);
+          return score === undefined ? [] : [score];
+        });
+        if (scores.length === 0) return summary;
+        const promoters = scores.reduce((sum, score) => sum + score.promoters, 0);
+        const passives = scores.reduce((sum, score) => sum + score.passives, 0);
+        const detractors = scores.reduce((sum, score) => sum + score.detractors, 0);
+        const answered = scores.reduce((sum, score) => sum + score.answered, 0);
+        return {
+          ...summary,
+          nps: {
+            promoters,
+            passives,
+            detractors,
+            answered,
+            score: npsPercent(promoters, detractors, answered),
+          },
+        };
       }
       default:
         return { type: question.type };
