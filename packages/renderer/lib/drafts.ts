@@ -3,6 +3,7 @@ import {
   questionsOf,
   type FormDefinition,
   type Issue,
+  type QuestionSnapshot,
   type QuestionTypeName,
 } from "@fb/core/definition";
 
@@ -77,6 +78,21 @@ export type Checked =
   | { readonly ok: true; readonly answers: Answers }
   | { readonly ok: false; readonly errors: Record<string, string> };
 
+/** The answers the current drafts stand for, including invalid ones. An unanswered question has no key. */
+export const answersFromDrafts = (
+  definition: FormDefinition,
+  drafts: Readonly<Record<string, Draft>>,
+): Answers => {
+  const answers: Answers = {};
+  for (const question of questionsOf(definition)) {
+    const answer = (answerOf[question.type] as (draft: Draft) => Answer | undefined)(
+      drafts[question.id],
+    );
+    if (answer !== undefined) answers[question.id] = answer;
+  }
+  return answers;
+};
+
 /**
  * The answers to send, validated by the version's own answer schema, or each invalid question's message. An
  * unanswered optional question has no key.
@@ -85,16 +101,32 @@ export const checkDrafts = (
   definition: FormDefinition,
   drafts: Readonly<Record<string, Draft>>,
 ): Checked => {
-  const answers: Answers = {};
+  const answers = answersFromDrafts(definition, drafts);
   const missing: Record<string, string> = {};
-  for (const question of questionsOf(definition)) {
-    const answer = (answerOf[question.type] as (draft: Draft) => Answer | undefined)(
-      drafts[question.id],
-    );
-    if (answer !== undefined) answers[question.id] = answer;
-    else if (question.required) missing[question.id] = unanswered;
-  }
+  for (const question of questionsOf(definition))
+    if (answers[question.id] === undefined && question.required) missing[question.id] = unanswered;
   const result = validateAnswers(definition, answers);
   if (result.ok && Object.keys(missing).length === 0) return { ok: true, answers: result.value };
   return { ok: false, errors: { ...(result.ok ? {} : questionErrors(result.issues)), ...missing } };
 };
+
+const checkedPageId = "00000000-0000-4000-8000-00000000c000";
+
+/**
+ * Next checks one page. The page's questions are validated as their own definition, so a required question
+ * on another page is not demanded yet. Submit keeps using {@link checkDrafts} for the whole path.
+ */
+export const checkPage = (
+  definition: FormDefinition,
+  drafts: Readonly<Record<string, Draft>>,
+  questions: readonly QuestionSnapshot[],
+): Checked =>
+  checkDrafts(
+    {
+      format: 2,
+      title: definition.title,
+      ...(definition.description === undefined ? {} : { description: definition.description }),
+      pages: [{ id: checkedPageId, questions: [...questions], jumps: [] }],
+    },
+    drafts,
+  );

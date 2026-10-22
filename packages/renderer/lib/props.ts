@@ -2,6 +2,15 @@ import type { FormDefinition } from "@fb/core/definition";
 import type { RendererError } from "./problems.ts";
 
 /**
+ * The page the respondent is now on. `title` is null when the page is untitled: the builder's "Page N"
+ * label is never sent. `pageId` is null for a format-1 definition, which is one page with no stored id.
+ */
+export type PageChange = {
+  readonly pageId: string | null;
+  readonly title: string | null;
+};
+
+/**
  * The host's credentials hook (ADR 0011). The renderer calls it before every request, with the form it is about
  * to reach, and sends the token it returns as a bearer token.
  */
@@ -18,6 +27,8 @@ type LiveProps = {
   onsubmitted?: (event: { readonly responseId: string }) => void;
   /** Whenever the renderer shows a refusal or a failure in place of, or above, the form. */
   onerror?: (event: RendererError) => void;
+  /** The respondent moved to a page, including the first one shown. */
+  onpagechange?: (event: PageChange) => void;
   preview?: undefined;
 };
 
@@ -30,6 +41,8 @@ type PreviewProps = {
   responseId?: undefined;
   onsubmitted?: undefined;
   onerror?: undefined;
+  /** The respondent moved to a page, including the first one shown. */
+  onpagechange?: (event: PageChange) => void;
 };
 
 export type RendererProps = LiveProps | PreviewProps;
