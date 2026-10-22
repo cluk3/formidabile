@@ -1,4 +1,9 @@
-import type { FormDefinition, QuestionSnapshotOf } from "@fb/core/definition";
+import {
+  questionsOf,
+  type FormDefinition,
+  type QuestionSnapshot,
+  type QuestionSnapshotOf,
+} from "@fb/core/definition";
 import type {
   AnalyticsConstraints,
   AnalyticsSummary,
@@ -6,7 +11,7 @@ import type {
   QuestionAnalytics,
 } from "../envelopes.ts";
 
-type Question = FormDefinition["questions"][number];
+type Question = QuestionSnapshot;
 type ChoiceQuestion = QuestionSnapshotOf<"single_choice" | "multiple_choice">;
 
 export interface NumberAggregate {
@@ -147,7 +152,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   }
   const appearances = new Map<string, Array<Appearance<Snapshot>>>();
   for (const version of versions)
-    version.definition.questions.forEach((question, position) => {
+    questionsOf(version.definition).forEach((question, position) => {
       const at = key(version.id, question.id);
       const list = appearances.get(question.id) ?? [];
       list.push({

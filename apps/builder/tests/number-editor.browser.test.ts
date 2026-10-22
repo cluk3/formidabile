@@ -1,5 +1,5 @@
 import type { FormDefinition, QuestionSnapshot } from "@fb/core/definition";
-import { validateForPublish } from "@fb/core/definition";
+import { questionsOf, validateForPublish } from "@fb/core/definition";
 import { expect, test } from "vite-plus/test";
 import { render } from "vitest-browser-svelte";
 import { createBuilderClient } from "#lib/api.ts";
@@ -71,7 +71,13 @@ test("display and step settings stay on the same number question", async () => {
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  const input = host.saves[0]?.definition.questions[0];
+  const saved = (index: number) => {
+    const definition = host.saves[index]?.definition;
+    if (definition === undefined) throw new Error(`missing save ${index}`);
+    return questionsOf(definition)[0];
+  };
+
+  const input = saved(0);
   expect(input).toMatchObject({
     type: "number",
     label: "Score",
@@ -83,7 +89,7 @@ test("display and step settings stay on the same number question", async () => {
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  const rating = host.saves[1]?.definition.questions[0];
+  const rating = saved(1);
   expect(rating?.id).toBe(input?.id);
   expect(rating?.config).toEqual({
     integer: true,
@@ -102,7 +108,7 @@ test("display and step settings stay on the same number question", async () => {
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  expect(host.saves[2]?.definition.questions[0]).toMatchObject({
+  expect(saved(2)).toMatchObject({
     id: input?.id,
     config: {
       integer: true,
@@ -122,7 +128,7 @@ test("display and step settings stay on the same number question", async () => {
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  const slider = host.saves[3]?.definition.questions[0];
+  const slider = saved(3);
   expect(slider).toMatchObject({
     id: input?.id,
     config: { integer: true, display: "slider", min: 0, max: 100, step: 5 },
@@ -136,7 +142,7 @@ test("display and step settings stay on the same number question", async () => {
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  const nps = host.saves[4]?.definition.questions[0];
+  const nps = saved(4);
   expect(nps).toMatchObject({
     id: input?.id,
     config: {

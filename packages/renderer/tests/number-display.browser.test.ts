@@ -1,4 +1,4 @@
-import type { FormDefinition } from "@fb/core/definition";
+import type { QuestionSnapshot } from "@fb/core/definition";
 import { expect, test } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
@@ -13,7 +13,7 @@ const posted = (requests: ReadonlyArray<{ method: string; body: unknown }>) =>
     answers: Record<string, unknown>;
   };
 
-const show = async (questions: FormDefinition["questions"]) => {
+const show = async (questions: QuestionSnapshot[]) => {
   const api = fakeApi(definitionOf(questions));
   await render(FormRenderer, { apiBaseUrl, formId, getToken: staticToken });
   await expect.element(page.getByRole("heading", { name: "Event feedback" })).toBeVisible();

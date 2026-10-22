@@ -1,5 +1,5 @@
 import { buildAnswerSchema } from "@fb/core/answers";
-import type { FormDefinition, QuestionSnapshot } from "@fb/core/definition";
+import { questionsOf, type FormDefinition, type QuestionSnapshot } from "@fb/core/definition";
 import type { Schema } from "effect";
 import { toJSONSchema } from "zod/mini";
 
@@ -36,7 +36,7 @@ export const answerJsonSchema = (definition: FormDefinition): Schema.JsonObject 
     io: "input",
   });
   const properties = schema.properties!;
-  for (const question of definition.questions) {
+  for (const question of questionsOf(definition)) {
     Object.assign(properties[question.id]!, generatorFixes(question));
   }
   return Object.assign(schema, {

@@ -1,4 +1,4 @@
-import { validateForPublish } from "@fb/core/definition";
+import { questionsOf, validateForPublish } from "@fb/core/definition";
 import { Context, Effect, Layer, type Schema } from "effect";
 import type { Actor } from "../authorization/actor.ts";
 import { requireAdminRead, requireCapability } from "../authorization/authorization.ts";
@@ -66,7 +66,7 @@ export class Publication extends Context.Service<
                   if (!valid.ok) return yield* new ValidationFailed({ issues: valid.issues });
                   const published = yield* insertCurrentVersion(tx, form, {
                     definition: valid.value as Schema.Json,
-                    questions: valid.value.questions,
+                    questions: questionsOf(valid.value),
                     publishedBy: subject,
                     derivedFromVersionId: draft.basedOnVersionId,
                   });

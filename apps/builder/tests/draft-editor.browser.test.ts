@@ -20,11 +20,8 @@ const textQuestion = (label: string): QuestionSnapshot => ({
   config: { display: "single_line" },
 });
 
-const definitionOf = (title: string, questions: QuestionSnapshot[] = []): FormDefinition => ({
-  format: 1,
-  title,
-  questions,
-});
+const definitionOf = (title: string, questions: QuestionSnapshot[] = []) =>
+  ({ format: 1 as const, title, questions }) satisfies FormDefinition;
 
 const draftOf = (definition: unknown, revision: string) => ({
   formId,
@@ -173,7 +170,11 @@ test("every question type can be added, configured and saved as a publishable dr
   const [save] = host.saves;
   expect(save?.expectedRevision).toBe("r0");
   expect(validateForPublish(save?.definition, [])).toMatchObject({ ok: true });
-  const questions = save?.definition.questions ?? [];
+  const savedDefinition = save?.definition;
+  const questions =
+    savedDefinition?.format === 2 ? (savedDefinition.pages[0]?.questions ?? []) : [];
+  expect(savedDefinition?.format).toBe(2);
+  expect(savedDefinition?.format === 2 && savedDefinition.pages[0]?.jumps).toEqual([]);
   expect(questions.map((q) => q.type)).toEqual([
     "text",
     "email",
@@ -218,7 +219,10 @@ test("treating a question as new, or changing its type, gives it a new identity"
   await screen.getByRole("button", { name: "Save" }).click();
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  const [first, second] = host.saves[0]?.definition.questions ?? [];
+  const savedDefinition = host.saves[0]?.definition;
+  const [first, second] =
+    savedDefinition?.format === 2 ? (savedDefinition.pages[0]?.questions ?? []) : [];
+  expect(savedDefinition?.format).toBe(2);
   expect(first).toEqual({ ...original, id: expect.any(String) });
   expect(first?.id).not.toBe(original.id);
   expect(second).toMatchObject({ type: "number", label: "Anything else?" });
@@ -247,7 +251,14 @@ test("a published form without a draft is edited from its current version", asyn
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
   expect(saves).toEqual([
-    { expectedRevision: null, definition: { ...published, title: "Published, revised" } },
+    {
+      expectedRevision: null,
+      definition: {
+        format: 2,
+        title: "Published, revised",
+        pages: [{ id: expect.any(String), questions: published.questions, jumps: [] }],
+      },
+    },
   ]);
 });
 

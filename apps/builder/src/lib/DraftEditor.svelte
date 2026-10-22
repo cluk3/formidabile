@@ -2,11 +2,12 @@
   import type { FormApiClient, Schemas } from "@fb/api-client";
   import {
     parseDefinition,
+    questionsOf,
     type FormDefinition,
     type Issue,
     type QuestionTypeName,
   } from "@fb/core/definition";
-  import { addQuestion, QUESTIONS_CAP } from "@fb/core/editing";
+  import { addQuestion, QUESTIONS_CAP, upgradeToFormat2 } from "@fb/core/editing";
   import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
   import { outcome, settleWrite, type Outcome } from "#lib/api.ts";
@@ -24,12 +25,15 @@
     formId,
     signInHref,
     onDeleted,
+    onDuplicated,
   }: {
     client: FormApiClient;
     formId: string;
     signInHref: string;
     /** The form was deleted: leave its editor. */
     onDeleted: () => void;
+    /** A duplicate was created: open that form. */
+    onDuplicated?: (formId: string) => void;
   } = $props();
   const uid = $props.id();
   const path = $derived({ params: { path: { formId } } });
@@ -194,7 +198,8 @@
 
   const save = async () => {
     if (definition === null) return;
-    const sent = definition;
+    const sent = upgradeToFormat2(definition, webCryptoIds);
+    if (definition !== sent) definition = sent;
     begin();
     const result = await outcome(() =>
       client.PUT("/forms/{formId}/draft", {
@@ -380,16 +385,11 @@
         }}></textarea>
     </div>
 
+    {@const questions = questionsOf(definition)}
     <ol class="flex flex-col gap-4">
-      {#each definition.questions as question, index (question.id)}
+      {#each questions as question, index (question.id)}
         <li>
-          <QuestionCard
-            {question}
-            {index}
-            count={definition.questions.length}
-            {edit}
-            ids={webCryptoIds}
-          />
+          <QuestionCard {question} {index} count={questions.length} {edit} ids={webCryptoIds} />
         </li>
       {/each}
     </ol>
@@ -405,7 +405,7 @@
       </div>
       <Button
         variant="outline"
-        disabled={definition.questions.length >= QUESTIONS_CAP}
+        disabled={questionsOf(definition).length >= QUESTIONS_CAP}
         onclick={() => edit((d) => addQuestion(d, newType, webCryptoIds))}>Add question</Button
       >
     </div>
@@ -420,7 +420,14 @@
       signIn={() => (signedOut = true)}
     />
 
-    <PublicationHistory {client} {form} signIn={() => (signedOut = true)} />
+    <PublicationHistory
+      {client}
+      {form}
+      signIn={() => (signedOut = true)}
+      onDuplicated={(id) => onDuplicated?.(id)}
+      onRestored={load}
+      onRevisionConflict={() => (conflict = changedSinceOpened)}
+    />
 
     <section class="flex flex-col gap-3" aria-labelledby={`${uid}-refs`}>
       <h2 id={`${uid}-refs`} class="text-lg font-semibold">External references</h2>

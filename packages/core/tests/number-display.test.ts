@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { validateAnswers } from "@fb/core/answers";
-import { parseDefinition, validateForPublish, type Result } from "@fb/core/definition";
+import { parseDefinition, questionsOf, validateForPublish, type Result } from "@fb/core/definition";
 import { addQuestion } from "@fb/core/editing";
 
 const id = "00000000-0000-4000-8000-000000000001";
@@ -46,7 +46,7 @@ describe("number display", () => {
         maxLabel: "Very likely",
       }),
     );
-    expect(labelled.ok && labelled.value.questions[0]).toMatchObject({
+    expect(labelled.ok && questionsOf(labelled.value)[0]).toMatchObject({
       config: { minLabel: "Not likely", maxLabel: "Very likely" },
     });
     expect(
@@ -57,7 +57,7 @@ describe("number display", () => {
   test("publish: a plain number keeps its range rules when the display is left unset", () => {
     expect(publishPaths({ integer: false, min: 0, max: 10 })).toEqual([]);
     expect(publishPaths({ integer: false, min: 3, max: 1 })).toEqual([["config", "max"]]);
-    expect(published({ integer: false, min: 0, max: 10 }).questions[0]).toMatchObject({
+    expect(questionsOf(published({ integer: false, min: 0, max: 10 }))[0]).toMatchObject({
       config: { integer: false, min: 0, max: 10 },
     });
   });
@@ -143,7 +143,7 @@ describe("number display", () => {
     const next = form({ integer: true, display: "rating", min: 1, max: 5 });
     const result = validateForPublish(next, [earlier]);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.questions[0]?.id).toBe(id);
+    if (result.ok) expect(questionsOf(result.value)[0]?.id).toBe(id);
   });
 
   test("a new number question starts as a plain input", () => {
@@ -152,8 +152,9 @@ describe("number display", () => {
     const edited = addQuestion(blank.value, "number", {
       questionId: () => id,
       optionValue: () => "opt",
+      pageId: () => "00000000-0000-4000-8000-000000000099",
     });
-    expect(edited.questions[0]?.config).toEqual({ integer: false, display: "input" });
+    expect(questionsOf(edited)[0]?.config).toEqual({ integer: false, display: "input" });
   });
 });
 

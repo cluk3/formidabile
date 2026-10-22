@@ -145,7 +145,9 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
     { value: "manageable", label: "Manageable" },
     { value: "hard", label: "Hard" },
   ];
-  const definition = (questions: Schemas["FormDefinition"]["questions"]) => ({
+  const definition = (
+    questions: Extract<Schemas["FormDefinition"], { format: 1 }>["questions"],
+  ) => ({
     format: 1 as const,
     title: "Onboarding survey",
     description: "Tell us how setting up went.",
@@ -162,6 +164,7 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
   const fourth = reidentifyQuestion(third, teamText, {
     questionId: () => teamTextAgain,
     optionValue: () => crypto.randomUUID(),
+    pageId: () => crypto.randomUUID(),
   });
 
   await seedForm(fetch, "acme-admin", [
