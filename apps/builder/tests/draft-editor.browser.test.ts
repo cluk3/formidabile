@@ -187,7 +187,7 @@ test("every question type can be added, configured and saved as a publishable dr
   expect(questions.map((q) => q.config)).toEqual([
     { display: "multi_line", maxLength: 280 },
     {},
-    { integer: true, min: 1, max: 10 },
+    { integer: true, display: "input", min: 1, max: 10 },
     { min: "2026-01-01" },
     {
       display: "dropdown",

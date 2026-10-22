@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { InputProps } from "../inputs.ts";
+  import ClearAnswer from "./ClearAnswer.svelte";
   import Description from "./Description.svelte";
   import Prompt from "./Prompt.svelte";
 
@@ -34,4 +35,7 @@
       {choice.label}
     </label>
   {/each}
+  {#if !question.required}
+    <ClearAnswer clear={() => (value = undefined)} />
+  {/if}
 </fieldset>
