@@ -58,6 +58,14 @@ It serves the same API as `createFormModuleHandler` from `@fb/http-api/web`, the
 
 `test:pg` uses the compose database unless you set `DATABASE_URL`.
 
+## Try it by hand
+
+```bash
+vp run demo
+```
+
+It resets the database to the demo data and serves the [reference host](./apps/reference-host/README.md) on http://localhost:4173 and the builder on http://localhost:4174. Ctrl+C stops both. `vp run demo:keep` starts them without resetting. [docs/manual-testing.md](./docs/manual-testing.md) is a walkthrough of what to try.
+
 ## Demo data
 
 ```bash
@@ -77,6 +85,9 @@ The `vite-plus` dev dependency puts a project-local `vp` in `node_modules/.bin`,
 ## Further reading
 
 - [packages/README.md](./packages/README.md): how the packages are laid out, and the database and migration rules.
+- [apps/reference-host/README.md](./apps/reference-host/README.md): the host used for manual testing and e2e.
+- [docs/manual-testing.md](./docs/manual-testing.md): a hands-on walkthrough of the whole product.
+- [docs/embedding.md](./docs/embedding.md): how a host embeds the renderer or writes its own.
 - [AGENTS.md](./AGENTS.md): instructions for coding agents.
 - [docs/embedding.md](./docs/embedding.md): the host-facing contract for embedding the renderer or writing your own.
 - [docs/adr/](./docs/adr/): architecture decisions.
