@@ -29,4 +29,4 @@ The renderer shows one page. `nextDestination` in `packages/renderer/lib/paging.
 
 A page change focuses the page title, or the form title when the trimmed title is empty. That is `focus()` with no `scrollIntoView`. `pagechange` is `{ pageId, title }` (`pageId` null on a format-1 page, `title` null when untitled), dispatched on the element and passed as `onpagechange`. The renderer never writes `document.title`, history, or the URL. There is no "page X of Y".
 
-`vp run ready` includes `test:pg` and CI, which this branch does not run. That checkbox stays open for the central merge.
+`vp run ready` includes `test:pg` and CI, which this branch does not run. That checkbox stays open for the central merge. After merging `form-builder-iteration` (number display and clear answer), local `vp check`, `vp run boundaries`, `vp run check:svelte`, `vp run check:generated`, and `vp test` (776 tests) passed. `vp run e2e` passed 55 and skipped 1 (the WebKit keyboard run). The worktree compose project name would start a second Postgres on 5432, so that run used `COMPOSE_PROJECT_NAME=form-builder` and the already healthy shared container.
