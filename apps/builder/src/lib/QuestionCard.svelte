@@ -96,7 +96,12 @@
 
   <Editor
     {question}
-    setConfig={(config) => set({ ...question, config } as QuestionSnapshot)}
+    setConfig={(config, required) =>
+      set({
+        ...question,
+        config,
+        ...(required === undefined ? {} : { required }),
+      } as QuestionSnapshot)}
     addOption={() => edit((definition) => addOption(definition, question.id, ids))}
     removeOption={(value) => edit((definition) => removeOption(definition, question.id, value))}
   />

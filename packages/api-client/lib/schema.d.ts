@@ -1210,7 +1210,9 @@ export interface components {
                 });
                 /** @constant */
                 type: "boolean";
-                config: Record<string, never>;
+                config: {
+                    mustBeYes?: boolean;
+                };
             })[];
         } | {
             /** @constant */
@@ -2039,7 +2041,9 @@ export interface components {
                     });
                     /** @constant */
                     type: "boolean";
-                    config: Record<string, never>;
+                    config: {
+                        mustBeYes?: boolean;
+                    };
                 })[];
                 jumps: {
                     condition: {
