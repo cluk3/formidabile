@@ -1,4 +1,5 @@
 import * as z from "zod/mini";
+import { Condition } from "./condition.ts";
 
 z.config(z.locales.en());
 
@@ -34,6 +35,11 @@ export const base = {
   label: DraftText(500),
   description: z.optional(DraftText(2000)),
   required: z.boolean(),
+  /**
+   * Show condition. Absent means the question is always shown once its page is reached. Format 1 snapshots
+   * omit it. Whether the condition fits the question is a publish rule, not part of this shape.
+   */
+  showCondition: z.optional(Condition),
 };
 
 /** A `min` above `max` leaves no answer in between. */

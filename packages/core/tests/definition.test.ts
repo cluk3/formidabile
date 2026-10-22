@@ -31,8 +31,8 @@ describe("parseDefinition", () => {
     expect(parseDefinition(definition())).toEqual({ ok: true, value: definition() });
   });
 
-  test("rejects another format", () => {
-    const result = parseDefinition(definition({ format: 2 }));
+  test("rejects an unknown format", () => {
+    const result = parseDefinition(definition({ format: 3 }));
     expect(result.ok).toBe(false);
     expect(!result.ok && result.issues.map((i) => i.path)).toEqual([["format"]]);
   });
@@ -80,7 +80,7 @@ describe("validateForPublish", () => {
   });
 
   test("reports structural problems without the publish rules", () => {
-    expect(issuePaths(validateForPublish(definition({ title: "", format: 2 }), []))).toEqual([
+    expect(issuePaths(validateForPublish(definition({ title: "", format: 3 }), []))).toEqual([
       ["format"],
     ]);
   });

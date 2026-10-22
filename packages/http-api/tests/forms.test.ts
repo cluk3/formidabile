@@ -96,13 +96,11 @@ describe("creating a form", () => {
     });
 
     expect(response.status).toBe(422);
-    expect(error).toEqual({
-      _tag: "ValidationFailed",
-      issues: [
-        { path: ["format"], message: expect.any(String) },
-        { path: ["questions"], message: expect.any(String) },
-      ],
-    });
+    expect(error).toMatchObject({ _tag: "ValidationFailed" });
+    expect(error && "issues" in error && error.issues.map((issue) => issue.path)).toEqual([
+      ["pages"],
+      [],
+    ]);
   });
 
   test("a body without a definition gets 422 from the edge", async () => {

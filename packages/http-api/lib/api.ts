@@ -324,7 +324,7 @@ export class FormApi extends HttpApi.make("FormApi")
   .annotateMerge(
     OpenApi.annotations({
       title: "Form module API",
-      version: "0.1.0",
+      version: "1.0.0",
       // `FormDefinitionJson` and `AnswersJson` are plain JSON to Effect. Zod's JSON Schemas document them, and
       // `@fb/core` parses them.
       transform: (spec) => {

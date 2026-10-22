@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createFormApiClient, type FormApiClient, type Schemas } from "@fb/api-client";
-  import { parseDefinition, type FormDefinition } from "@fb/core/definition";
+  import { parseDefinition, questionsOf, type FormDefinition } from "@fb/core/definition";
   import { tick } from "svelte";
   import { checkDrafts, draftsOf, questionErrors, type Draft } from "./drafts.ts";
   import { messages, unauthenticated, type ProblemCode } from "./problems.ts";
@@ -320,7 +320,7 @@
     {@const unconfirmed = notice?.code === "submitUnconfirmed"}
     <form bind:this={formElement} novalidate onsubmit={(event) => submit(event, form)}>
       <fieldset class="answers" disabled={unconfirmed}>
-        {#each form.definition.questions as question (question.id)}
+        {#each questionsOf(form.definition) as question (question.id)}
           <QuestionCard {question} bind:value={drafts[question.id]} error={errors[question.id]} />
         {/each}
       </fieldset>

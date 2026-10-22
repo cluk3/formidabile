@@ -74,8 +74,17 @@ test("must be yes is a setting that makes the question required", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Save" }));
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
 
-  expect(saves[0]?.definition.questions[0]).toMatchObject({
-    required: true,
-    config: { mustBeYes: true },
+  expect(saves[0]?.definition).toMatchObject({
+    format: 2,
+    pages: [
+      {
+        questions: [
+          {
+            required: true,
+            config: { mustBeYes: true },
+          },
+        ],
+      },
+    ],
   });
 });

@@ -1,5 +1,10 @@
 import { validateAnswers, type Answers } from "@fb/core/answers";
-import type { FormDefinition, Issue, QuestionTypeName } from "@fb/core/definition";
+import {
+  questionsOf,
+  type FormDefinition,
+  type Issue,
+  type QuestionTypeName,
+} from "@fb/core/definition";
 
 /** What each type's input holds while the respondent works on it: `undefined` until first touched. */
 type Drafts = {
@@ -49,7 +54,7 @@ export const draftsOf = (
   answers: Readonly<Record<string, Answer>>,
 ): Record<string, Draft> => {
   const drafts: Record<string, Draft> = {};
-  for (const question of definition.questions) {
+  for (const question of questionsOf(definition)) {
     const answer = answers[question.id];
     if (answer !== undefined) drafts[question.id] = draftOf[question.type](answer);
   }
@@ -82,7 +87,7 @@ export const checkDrafts = (
 ): Checked => {
   const answers: Answers = {};
   const missing: Record<string, string> = {};
-  for (const question of definition.questions) {
+  for (const question of questionsOf(definition)) {
     const answer = (answerOf[question.type] as (draft: Draft) => Answer | undefined)(
       drafts[question.id],
     );
