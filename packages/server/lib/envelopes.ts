@@ -181,6 +181,7 @@ const QuestionTypeName = Schema.Literals([
   "multiple_choice",
   "boolean",
   "phone",
+  "url",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -222,7 +223,7 @@ export const AnalyticsSummary = Schema.Union([
       }),
     ),
   }),
-  Schema.Struct({ type: Schema.Literals(["text", "email", "date", "phone"]) }),
+  Schema.Struct({ type: Schema.Literals(["text", "email", "date", "phone", "url"]) }),
 ]).annotate({ identifier: "AnalyticsSummary" });
 export type AnalyticsSummary = typeof AnalyticsSummary.Type;
 

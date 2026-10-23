@@ -9,6 +9,7 @@ import NumberInput from "./inputs/NumberInput.svelte";
 import PhoneInput from "./inputs/PhoneInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
 import TextInput from "./inputs/TextInput.svelte";
+import UrlInput from "./inputs/UrlInput.svelte";
 
 /** The ids and state the question card hands its input, for labelling and error linking. */
 export type Field = {
@@ -35,4 +36,5 @@ export const inputs = {
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
   phone: PhoneInput,
+  url: UrlInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

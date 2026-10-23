@@ -10,6 +10,7 @@ type AnswerValue = {
   multiple_choice: string[];
   boolean: boolean;
   phone: string;
+  url: string;
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

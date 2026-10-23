@@ -9,6 +9,7 @@ import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
 import PhoneAnswer from "#lib/answers/PhoneAnswer.svelte";
 import type { AnswerProps } from "#lib/answers/props.ts";
 import TextAnswer from "#lib/answers/TextAnswer.svelte";
+import UrlAnswer from "#lib/answers/UrlAnswer.svelte";
 import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
 import DateEditor from "#lib/editors/DateEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
@@ -18,6 +19,7 @@ import PhoneEditor from "#lib/editors/PhoneEditor.svelte";
 import type { EditorProps } from "#lib/editors/props.ts";
 import SingleChoiceEditor from "#lib/editors/SingleChoiceEditor.svelte";
 import TextEditor from "#lib/editors/TextEditor.svelte";
+import UrlEditor from "#lib/editors/UrlEditor.svelte";
 
 /**
  * Every question type in the builder, keyed by core's type name: its name, its editor, and how a response's answer
@@ -36,6 +38,7 @@ export const registry = {
   },
   boolean: { name: "Yes/no", editor: BooleanEditor, answer: BooleanAnswer },
   phone: { name: "Phone", editor: PhoneEditor, answer: PhoneAnswer },
+  url: { name: "URL", editor: UrlEditor, answer: UrlAnswer },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

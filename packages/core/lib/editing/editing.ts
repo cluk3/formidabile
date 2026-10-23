@@ -44,6 +44,7 @@ const newConfig = {
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
   phone: () => ({}),
+  url: () => ({}),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],

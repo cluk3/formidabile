@@ -31,6 +31,9 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
     case "phone":
       return { pattern: "^\\+[0-9]{1,15}$" };
+    case "url":
+      // `format` cannot say "http or https, with a host". A URI format would also reject a non-ASCII host the server accepts.
+      return { pattern: "^(?i:https?):\\/\\/[^\\s/?#]+[^\\s]*$" };
     default:
       return {};
   }

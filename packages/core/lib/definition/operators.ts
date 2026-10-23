@@ -229,6 +229,7 @@ export const conditionOperators = {
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
   phone: withPresence(phoneOperators),
+  url: withPresence(textOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
