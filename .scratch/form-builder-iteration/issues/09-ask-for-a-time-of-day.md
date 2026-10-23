@@ -24,3 +24,5 @@ The advisory schema's pattern is `^(?:[01]\d|2[0-3]):[0-5]\d$` (also emitted by 
 `packages/core/tests/answers.test.ts` has one appended `time_of_day` case so "covers every question type" stays true. Other behaviour is in `packages/core/tests/time-of-day.test.ts`.
 
 Registries append `time_of_day` after `boolean`. On a later merge, keep spec order among the new types: phone, url, time_of_day, date_time, date_range, ranking, single_choice_matrix, multiple_choice_matrix, address. The builder editor labels are "Earliest time" and "Latest time". The condition editor uses a native time input for constant kind `"time"`. The respondent input is `type="time"` with `min`/`max` set from the bounds.
+
+Merged `form-builder-iteration` (ticket 06's shown / skipped / not shown counts). `time_of_day` stays on the counts-only summary arm; the summary comment now says those types have no breakdown beyond the counts. `vp check`, `vp run boundaries`, `vp run check:svelte`, and `vp run check:generated` passed. `vp test` passed, 842 tests. `vp run ready` stays open: it includes e2e and CI.
