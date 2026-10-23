@@ -65,10 +65,33 @@
 
   const choiceOptions = (
     question: QuestionSnapshot,
+  ): readonly { readonly value: string; readonly label: string }[] => {
+    if (question.type === "single_choice" || question.type === "multiple_choice")
+      return question.config.options;
+    if (question.type === "single_choice_matrix" || question.type === "multiple_choice_matrix")
+      return question.config.columns;
+    return [];
+  };
+
+  const matrixRows = (
+    question: QuestionSnapshot | undefined,
   ): readonly { readonly value: string; readonly label: string }[] =>
-    question.type === "single_choice" || question.type === "multiple_choice"
-      ? question.config.options
+    question?.type === "single_choice_matrix" || question?.type === "multiple_choice_matrix"
+      ? question.config.rows
       : [];
+
+  /** A comparison operator names one row. Presence operators may name a row or the whole question. */
+  const rowFor = (
+    operator: ConditionOperator,
+    question: QuestionSnapshot,
+    keep: string | undefined,
+  ): { row?: string } => {
+    if (operator.row !== true) return {};
+    const rows = matrixRows(question);
+    const row =
+      keep !== undefined && rows.some((item) => item.value === keep) ? keep : rows[0]?.value;
+    return row === undefined ? {} : { row };
+  };
 
   const initialConstant = (
     operator: ConditionOperator,
@@ -107,10 +130,12 @@
     if (question === undefined) return;
     const available = conditionOperators[question.type];
     const operator = available.find((item) => item.id === leaf.operator) ?? available[0]!;
+    const { row: _row, ...rest } = leafBase(leaf);
     change({
-      ...leafBase(leaf),
+      ...rest,
       questionId,
       operator: operator.id,
+      ...rowFor(operator, question, leaf.row),
       ...initialConstant(
         operator,
         question,
@@ -125,11 +150,18 @@
       (item) => item.id === operatorId,
     );
     if (operator === undefined || question === undefined) return;
+    const { row: _row, ...rest } = leafBase(leaf);
     change({
-      ...leafBase(leaf),
+      ...rest,
       operator: operator.id,
+      ...rowFor(operator, question, leaf.row),
       ...initialConstant(operator, question, leaf.constant),
     });
+  };
+
+  const setRow = (leaf: Leaf, raw: string, change: Change) => {
+    const { row: _row, ...rest } = leaf;
+    change(raw === "" ? rest : { ...rest, row: raw });
   };
 
   const setConstant = (
@@ -255,6 +287,27 @@
           {/if}
         </select>
       </div>
+      {#if matrixRows(question).length > 0}
+        <div class={fieldClass}>
+          <label for="{key}-row">Row</label>
+          <select
+            id="{key}-row"
+            class={nativeInputClass}
+            value={leaf.row ?? ""}
+            onchange={(event) => setRow(leaf, event.currentTarget.value, change)}
+          >
+            {#if active?.row !== true}
+              <option value="">The whole question</option>
+            {/if}
+            {#each matrixRows(question) as row (row.value)}
+              <option value={row.value}>{row.label.trim() || "Untitled row"}</option>
+            {/each}
+            {#if leaf.row !== undefined && !matrixRows(question).some((row) => row.value === leaf.row)}
+              <option value={leaf.row}>Unknown row</option>
+            {/if}
+          </select>
+        </div>
+      {/if}
       {#if active?.constant === "strings" && question !== undefined}
         <fieldset class="flex flex-col gap-1">
           <legend class="text-sm font-medium">Values</legend>

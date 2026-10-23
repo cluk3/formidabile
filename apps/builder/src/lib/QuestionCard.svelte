@@ -8,13 +8,16 @@
   } from "@fb/core/definition";
   import {
     addOption,
+    addRow,
     changeQuestionType,
     clearShowCondition,
     moveQuestion,
     moveQuestionTo,
+    moveRow,
     reidentifyQuestion,
     removeOption,
     removeQuestion,
+    removeRow,
     replaceQuestion,
     setShowCondition,
     type IdSource,
@@ -24,6 +27,7 @@
   import { Input } from "#lib/components/ui/input/index.js";
   import { checkClass, fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import ConditionEditor from "#lib/ConditionEditor.svelte";
+  import MatrixEditor from "#lib/editors/MatrixEditor.svelte";
   import { editorOf, questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
@@ -144,17 +148,34 @@
     Required
   </label>
 
-  <Editor
-    {question}
-    setConfig={(config, required) =>
-      set({
-        ...question,
-        config,
-        ...(required === undefined ? {} : { required }),
-      } as QuestionSnapshot)}
-    addOption={() => edit((definition) => addOption(definition, question.id, ids))}
-    removeOption={(value) => edit((definition) => removeOption(definition, question.id, value))}
-  />
+  {#if question.type === "single_choice_matrix" || question.type === "multiple_choice_matrix"}
+    <MatrixEditor
+      {question}
+      setConfig={(config, required) =>
+        set({
+          ...question,
+          config,
+          ...(required === undefined ? {} : { required }),
+        })}
+      addOption={() => edit((definition) => addOption(definition, question.id, ids))}
+      removeOption={(value) => edit((definition) => removeOption(definition, question.id, value))}
+      addRow={() => edit((definition) => addRow(definition, question.id, ids))}
+      removeRow={(value) => edit((definition) => removeRow(definition, question.id, value))}
+      moveRow={(value, to) => edit((definition) => moveRow(definition, question.id, value, to))}
+    />
+  {:else}
+    <Editor
+      {question}
+      setConfig={(config, required) =>
+        set({
+          ...question,
+          config,
+          ...(required === undefined ? {} : { required }),
+        } as QuestionSnapshot)}
+      addOption={() => edit((definition) => addOption(definition, question.id, ids))}
+      removeOption={(value) => edit((definition) => removeOption(definition, question.id, value))}
+    />
+  {/if}
 
   <ConditionEditor
     condition={question.showCondition}

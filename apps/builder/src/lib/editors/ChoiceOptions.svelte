@@ -11,21 +11,26 @@
     setOptions,
     addOption,
     removeOption,
+    legend = "Options",
+    item = "option",
   }: {
     options: readonly Option[];
     setOptions(options: Option[]): void;
     addOption(): void;
     removeOption(value: string): void;
+    legend?: string;
+    /** Used in the accessible names, for example "column". */
+    item?: string;
   } = $props();
 </script>
 
 <fieldset class="flex flex-col gap-2">
-  <legend class="mb-1.5 text-sm font-medium">Options</legend>
+  <legend class="mb-1.5 text-sm font-medium">{legend}</legend>
   <ol class="flex flex-col gap-2">
     {#each options as option, i (option.value)}
       <li class="flex items-center gap-2">
         <Input
-          aria-label={`Option ${i + 1}`}
+          aria-label={`${item} ${i + 1}`}
           value={option.label}
           maxlength={200}
           oninput={(event) =>
@@ -34,7 +39,7 @@
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Remove option ${i + 1}`}
+          aria-label={`Remove ${item} ${i + 1}`}
           onclick={() => removeOption(option.value)}>Remove</Button
         >
       </li>
@@ -45,6 +50,7 @@
     variant="outline"
     size="sm"
     disabled={options.length >= OPTIONS_CAP}
-    onclick={addOption}>Add option</Button
+    onclick={addOption}>Add {item}</Button
+  >
   >
 </fieldset>

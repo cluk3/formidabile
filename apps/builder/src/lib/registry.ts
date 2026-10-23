@@ -4,6 +4,7 @@ import BooleanAnswer from "#lib/answers/BooleanAnswer.svelte";
 import ChoiceAnswer from "#lib/answers/ChoiceAnswer.svelte";
 import DateAnswer from "#lib/answers/DateAnswer.svelte";
 import EmailAnswer from "#lib/answers/EmailAnswer.svelte";
+import MatrixAnswer from "#lib/answers/MatrixAnswer.svelte";
 import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
 import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
 import type { AnswerProps } from "#lib/answers/props.ts";
@@ -11,6 +12,7 @@ import TextAnswer from "#lib/answers/TextAnswer.svelte";
 import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
 import DateEditor from "#lib/editors/DateEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
+import MatrixEditor from "#lib/editors/MatrixEditor.svelte";
 import MultipleChoiceEditor from "#lib/editors/MultipleChoiceEditor.svelte";
 import NumberEditor from "#lib/editors/NumberEditor.svelte";
 import type { EditorProps } from "#lib/editors/props.ts";
@@ -33,6 +35,16 @@ export const registry = {
     answer: MultipleChoiceAnswer,
   },
   boolean: { name: "Yes/no", editor: BooleanEditor, answer: BooleanAnswer },
+  single_choice_matrix: {
+    name: "Single-choice matrix",
+    editor: MatrixEditor,
+    answer: MatrixAnswer,
+  },
+  multiple_choice_matrix: {
+    name: "Multiple-choice matrix",
+    editor: MatrixEditor,
+    answer: MatrixAnswer as Component<AnswerProps<"multiple_choice_matrix">>,
+  },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

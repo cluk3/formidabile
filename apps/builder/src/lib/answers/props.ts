@@ -9,6 +9,8 @@ type AnswerValue = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  single_choice_matrix: Record<string, string>;
+  multiple_choice_matrix: Record<string, string[]>;
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

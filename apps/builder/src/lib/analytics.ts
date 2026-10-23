@@ -55,6 +55,11 @@ export const resultText = (summary: Summary) => {
       if (nps === undefined) return stats;
       return `NPS ${numberText(nps.score)} · Promoters ${nps.promoters} · Passives ${nps.passives} · Detractors ${nps.detractors}. ${stats}`;
     }
+    case "single_choice_matrix":
+    case "multiple_choice_matrix":
+      return summary.cells
+        .map((cell) => `${cell.rowLabel} / ${cell.columnLabel}: ${cell.count}`)
+        .join(" · ");
     default:
       return "";
   }
