@@ -11,7 +11,7 @@
 - [x] A submission that leaves the checkbox unticked is refused when the question is asked. Once a question can leave the path, a hidden must-be-yes question does not block submission.
 - [x] Publish accepts the question: `true` is an answer it allows. This ticket does not bump `info.version`.
 - [x] Tests cover the constraint and publish at the core entry point, the refusal through the HTTP API, the checkbox in the renderer, and the setting in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

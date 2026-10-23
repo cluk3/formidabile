@@ -15,7 +15,7 @@
 - [x] A definition accepts at most 50 pages and at most 200 questions across all of them. Page ids are unique within the definition.
 - [x] `info.version` is 1.0.0. The OpenAPI document and the generated client match the API. No later ticket bumps the version again.
 - [x] Tests cover parsing and publish at the core entry point, and both formats plus the 422 cases through the HTTP API.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

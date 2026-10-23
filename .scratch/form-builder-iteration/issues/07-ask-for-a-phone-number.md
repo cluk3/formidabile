@@ -13,7 +13,7 @@
 - [x] Analytics for a phone question are counts only, the same shape as text. No raw values or samples are returned.
 - [x] The advisory answer schema expresses the phone pattern. This ticket does not bump `info.version`.
 - [x] Tests cover structure, publish, the answer schema (including normalisation), display, and the operators at the core entry point; the advisory schema through the HTTP API; and the input in the renderer and the editor in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

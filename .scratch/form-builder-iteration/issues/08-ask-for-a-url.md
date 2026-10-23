@@ -13,7 +13,7 @@
 - [x] The URL field offers URL autocomplete. The existing email question offers email autocomplete.
 - [x] Analytics for a URL question are counts only, the same shape as text. The advisory answer schema expresses the URL constraint. This ticket does not bump `info.version`.
 - [x] Tests cover structure, publish, the answer schema, display, and the operators at the core entry point; the advisory schema through the HTTP API; the visible scheme and the input in the renderer; and the editor plus the plain-text answer display in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

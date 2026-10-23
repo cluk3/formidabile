@@ -16,7 +16,7 @@
 - [x] The builder warns when it can see that a question or a page cannot be reached. The minimum case is an `all` group that requires a question to satisfy both an operator and its complement. The warning never blocks publish. Publish has no reachability rule.
 - [x] The advisory answer schema lists a question as `required` only when it is required, has no show condition, and sits on a page no jump can pass over. Every other question is optional in that schema. The server's check stays final.
 - [x] Tests cover next-destination order, passing over pages, and broken-jump tolerance at the core entry point; jump editing, the broken marker, and the unreachability warning in the builder; the Submit / Next label in the renderer; and the advisory `required` rule through the HTTP API, including the existing contract that runs the same cases through a generic validator.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

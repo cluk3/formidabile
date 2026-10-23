@@ -17,7 +17,7 @@
 - [x] The respondent is shown the page's own heading and no "page X of Y" count.
 - [x] Edit mode opens on the first page with the stored answers filled in. Preview of a draft walks pages the same way.
 - [x] Builder tests cover page editing and moving a question. Renderer tests cover paging, the button label, per-page validation and focus, Back, `pagechange`, edit mode, and preview. Accessibility coverage includes focus moving to the heading on page change.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

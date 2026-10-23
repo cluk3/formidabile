@@ -14,4 +14,4 @@
 - [x] Analytics report each option's mean position and how often it was ranked first. The base is the answered responses of the versions that offered that option. Versions whose option sets differ still combine, and the per-version breakdown shows each version on its own. No raw rankings are returned.
 - [x] The advisory answer schema describes a ranking as unique items drawn from the option values, with exactly as many items as options. This ticket does not bump `info.version`.
 - [x] Tests cover structure, publish, the permutation rule, display, and the operators at the core entry point; the advisory schema and the ranking aggregates through the HTTP API; the ranking aggregates on both PGlite and Postgres; the add and move interaction in the renderer; and the editor in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.

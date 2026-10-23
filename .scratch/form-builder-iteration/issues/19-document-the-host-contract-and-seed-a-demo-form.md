@@ -11,4 +11,4 @@
 - [x] The guide covers the new question types' answer shapes, the number displays, the step constraint, must-be-yes, and the autocomplete tokens.
 - [x] The guide covers duplicate and restore as reads plus the existing create and draft-save calls, and a host posting a template definition as a new form. The module stores no templates.
 - [x] The reference host's demo seed creates one paged form through the API, the same way the other seed forms are created. That form uses show conditions, jumps, and each new question type.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.

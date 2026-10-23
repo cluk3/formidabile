@@ -10,4 +10,4 @@
 - [x] That check passes in Chromium, Firefox, and WebKit.
 - [x] The element still ships no static `style` attribute and no inline script, and it still does not write the host document title, history, or URL.
 - [x] A page change moves focus to the new page's heading in the accessibility coverage.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.

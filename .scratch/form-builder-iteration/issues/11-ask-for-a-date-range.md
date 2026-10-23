@@ -13,7 +13,7 @@
 - [x] The control is two native date inputs, labelled From and To, in one group. Analytics are counts only, the same shape as text.
 - [x] The advisory answer schema carries the start-on-or-before-end rule as an `x-fb-*` key. The server's check stays final. This ticket does not bump `info.version`.
 - [x] Tests cover structure, publish, the answer schema, display, and the operators at the core entry point; the advisory schema through the HTTP API; the From / To group in the renderer; and the editor in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

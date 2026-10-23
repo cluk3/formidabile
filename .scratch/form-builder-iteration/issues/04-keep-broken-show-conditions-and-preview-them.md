@@ -13,7 +13,7 @@
 - [x] "Treat as a new question" rewrites every show condition in the draft that names the old question identity so that it names the new one.
 - [x] Jumps are a later ticket. A later question type that adds row values extends this same rule; this ticket covers questions and option values.
 - [x] Tests cover the editing operations and the draft-tolerant path at the core entry points, publish refusing the broken draft through the HTTP API, and the broken marker plus the preview warning in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

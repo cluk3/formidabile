@@ -11,7 +11,7 @@
 - [x] Conditions offer is at, is before, is after, is answered, and is not answered.
 - [x] The respondent uses a native time input. Analytics are counts only, the same shape as text. The advisory answer schema expresses the time pattern. This ticket does not bump `info.version`.
 - [x] Tests cover structure, publish (including the bound order), the answer schema, display, and the operators at the core entry point; the advisory schema through the HTTP API; the input in the renderer; and the editor in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

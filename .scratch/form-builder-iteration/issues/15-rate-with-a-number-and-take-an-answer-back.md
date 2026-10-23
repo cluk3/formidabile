@@ -15,7 +15,7 @@
 - [x] Rating, scale, and slider use the number summary: minimum, maximum, mean, and median.
 - [x] The advisory answer schema carries the step as an `x-fb-*` key. The server's check stays final. This ticket does not bump `info.version`.
 - [x] Tests cover the display publish rules, the step check, and display at the core entry point; the advisory schema and the NPS score through the HTTP API; the NPS score on both PGlite and Postgres; empty starts, the slider, and Clear answer in the renderer; and the display and step settings in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

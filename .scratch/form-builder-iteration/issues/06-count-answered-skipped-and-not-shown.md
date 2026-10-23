@@ -13,7 +13,7 @@
 - [x] The same figures come back on PGlite and on Postgres. No raw answers or samples are returned.
 - [x] Ranking, matrix, and NPS aggregates are later tickets. This ticket is the three counts, shown in the builder's analytics tables.
 - [x] Tests cover the counts through the HTTP API and in the shared analytics suite on both databases, and the builder shows the three counts.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

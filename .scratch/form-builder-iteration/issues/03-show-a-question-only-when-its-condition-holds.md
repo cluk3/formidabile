@@ -20,7 +20,7 @@
 - [x] Draft save stays structural. Publish rejects a condition on a question that is not earlier in the version, an option value the question does not have, an operator or constant that does not fit the question type, and an empty group. Publish reports every problem at once.
 - [x] A draft whose conditions are valid previews along the path they describe. Broken conditions, jumps, and the aggregate not-shown counts are later tickets.
 - [x] Tests cover the path, the operators, path-aware answer validation, and answered / skipped / not shown at the core entry points; the 422, the stored path on submit, edit, and admin read through the HTTP API; hiding, restoring, and passing over pages in the renderer; and editing a show condition in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

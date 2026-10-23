@@ -14,7 +14,7 @@
 - [x] A save that landed in the meantime is reported the same way other draft saves report `RevisionConflict`. Restoring the current published version discards the draft's edits and leaves a draft open.
 - [x] A copied definition is stored as it was sent, format 1 or format 2. A missing format or an unknown key is still 422. The module stores no templates. A host posts a template definition as a new form in any tenant its token names.
 - [x] Tests cover duplicate and restore as compositions through the HTTP API, including restore over an existing draft with a stale revision and deleting a never-published duplicate, and the builder flows for duplicate, the confirm step, and the conflict.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
 
 ## Comments
 

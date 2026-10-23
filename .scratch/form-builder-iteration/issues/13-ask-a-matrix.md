@@ -15,4 +15,4 @@
 - [ ] Analytics report a count and a share for each row and column. The base is the answered rows of the versions that had both that row and that column. No raw matrix answers are returned.
 - [ ] The advisory answer schema describes a matrix as an object with one property per row value. This ticket does not bump `info.version`.
 - [ ] Tests cover structure, publish, the row rules, display, and the operators at the core entry point; the advisory schema and the matrix aggregates through the HTTP API; the matrix aggregates on both PGlite and Postgres; the grid, the narrow groups, and Clear answer in the renderer; and the row editor in the builder.
-- [ ] `vp run ready` is green locally, and every CI job is green on the PR.
+- [x] `vp run ready` is green locally, and every CI job is green on the PR.
