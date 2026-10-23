@@ -1,0 +1,1429 @@
+{
+  "id": "4ffa0631-ff07-4460-9593-1487041830f4",
+  "prevIds": [
+    "24e037c6-69b6-4ace-82cb-e68d414a07ff"
+  ],
+  "version": "8",
+  "dialect": "postgres",
+  "ddl": [
+    {
+      "name": "form_management",
+      "entityType": "schemas"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "answers",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "drafts",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "form_external_refs",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "form_version_questions",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "form_versions",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "forms",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "question_identities",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "response_external_refs",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "response_path",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "responses",
+      "entityType": "tables",
+      "schema": "form_management"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "response_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "question_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "value",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "nextval('form_management.draft_revisions')",
+      "generated": null,
+      "identity": null,
+      "name": "revision",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "based_on_version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "definition",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "namespace",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ref_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "question_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "type",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "position",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "number",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "definition",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "published_by",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "derived_from_version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tenant",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "availability",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "response_limit",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "current_version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "question_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "type",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "response_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "namespace",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "ref_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "response_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "question_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "form_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "respondent_id",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "limited",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revision",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "submitted_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "edited_at",
+      "entityType": "columns",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "version_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "question_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "answers_version_id_question_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "namespace",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "ref_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "form_external_refs_namespace_ref_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "namespace",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "ref_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "response_external_refs_namespace_ref_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "version_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "question_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "response_path_version_id_question_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "form_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "respondent_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": "\"limited\"",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "responses_one_per_respondent",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "form_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "version_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "responses_form_id_version_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "respondent_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "responses_respondent_id_index",
+      "entityType": "indexes",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "response_id",
+        "version_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "responses",
+      "columnsTo": [
+        "id",
+        "version_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "answers_response_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "version_id",
+        "question_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_version_questions",
+      "columnsTo": [
+        "version_id",
+        "question_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "answers_question_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "forms",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "drafts_form_id_forms_id_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "based_on_version_id",
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_versions",
+      "columnsTo": [
+        "id",
+        "form_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "drafts_based_on_version_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "drafts"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "forms",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "form_external_refs_form_id_forms_id_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "form_id",
+        "question_id",
+        "type"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "question_identities",
+      "columnsTo": [
+        "form_id",
+        "question_id",
+        "type"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "form_version_questions_identity_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "version_id",
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_versions",
+      "columnsTo": [
+        "id",
+        "form_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "form_version_questions_version_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "forms",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "form_versions_form_id_forms_id_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "derived_from_version_id",
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_versions",
+      "columnsTo": [
+        "id",
+        "form_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "form_versions_derived_from_version_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "current_version_id",
+        "id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_versions",
+      "columnsTo": [
+        "id",
+        "form_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "forms_current_version_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "forms",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "question_identities_form_id_forms_id_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "response_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "responses",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "response_external_refs_response_id_responses_id_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "response_id",
+        "version_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "responses",
+      "columnsTo": [
+        "id",
+        "version_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "response_path_response_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "version_id",
+        "question_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_version_questions",
+      "columnsTo": [
+        "version_id",
+        "question_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "response_path_question_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "version_id",
+        "form_id"
+      ],
+      "schemaTo": "form_management",
+      "tableTo": "form_versions",
+      "columnsTo": [
+        "id",
+        "form_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "name": "responses_version_fkey",
+      "entityType": "fks",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "columns": [
+        "response_id",
+        "question_id"
+      ],
+      "nameExplicit": false,
+      "name": "answers_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "answers"
+    },
+    {
+      "columns": [
+        "form_id",
+        "namespace",
+        "ref_id"
+      ],
+      "nameExplicit": false,
+      "name": "form_external_refs_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "columns": [
+        "version_id",
+        "question_id"
+      ],
+      "nameExplicit": false,
+      "name": "form_version_questions_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "form_version_questions"
+    },
+    {
+      "columns": [
+        "form_id",
+        "question_id"
+      ],
+      "nameExplicit": false,
+      "name": "question_identities_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "columns": [
+        "response_id",
+        "namespace",
+        "ref_id"
+      ],
+      "nameExplicit": false,
+      "name": "response_external_refs_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "columns": [
+        "response_id",
+        "question_id"
+      ],
+      "nameExplicit": false,
+      "name": "response_path_pkey",
+      "entityType": "pks",
+      "schema": "form_management",
+      "table": "response_path"
+    },
+    {
+      "columns": [
+        "form_id"
+      ],
+      "nameExplicit": false,
+      "name": "drafts_pkey",
+      "schema": "form_management",
+      "table": "drafts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "form_versions_pkey",
+      "schema": "form_management",
+      "table": "form_versions",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "forms_pkey",
+      "schema": "form_management",
+      "table": "forms",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "responses_pkey",
+      "schema": "form_management",
+      "table": "responses",
+      "entityType": "pks"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id",
+        "number"
+      ],
+      "nullsNotDistinct": false,
+      "name": "form_versions_form_id_number_unique",
+      "entityType": "uniques",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "id",
+        "form_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "form_versions_id_form_id_unique",
+      "entityType": "uniques",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "form_id",
+        "question_id",
+        "type"
+      ],
+      "nullsNotDistinct": false,
+      "name": "question_identities_form_id_question_id_type_unique",
+      "entityType": "uniques",
+      "schema": "form_management",
+      "table": "question_identities"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "id",
+        "version_id"
+      ],
+      "nullsNotDistinct": false,
+      "name": "responses_id_version_id_unique",
+      "entityType": "uniques",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "form_id",
+        "respondent_id",
+        "idempotency_key"
+      ],
+      "nullsNotDistinct": true,
+      "name": "responses_idempotency_key_unique",
+      "entityType": "uniques",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "value": "char_length(\"namespace\") <= 64 AND \"namespace\" ~ '^[a-z][a-z0-9_.-]*$'",
+      "name": "form_external_refs_namespace_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "value": "char_length(\"ref_id\") BETWEEN 1 AND 255",
+      "name": "form_external_refs_ref_id_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "form_external_refs"
+    },
+    {
+      "value": "\"number\" >= 1",
+      "name": "form_versions_number_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "form_versions"
+    },
+    {
+      "value": "\"availability\" IN ('open', 'closed')",
+      "name": "forms_availability_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "value": "\"response_limit\" IN ('unlimited', 'one_per_respondent')",
+      "name": "forms_response_limit_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "value": "\"availability\" = 'closed' OR \"current_version_id\" IS NOT NULL",
+      "name": "forms_open_needs_version_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "forms"
+    },
+    {
+      "value": "char_length(\"namespace\") <= 64 AND \"namespace\" ~ '^[a-z][a-z0-9_.-]*$'",
+      "name": "response_external_refs_namespace_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "value": "char_length(\"ref_id\") BETWEEN 1 AND 255",
+      "name": "response_external_refs_ref_id_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "response_external_refs"
+    },
+    {
+      "value": "\"revision\" >= 1",
+      "name": "responses_revision_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "value": "NOT \"limited\" OR \"respondent_id\" IS NOT NULL",
+      "name": "responses_limited_needs_respondent_check",
+      "entityType": "checks",
+      "schema": "form_management",
+      "table": "responses"
+    },
+    {
+      "incrementBy": "1",
+      "minValue": "1",
+      "maxValue": "9223372036854775807",
+      "startWith": "1",
+      "cacheSize": 1,
+      "cycle": false,
+      "name": "draft_revisions",
+      "entityType": "sequences",
+      "schema": "form_management"
+    }
+  ],
+  "renames": []
+}

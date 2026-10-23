@@ -3416,11 +3416,18 @@
               "definition"
             ],
             "additionalProperties": false
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
           "response",
-          "version"
+          "version",
+          "path"
         ],
         "additionalProperties": false
       },

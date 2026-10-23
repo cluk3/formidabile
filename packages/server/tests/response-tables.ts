@@ -50,6 +50,14 @@ const insertAnswer = (responseId: string, versionId: string, questionId: string)
     `,
   );
 
+const insertPath = (responseId: string, versionId: string, questionId: string) =>
+  SqlClient.SqlClient.use(
+    (sql) => sql`
+      INSERT INTO form_management.response_path (response_id, question_id, version_id)
+      VALUES (${responseId}, ${questionId}, ${versionId})
+    `,
+  );
+
 const insertFormRef = (formId: string, namespace: string, refId: string) =>
   SqlClient.SqlClient.use(
     (sql) => sql`
@@ -108,6 +116,30 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
     expect(outsideVersion.message).toContain("answers_question_fkey");
     expect(otherVersion.code).toBe("23503");
     expect(otherVersion.message).toContain("answers_response_fkey");
+  });
+
+  test("a path row must name a question in its response's version", async () => {
+    const { outsideVersion, otherVersion } = await run(
+      Effect.gen(function* () {
+        const { formId, versionId, questionId } = yield* publishedForm;
+        const laterVersionId = crypto.randomUUID();
+        const laterQuestionId = crypto.randomUUID();
+        yield* insertVersion(formId, laterVersionId, 2);
+        yield* insertQuestion(formId, laterVersionId, laterQuestionId);
+        const responseId = yield* insertResponse({ formId, versionId });
+
+        yield* insertPath(responseId, versionId, questionId);
+        return {
+          outsideVersion: yield* rejection(insertPath(responseId, versionId, laterQuestionId)),
+          otherVersion: yield* rejection(insertPath(responseId, laterVersionId, laterQuestionId)),
+        };
+      }),
+    );
+
+    expect(outsideVersion.code).toBe("23503");
+    expect(outsideVersion.message).toContain("response_path_question_fkey");
+    expect(otherVersion.code).toBe("23503");
+    expect(otherVersion.message).toContain("response_path_response_fkey");
   });
 
   describe("one response per respondent on limited forms", () => {
@@ -334,7 +366,7 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
       expect(kept).toBe(1);
     });
 
-    test("deleting responses removes their answers and references by cascade, without firing any immutability trigger", async () => {
+    test("deleting responses removes their answers, path and references by cascade, without firing any immutability trigger", async () => {
       const { remaining, publisherChange } = await run(
         Effect.gen(function* () {
           const { formId, versionId, questionId } = yield* publishedForm;
@@ -344,6 +376,7 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
           ];
           for (const responseId of responseIds) {
             yield* insertAnswer(responseId, versionId, questionId);
+            yield* insertPath(responseId, versionId, questionId);
             yield* insertResponseRef(responseId, "project", "p-1");
           }
           const sql = yield* SqlClient.SqlClient;
@@ -353,6 +386,7 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
             SELECT
               (SELECT count(*)::int FROM form_management.responses WHERE form_id = ${formId}) AS responses,
               (SELECT count(*)::int FROM form_management.answers WHERE response_id IN ${sql.in(responseIds)}) AS answers,
+              (SELECT count(*)::int FROM form_management.response_path WHERE response_id IN ${sql.in(responseIds)}) AS path,
               (SELECT count(*)::int FROM form_management.response_external_refs WHERE response_id IN ${sql.in(responseIds)}) AS refs,
               (SELECT count(*)::int FROM form_management.form_versions WHERE id = ${versionId}) AS versions,
               (SELECT count(*)::int FROM form_management.form_version_questions WHERE version_id = ${versionId}) AS "questionKeys"
@@ -369,6 +403,7 @@ export const describeResponseTables = (database: Layer.Layer<Services, unknown>)
       expect(remaining).toEqual({
         responses: 0,
         answers: 0,
+        path: 0,
         refs: 0,
         versions: 1,
         questionKeys: 1,

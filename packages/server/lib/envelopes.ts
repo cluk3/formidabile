@@ -151,10 +151,12 @@ export const ResponsePage = Schema.Struct({
 }).annotate({ identifier: "ResponsePage" });
 export type ResponsePage = typeof ResponsePage.Type;
 
-/** A response as an admin reads it: raw answers, with the version it was submitted under. */
+/** A response as an admin reads it: raw answers and the path it was shown, with its version. */
 export const ResponseDetail = Schema.Struct({
   response: Schema.Struct({ ...ResponseSummary.fields, answers: AnswersJson }),
   version: RespondentVersion,
+  /** Question ids the response was shown, in the version's question order (ADR-017). */
+  path: Schema.Array(Schema.String),
 }).annotate({ identifier: "ResponseDetail" });
 export type ResponseDetail = typeof ResponseDetail.Type;
 
