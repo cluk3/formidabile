@@ -9,6 +9,7 @@ import { mergeAnalytics } from "./merge.ts";
 import {
   answeredPerQuestion,
   npsCounts,
+  shownPerQuestion,
   numbersCombined,
   numbersPerVersion,
   optionCounts,
@@ -57,6 +58,7 @@ export class Analytics extends Context.Service<
                           ],
                   );
                   const answered = yield* answeredPerQuestion(tx, tenant, formId);
+                  const shown = yield* shownPerQuestion(tx, tenant, formId);
                   const values = yield* valueCounts(tx, tenant, formId);
                   const options = yield* optionCounts(tx, tenant, formId);
                   const numbers = yield* numbersPerVersion(tx, tenant, formId);
@@ -66,6 +68,7 @@ export class Analytics extends Context.Service<
                     formId,
                     versions,
                     answered,
+                    shown,
                     choices: [...values, ...options],
                     numbers,
                     combinedNumbers,
@@ -73,7 +76,7 @@ export class Analytics extends Context.Service<
                   });
                 }),
               // One snapshot for every query, so concurrent submissions and edits can't make `answered`
-              // exceed `responses`.
+              // exceed `shown`, or `shown` exceed `responses`.
               readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);
