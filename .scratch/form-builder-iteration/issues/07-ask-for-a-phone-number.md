@@ -25,7 +25,7 @@ Operators are `equals`, `does_not_equal`, `starts_with`, `does_not_start_with`, 
 
 The renderer input is `type="tel"` and `autocomplete="tel"`. The builder adds the question from the type list and shows the stored number as plain text. A missing country code is the same message in the renderer and on submit.
 
-`vp check` and `vp run boundaries` passed. The phone tests passed: core structure, publish, normalisation, display, and operators; the counts-only merge; the advisory schema and a stored submit through the HTTP API; the telephone input in the renderer; and adding the question plus the stored number in the builder. `vp run check:svelte` and the full `vp test` were not finished in this pass. `vp run check:generated` regenerates a matching document and then fails `git diff --exit-code` until `openapi.json` and `schema.d.ts` are committed.
+`vp check`, `vp run boundaries`, `vp run check:svelte`, `vp run --no-cache @fb/renderer#build`, and `vp run check:generated` passed. `vp test` is 829 tests: the first full run had four timeouts under load and one real miss, `buildAnswerSchema` not listing phone. After that case was added, those five files passed (105 tests). `form-builder-iteration` was still `670d6ca`, so the merge brought nothing new. `vp run ready` stays open.
 
 
 [You have received this identical output 3 times. Re-reading '/Users/lucacampli/prog-pers/form-builder-worktrees/07-ask-for-a-phone-number/.scratch/form-builder-iteration/issues/07-ask-for-a-phone-number.md:raw' will not change it — use a narrower selector (path:A-B), or proceed with the edit.]
