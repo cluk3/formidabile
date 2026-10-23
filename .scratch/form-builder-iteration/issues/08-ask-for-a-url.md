@@ -23,4 +23,4 @@ The renderer input is `type="url"` and `autocomplete="url"`. On blur it shows `h
 
 The HTTP contract test compiles the answer schema the same way `answer-schema.test.ts` does: Ajv 2020 with `ajv-formats`, then `addVocabulary(["x-fb-authoritative", "x-fb-minDate", "x-fb-maxDate"])`. Ajv counts code points, so a 2,048-code-point string that uses a surrogate pair is accepted by both the server and the advisory schema. The schema still cannot trim or reject `http:///path`, and those two cases stay browser-only gaps.
 
-Core, analytics, renderer, builder, and the HTTP schema tests passed. `vp run ready` and CI stay open.
+Core, analytics, renderer, builder, and the HTTP schema tests passed. Merging `form-builder-iteration` (ticket 06) adds `shown` and `notShown` beside answered and skipped. A URL question stays counts-only: its summary is still `{ type: "url" }`. `vp run ready` and CI stay open.
