@@ -43,7 +43,7 @@ export const registry = {
   multiple_choice_matrix: {
     name: "Multiple-choice matrix",
     editor: MatrixEditor,
-    answer: MatrixAnswer as Component<AnswerProps<"multiple_choice_matrix">>,
+    answer: MatrixAnswer,
   },
 } satisfies {
   [T in QuestionTypeName]: {
