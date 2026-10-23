@@ -102,3 +102,34 @@ test("the time of day editor sets an optional earliest and latest", async () => 
   await expect.element(screen.getByText("Draft saved")).toBeVisible();
   expect(saved().question?.config).toEqual({ earliest: "18:00" });
 });
+
+test("a show condition compares a time of day with the native time input", async () => {
+  const host = draftHost(definitionOf());
+  const screen = await renderEditor(host.fetch);
+
+  await screen.getByLabelText("New question type").selectOptions("Time of day");
+  await screen.getByRole("button", { name: "Add question" }).click();
+  await question(screen, 1).getByLabelText("Label").fill("Arrival time");
+
+  await screen.getByLabelText("New question type").selectOptions("Text");
+  await screen.getByRole("button", { name: "Add question" }).click();
+  const notes = question(screen, 2);
+  await notes.getByLabelText("Label").fill("Notes");
+  await notes.getByRole("button", { name: "Only show when…" }).click();
+
+  const value = notes.getByLabelText("Value");
+  await expect.element(value).toHaveAttribute("type", "time");
+  await expect.element(notes.getByLabelText("Operator")).toHaveValue("is_at");
+  await value.fill("09:30");
+  await screen.getByRole("button", { name: "Save" }).click();
+  await expect.element(screen.getByText("Draft saved")).toBeVisible();
+
+  const saved = host.saves.at(-1)?.definition;
+  if (saved === undefined) throw new Error("missing save");
+  const [arrival, follower] = questionsOf(saved);
+  expect(follower?.showCondition).toEqual({
+    questionId: arrival?.id,
+    operator: "is_at",
+    constant: "09:30",
+  });
+});

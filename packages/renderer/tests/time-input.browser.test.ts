@@ -1,9 +1,13 @@
 import type { QuestionSnapshot } from "@fb/core/definition";
-import { expect, test } from "vite-plus/test";
+import { afterEach, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 import { FormRenderer } from "@fb/renderer";
 import { apiBaseUrl, definitionOf, fakeApi, formId, versionId } from "./fake-api.ts";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const staticToken = async () => "token-1";

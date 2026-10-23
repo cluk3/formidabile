@@ -198,7 +198,7 @@ const ChoiceSummary = Schema.Struct({
   ),
 });
 
-/** Tagged by the question's type. Text, email and date questions report only answered and skipped counts. */
+/** Tagged by the question's type. Text, email, date and time of day report only answered and skipped counts. */
 export const AnalyticsSummary = Schema.Union([
   ChoiceSummary,
   Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
