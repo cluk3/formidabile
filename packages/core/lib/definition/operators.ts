@@ -1,3 +1,5 @@
+import { phoneOperators } from "./types/phone.ts";
+
 /** What a leaf compares an answer with. `date` is an ISO calendar day; `strings` is an option-value list. */
 export type ConstantKind = "none" | "string" | "number" | "date" | "strings";
 
@@ -226,6 +228,7 @@ export const conditionOperators = {
   single_choice: withPresence(singleOperators),
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
+  phone: withPresence(phoneOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>

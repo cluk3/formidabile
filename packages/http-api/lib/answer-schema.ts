@@ -1,5 +1,10 @@
 import { buildAnswerSchema } from "@fb/core/answers";
-import { questionsOf, type FormDefinition, type QuestionSnapshot } from "@fb/core/definition";
+import {
+  pagesOf,
+  questionsOf,
+  type FormDefinition,
+  type QuestionSnapshot,
+} from "@fb/core/definition";
 import type { Schema } from "effect";
 import { toJSONSchema } from "zod/mini";
 
@@ -24,9 +29,48 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "phone":
+      return { pattern: "^\\+[0-9]{1,15}$" };
     default:
       return {};
   }
+};
+
+/**
+ * Question ids a jump can pass over. A jump to a later page passes over the pages between it and that
+ * page; a jump to the end passes over every later page. The landing page is not passed over. A target
+ * that is not a later page passes over nothing. Conditions are not solved: if a jump can skip the page,
+ * the page is not on every path (ADR-017).
+ */
+const passedOver = (definition: FormDefinition): ReadonlySet<string> => {
+  const pages = pagesOf(definition);
+  const ids = new Set<string>();
+  pages.forEach((page, index) => {
+    for (const jump of page.jumps) {
+      const target =
+        jump.target === "end"
+          ? pages.length
+          : pages.findIndex((candidate) => candidate.id === jump.target);
+      if (target <= index) continue;
+      for (let cursor = index + 1; cursor < target; cursor += 1)
+        for (const question of pages[cursor]!.questions) ids.add(question.id);
+    }
+  });
+  return ids;
+};
+
+/**
+ * A question is required in the advisory schema only when it is required on every path: it is required,
+ * it has no show condition, and it sits on a page no jump can pass over. The server's check stays final.
+ */
+const requiredOnEveryPath = (definition: FormDefinition): string[] => {
+  const skipped = passedOver(definition);
+  return questionsOf(definition)
+    .filter(
+      (question) =>
+        question.required && question.showCondition === undefined && !skipped.has(question.id),
+    )
+    .map((question) => question.id);
 };
 
 /** A version's answer schema as JSON Schema 2020-12, for browser validation in custom renderers (ADR 0010). */
@@ -39,8 +83,11 @@ export const answerJsonSchema = (definition: FormDefinition): Schema.JsonObject 
   for (const question of questionsOf(definition)) {
     Object.assign(properties[question.id]!, generatorFixes(question));
   }
-  return Object.assign(schema, {
+  const required = requiredOnEveryPath(definition);
+  const { required: _required, ...rest } = schema;
+  return Object.assign(rest, {
     description: authority,
     "x-fb-authoritative": false,
+    ...(required.length === 0 ? {} : { required }),
   }) as Schema.JsonObject;
 };

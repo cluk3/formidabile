@@ -21,8 +21,10 @@ const analytics: Schemas["FormAnalytics"] = {
       inCurrentVersion: true,
       combined: {
         responses: 3,
+        shown: 3,
         answered: 3,
         skipped: 0,
+        notShown: 0,
         absentResponses: 0,
         summary: {
           type: "number",
@@ -39,8 +41,10 @@ const analytics: Schemas["FormAnalytics"] = {
           version: 1,
           present: true,
           responses: 3,
+          shown: 3,
           answered: 3,
           skipped: 0,
+          notShown: 0,
           summary: {
             type: "number",
             count: 3,

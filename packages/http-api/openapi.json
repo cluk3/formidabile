@@ -2826,7 +2826,8 @@
               "date",
               "single_choice",
               "multiple_choice",
-              "boolean"
+              "boolean",
+              "phone"
             ]
           },
           "label": {
@@ -2867,12 +2868,22 @@
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
               },
+              "shown": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
               "answered": {
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
               },
               "skipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "notShown": {
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
@@ -2888,8 +2899,10 @@
             },
             "required": [
               "responses",
+              "shown",
               "answered",
               "skipped",
+              "notShown",
               "absentResponses",
               "summary"
             ],
@@ -2939,12 +2952,22 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "shown": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "answered": {
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
                     "skipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notShown": {
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
@@ -2967,8 +2990,10 @@
                     "version",
                     "present",
                     "responses",
+                    "shown",
                     "answered",
                     "skipped",
+                    "notShown",
                     "summary",
                     "constraints"
                   ],
@@ -3304,7 +3329,8 @@
                 "enum": [
                   "text",
                   "email",
-                  "date"
+                  "date",
+                  "phone"
                 ]
               }
             },
@@ -10253,6 +10279,958 @@
                         "config"
                       ],
                       "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "maxLength": 500
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "showCondition": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "questionId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64
+                                },
+                                "constant": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "maxLength": 500
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "maxItems": 100,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "row": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64
+                                }
+                              },
+                              "required": [
+                                "questionId",
+                                "operator"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "all": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "questionId": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "operator": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "constant": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "maxLength": 500
+                                                  },
+                                                  {
+                                                    "type": "number"
+                                                  },
+                                                  {
+                                                    "type": "boolean"
+                                                  },
+                                                  {
+                                                    "maxItems": 100,
+                                                    "type": "array",
+                                                    "items": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                ]
+                                              },
+                                              "row": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              }
+                                            },
+                                            "required": [
+                                              "questionId",
+                                              "operator"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "all": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "object",
+                                                          "properties": {
+                                                            "questionId": {
+                                                              "type": "string",
+                                                              "format": "uuid",
+                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                            },
+                                                            "operator": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            },
+                                                            "constant": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "string",
+                                                                  "maxLength": 500
+                                                                },
+                                                                {
+                                                                  "type": "number"
+                                                                },
+                                                                {
+                                                                  "type": "boolean"
+                                                                },
+                                                                {
+                                                                  "maxItems": 100,
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "string"
+                                                                  }
+                                                                }
+                                                              ]
+                                                            },
+                                                            "row": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            }
+                                                          },
+                                                          "required": [
+                                                            "questionId",
+                                                            "operator"
+                                                          ],
+                                                          "additionalProperties": false
+                                                        },
+                                                        {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "all": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "all"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            },
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "any": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "any"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "required": [
+                                                  "all"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "any": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "object",
+                                                          "properties": {
+                                                            "questionId": {
+                                                              "type": "string",
+                                                              "format": "uuid",
+                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                            },
+                                                            "operator": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            },
+                                                            "constant": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "string",
+                                                                  "maxLength": 500
+                                                                },
+                                                                {
+                                                                  "type": "number"
+                                                                },
+                                                                {
+                                                                  "type": "boolean"
+                                                                },
+                                                                {
+                                                                  "maxItems": 100,
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "string"
+                                                                  }
+                                                                }
+                                                              ]
+                                                            },
+                                                            "row": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            }
+                                                          },
+                                                          "required": [
+                                                            "questionId",
+                                                            "operator"
+                                                          ],
+                                                          "additionalProperties": false
+                                                        },
+                                                        {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "all": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "all"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            },
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "any": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "any"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "required": [
+                                                  "any"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "all"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "any": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "questionId": {
+                                                "type": "string",
+                                                "format": "uuid",
+                                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                              },
+                                              "operator": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "constant": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "string",
+                                                    "maxLength": 500
+                                                  },
+                                                  {
+                                                    "type": "number"
+                                                  },
+                                                  {
+                                                    "type": "boolean"
+                                                  },
+                                                  {
+                                                    "maxItems": 100,
+                                                    "type": "array",
+                                                    "items": {
+                                                      "type": "string"
+                                                    }
+                                                  }
+                                                ]
+                                              },
+                                              "row": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              }
+                                            },
+                                            "required": [
+                                              "questionId",
+                                              "operator"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "all": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "object",
+                                                          "properties": {
+                                                            "questionId": {
+                                                              "type": "string",
+                                                              "format": "uuid",
+                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                            },
+                                                            "operator": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            },
+                                                            "constant": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "string",
+                                                                  "maxLength": 500
+                                                                },
+                                                                {
+                                                                  "type": "number"
+                                                                },
+                                                                {
+                                                                  "type": "boolean"
+                                                                },
+                                                                {
+                                                                  "maxItems": 100,
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "string"
+                                                                  }
+                                                                }
+                                                              ]
+                                                            },
+                                                            "row": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            }
+                                                          },
+                                                          "required": [
+                                                            "questionId",
+                                                            "operator"
+                                                          ],
+                                                          "additionalProperties": false
+                                                        },
+                                                        {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "all": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "all"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            },
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "any": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "any"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "required": [
+                                                  "all"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "any": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "object",
+                                                          "properties": {
+                                                            "questionId": {
+                                                              "type": "string",
+                                                              "format": "uuid",
+                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                            },
+                                                            "operator": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            },
+                                                            "constant": {
+                                                              "anyOf": [
+                                                                {
+                                                                  "type": "string",
+                                                                  "maxLength": 500
+                                                                },
+                                                                {
+                                                                  "type": "number"
+                                                                },
+                                                                {
+                                                                  "type": "boolean"
+                                                                },
+                                                                {
+                                                                  "maxItems": 100,
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "string"
+                                                                  }
+                                                                }
+                                                              ]
+                                                            },
+                                                            "row": {
+                                                              "type": "string",
+                                                              "minLength": 1,
+                                                              "maxLength": 64
+                                                            }
+                                                          },
+                                                          "required": [
+                                                            "questionId",
+                                                            "operator"
+                                                          ],
+                                                          "additionalProperties": false
+                                                        },
+                                                        {
+                                                          "anyOf": [
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "all": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "all"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            },
+                                                            {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                "any": {
+                                                                  "type": "array",
+                                                                  "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "questionId": {
+                                                                        "type": "string",
+                                                                        "format": "uuid",
+                                                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                      },
+                                                                      "operator": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      },
+                                                                      "constant": {
+                                                                        "anyOf": [
+                                                                          {
+                                                                            "type": "string",
+                                                                            "maxLength": 500
+                                                                          },
+                                                                          {
+                                                                            "type": "number"
+                                                                          },
+                                                                          {
+                                                                            "type": "boolean"
+                                                                          },
+                                                                          {
+                                                                            "maxItems": 100,
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                              "type": "string"
+                                                                            }
+                                                                          }
+                                                                        ]
+                                                                      },
+                                                                      "row": {
+                                                                        "type": "string",
+                                                                        "minLength": 1,
+                                                                        "maxLength": 64
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "questionId",
+                                                                      "operator"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                }
+                                                              },
+                                                              "required": [
+                                                                "any"
+                                                              ],
+                                                              "additionalProperties": false
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "required": [
+                                                  "any"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "any"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "phone"
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {},
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "required",
+                        "type",
+                        "config"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -17094,6 +18072,958 @@
                                     "type": "boolean"
                                   }
                                 },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "required",
+                              "type",
+                              "config"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "label": {
+                                "type": "string",
+                                "maxLength": 500
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 2000
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "showCondition": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "questionId": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      "operator": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64
+                                      },
+                                      "constant": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "maxItems": 100,
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "row": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64
+                                      }
+                                    },
+                                    "required": [
+                                      "questionId",
+                                      "operator"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "all": {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "questionId": {
+                                                      "type": "string",
+                                                      "format": "uuid",
+                                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                    },
+                                                    "operator": {
+                                                      "type": "string",
+                                                      "minLength": 1,
+                                                      "maxLength": 64
+                                                    },
+                                                    "constant": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "string",
+                                                          "maxLength": 500
+                                                        },
+                                                        {
+                                                          "type": "number"
+                                                        },
+                                                        {
+                                                          "type": "boolean"
+                                                        },
+                                                        {
+                                                          "maxItems": 100,
+                                                          "type": "array",
+                                                          "items": {
+                                                            "type": "string"
+                                                          }
+                                                        }
+                                                      ]
+                                                    },
+                                                    "row": {
+                                                      "type": "string",
+                                                      "minLength": 1,
+                                                      "maxLength": 64
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "questionId",
+                                                    "operator"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "all": {
+                                                          "type": "array",
+                                                          "items": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                  "questionId": {
+                                                                    "type": "string",
+                                                                    "format": "uuid",
+                                                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                  },
+                                                                  "operator": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  },
+                                                                  "constant": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "string",
+                                                                        "maxLength": 500
+                                                                      },
+                                                                      {
+                                                                        "type": "number"
+                                                                      },
+                                                                      {
+                                                                        "type": "boolean"
+                                                                      },
+                                                                      {
+                                                                        "maxItems": 100,
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "string"
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  },
+                                                                  "row": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  }
+                                                                },
+                                                                "required": [
+                                                                  "questionId",
+                                                                  "operator"
+                                                                ],
+                                                                "additionalProperties": false
+                                                              },
+                                                              {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "all": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "all"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  },
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "any": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "any"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "required": [
+                                                        "all"
+                                                      ],
+                                                      "additionalProperties": false
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "any": {
+                                                          "type": "array",
+                                                          "items": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                  "questionId": {
+                                                                    "type": "string",
+                                                                    "format": "uuid",
+                                                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                  },
+                                                                  "operator": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  },
+                                                                  "constant": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "string",
+                                                                        "maxLength": 500
+                                                                      },
+                                                                      {
+                                                                        "type": "number"
+                                                                      },
+                                                                      {
+                                                                        "type": "boolean"
+                                                                      },
+                                                                      {
+                                                                        "maxItems": 100,
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "string"
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  },
+                                                                  "row": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  }
+                                                                },
+                                                                "required": [
+                                                                  "questionId",
+                                                                  "operator"
+                                                                ],
+                                                                "additionalProperties": false
+                                                              },
+                                                              {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "all": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "all"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  },
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "any": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "any"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "required": [
+                                                        "any"
+                                                      ],
+                                                      "additionalProperties": false
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "all"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "any": {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "questionId": {
+                                                      "type": "string",
+                                                      "format": "uuid",
+                                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                    },
+                                                    "operator": {
+                                                      "type": "string",
+                                                      "minLength": 1,
+                                                      "maxLength": 64
+                                                    },
+                                                    "constant": {
+                                                      "anyOf": [
+                                                        {
+                                                          "type": "string",
+                                                          "maxLength": 500
+                                                        },
+                                                        {
+                                                          "type": "number"
+                                                        },
+                                                        {
+                                                          "type": "boolean"
+                                                        },
+                                                        {
+                                                          "maxItems": 100,
+                                                          "type": "array",
+                                                          "items": {
+                                                            "type": "string"
+                                                          }
+                                                        }
+                                                      ]
+                                                    },
+                                                    "row": {
+                                                      "type": "string",
+                                                      "minLength": 1,
+                                                      "maxLength": 64
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "questionId",
+                                                    "operator"
+                                                  ],
+                                                  "additionalProperties": false
+                                                },
+                                                {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "all": {
+                                                          "type": "array",
+                                                          "items": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                  "questionId": {
+                                                                    "type": "string",
+                                                                    "format": "uuid",
+                                                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                  },
+                                                                  "operator": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  },
+                                                                  "constant": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "string",
+                                                                        "maxLength": 500
+                                                                      },
+                                                                      {
+                                                                        "type": "number"
+                                                                      },
+                                                                      {
+                                                                        "type": "boolean"
+                                                                      },
+                                                                      {
+                                                                        "maxItems": 100,
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "string"
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  },
+                                                                  "row": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  }
+                                                                },
+                                                                "required": [
+                                                                  "questionId",
+                                                                  "operator"
+                                                                ],
+                                                                "additionalProperties": false
+                                                              },
+                                                              {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "all": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "all"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  },
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "any": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "any"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "required": [
+                                                        "all"
+                                                      ],
+                                                      "additionalProperties": false
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "any": {
+                                                          "type": "array",
+                                                          "items": {
+                                                            "anyOf": [
+                                                              {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                  "questionId": {
+                                                                    "type": "string",
+                                                                    "format": "uuid",
+                                                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                  },
+                                                                  "operator": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  },
+                                                                  "constant": {
+                                                                    "anyOf": [
+                                                                      {
+                                                                        "type": "string",
+                                                                        "maxLength": 500
+                                                                      },
+                                                                      {
+                                                                        "type": "number"
+                                                                      },
+                                                                      {
+                                                                        "type": "boolean"
+                                                                      },
+                                                                      {
+                                                                        "maxItems": 100,
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "string"
+                                                                        }
+                                                                      }
+                                                                    ]
+                                                                  },
+                                                                  "row": {
+                                                                    "type": "string",
+                                                                    "minLength": 1,
+                                                                    "maxLength": 64
+                                                                  }
+                                                                },
+                                                                "required": [
+                                                                  "questionId",
+                                                                  "operator"
+                                                                ],
+                                                                "additionalProperties": false
+                                                              },
+                                                              {
+                                                                "anyOf": [
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "all": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "all"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  },
+                                                                  {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                      "any": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                          "type": "object",
+                                                                          "properties": {
+                                                                            "questionId": {
+                                                                              "type": "string",
+                                                                              "format": "uuid",
+                                                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                                                            },
+                                                                            "operator": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            },
+                                                                            "constant": {
+                                                                              "anyOf": [
+                                                                                {
+                                                                                  "type": "string",
+                                                                                  "maxLength": 500
+                                                                                },
+                                                                                {
+                                                                                  "type": "number"
+                                                                                },
+                                                                                {
+                                                                                  "type": "boolean"
+                                                                                },
+                                                                                {
+                                                                                  "maxItems": 100,
+                                                                                  "type": "array",
+                                                                                  "items": {
+                                                                                    "type": "string"
+                                                                                  }
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            "row": {
+                                                                              "type": "string",
+                                                                              "minLength": 1,
+                                                                              "maxLength": 64
+                                                                            }
+                                                                          },
+                                                                          "required": [
+                                                                            "questionId",
+                                                                            "operator"
+                                                                          ],
+                                                                          "additionalProperties": false
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "required": [
+                                                                      "any"
+                                                                    ],
+                                                                    "additionalProperties": false
+                                                                  }
+                                                                ]
+                                                              }
+                                                            ]
+                                                          }
+                                                        }
+                                                      },
+                                                      "required": [
+                                                        "any"
+                                                      ],
+                                                      "additionalProperties": false
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "any"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              "type": {
+                                "type": "string",
+                                "const": "phone"
+                              },
+                              "config": {
+                                "type": "object",
+                                "properties": {},
                                 "additionalProperties": false
                               }
                             },
