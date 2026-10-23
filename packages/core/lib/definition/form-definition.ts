@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { Condition, conditionCount, CONDITIONS_CAP } from "./condition.ts";
 import { conditionIssues } from "./condition-issues.ts";
+import { jumpIssues } from "./jump-issues.ts";
 import {
   DraftText,
   toIssues,
@@ -264,5 +265,6 @@ export const validateForPublish = (
     });
   }
   issues.push(...conditionIssues(definition));
+  issues.push(...jumpIssues(definition));
   return issues.length === 0 ? { ok: true, value: definition } : { ok: false, issues };
 };

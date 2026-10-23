@@ -1,9 +1,11 @@
 import type { Condition } from "../definition/condition.ts";
 import {
+  JUMPS_CAP,
   PAGES_CAP,
   QUESTIONS_CAP,
   questionsOf,
   type FormDefinition,
+  type Jump,
   type Page,
   type QuestionSnapshot,
   type QuestionSnapshotOf,
@@ -408,4 +410,53 @@ export const clearShowCondition = <D extends FormDefinition>(
     if (question.showCondition === undefined) return question;
     const { showCondition: _showCondition, ...rest } = question;
     return rest as QuestionSnapshot;
+  });
+
+const jumpIndex = (page: Page, index: number) => {
+  if (!Number.isInteger(index) || index < 0 || index >= page.jumps.length)
+    throw new RangeError(`No jump ${index} among ${page.jumps.length} jumps`);
+};
+
+/** Appends a jump. The condition and target are stored as given; publish checks that they fit. */
+export const addJump = (definition: FormDefinition, pageId: string, jump: Jump): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    if (page.jumps.length >= JUMPS_CAP)
+      throw new RangeError(`A page has at most ${JUMPS_CAP} jumps`);
+    return { ...page, jumps: [...page.jumps, jump] };
+  });
+
+/** Removes the jump at `index`. Later jumps keep their order. */
+export const removeJump = (definition: FormDefinition, pageId: string, index: number): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, index);
+    return { ...page, jumps: page.jumps.toSpliced(index, 1) };
+  });
+
+/** Moves the jump at `from` to index `to`. `to` is the index it should have afterwards. */
+export const moveJump = (
+  definition: FormDefinition,
+  pageId: string,
+  from: number,
+  to: number,
+): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, from);
+    if (!Number.isInteger(to) || to < 0 || to >= page.jumps.length)
+      throw new RangeError(`No position ${to} among ${page.jumps.length} jumps`);
+    const jumps = [...page.jumps];
+    const [jump] = jumps.splice(from, 1);
+    jumps.splice(to, 0, jump!);
+    return { ...page, jumps };
+  });
+
+/** Replaces the jump at `index`. The page's other jumps stay put. */
+export const setJump = (
+  definition: FormDefinition,
+  pageId: string,
+  index: number,
+  jump: Jump,
+): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, index);
+    return { ...page, jumps: page.jumps.with(index, jump) };
   });
