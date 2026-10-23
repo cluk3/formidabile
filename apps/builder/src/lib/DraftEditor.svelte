@@ -1,13 +1,7 @@
 <script lang="ts">
   import type { FormApiClient, Schemas } from "@fb/api-client";
-  import {
-    parseDefinition,
-    questionsOf,
-    type FormDefinition,
-    type Issue,
-    type QuestionTypeName,
-  } from "@fb/core/definition";
-  import { addQuestion, QUESTIONS_CAP, upgradeToFormat2 } from "@fb/core/editing";
+  import { parseDefinition, type FormDefinition, type Issue } from "@fb/core/definition";
+  import { upgradeToFormat2 } from "@fb/core/editing";
   import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
   import { outcome, settleWrite, type Outcome } from "#lib/api.ts";
@@ -16,9 +10,8 @@
   import { fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
+  import PageList from "#lib/PageList.svelte";
   import PublicationHistory from "#lib/PublicationHistory.svelte";
-  import QuestionCard from "#lib/QuestionCard.svelte";
-  import { questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
     client,
@@ -55,7 +48,6 @@
   let issues = $state.raw<Issue[]>([]);
   /** What `issues` stopped. */
   let refused = $state<"saved" | "published">("saved");
-  let newType = $state<QuestionTypeName>("text");
 
   const changedSinceOpened = "This draft has changed since you opened it.";
   /** What every write does on a sign-in prompt or a notice. */
@@ -385,30 +377,7 @@
         }}></textarea>
     </div>
 
-    {@const questions = questionsOf(definition)}
-    <ol class="flex flex-col gap-4">
-      {#each questions as question, index (question.id)}
-        <li>
-          <QuestionCard {question} {index} count={questions.length} {edit} ids={webCryptoIds} />
-        </li>
-      {/each}
-    </ol>
-
-    <div class="flex items-end gap-2">
-      <div class={fieldClass}>
-        <label for={`${uid}-new-type`}>New question type</label>
-        <select id={`${uid}-new-type`} class={nativeInputClass} bind:value={newType}>
-          {#each questionTypeNames as type (type)}
-            <option value={type}>{registry[type].name}</option>
-          {/each}
-        </select>
-      </div>
-      <Button
-        variant="outline"
-        disabled={questionsOf(definition).length >= QUESTIONS_CAP}
-        onclick={() => edit((d) => addQuestion(d, newType, webCryptoIds))}>Add question</Button
-      >
-    </div>
+    <PageList {definition} {edit} ids={webCryptoIds} />
 
     <FormSettings
       {client}

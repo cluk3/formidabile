@@ -4,6 +4,7 @@
     addOption,
     changeQuestionType,
     moveQuestion,
+    moveQuestionTo,
     reidentifyQuestion,
     removeOption,
     removeQuestion,
@@ -22,14 +23,25 @@
     count,
     edit,
     ids,
+    atStart,
+    atEnd,
+    destinations = [],
   }: {
     question: QuestionSnapshot;
     index: number;
     count: number;
     edit(change: (definition: FormDefinition) => FormDefinition): void;
     ids: IdSource;
+    /** Move up stops here. Omitted, the question stops at the start of the form. */
+    atStart?: boolean;
+    /** Move down stops here. Omitted, the question stops at the end of the form. */
+    atEnd?: boolean;
+    /** Other pages this question can move to, labelled as the builder shows them. */
+    destinations?: readonly { readonly id: string; readonly label: string }[];
   } = $props();
   const uid = $props.id();
+  const upDisabled = $derived(atStart ?? index === 0);
+  const downDisabled = $derived(atEnd ?? index === count - 1);
 
   const Editor = $derived(editorOf(question));
   let moveUp = $state<HTMLElement | null>(null);
@@ -111,16 +123,41 @@
       variant="outline"
       size="sm"
       bind:ref={moveUp}
-      disabled={index === 0}
+      disabled={upDisabled}
       onclick={() => move(-1)}>Move up</Button
     >
     <Button
       variant="outline"
       size="sm"
       bind:ref={moveDown}
-      disabled={index === count - 1}
+      disabled={downDisabled}
       onclick={() => move(1)}>Move down</Button
     >
+    {#if destinations.length > 0}
+      <div class={fieldClass}>
+        <label for="{uid}-move">Move to page</label>
+        <select
+          id="{uid}-move"
+          class={nativeInputClass}
+          onchange={(event) => {
+            const pageId = event.currentTarget.value;
+            event.currentTarget.value = "";
+            if (pageId === "") return;
+            edit((definition) => {
+              if (definition.format !== 2) return definition;
+              const target = definition.pages.find((item) => item.id === pageId);
+              if (target === undefined) return definition;
+              return moveQuestionTo(definition, question.id, pageId, target.questions.length);
+            });
+          }}
+        >
+          <option value="">Choose a page</option>
+          {#each destinations as destination (destination.id)}
+            <option value={destination.id}>{destination.label}</option>
+          {/each}
+        </select>
+      </div>
+    {/if}
     <Button
       variant="outline"
       size="sm"
