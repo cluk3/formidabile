@@ -20,16 +20,18 @@
 
   const { response, version } = $derived(detail);
   // Read back through core's structural checks; the answers passed this version's schema when they were stored.
+  // Admin detail carries `path` beside `response` and `version`: the question ids this response was shown.
+  // The generated client type does not have it yet, so a missing or unreadable path means every question was shown.
   const interpreted = $derived.by(() => {
     const parsed = parseDefinition(version.definition);
-    // The stored path arrives with the server slice. Until then every question of the version was shown.
-    return parsed.ok
-      ? interpretAnswers(
-          parsed.value,
-          response.answers,
-          questionsOf(parsed.value).map((question) => question.id),
-        )
-      : null;
+    if (!parsed.ok) return null;
+    const fields: Record<string, unknown> = detail;
+    const stored = fields.path;
+    const shown =
+      Array.isArray(stored) && stored.every((id) => typeof id === "string")
+        ? stored
+        : questionsOf(parsed.value).map((question) => question.id);
+    return interpretAnswers(parsed.value, response.answers, shown);
   });
 </script>
 
@@ -61,15 +63,21 @@
     <p>This version uses a question type the builder doesn't support.</p>
   {:else}
     <dl class="flex flex-col gap-3">
-      {#each interpreted as { question, answer } (question.id)}
-        {@const Answer = answerOf(question)}
+      {#each interpreted as row (row.question.id)}
+        {@const Answer = answerOf(row.question)}
         <div class="flex flex-col gap-1">
-          <dt class="text-sm font-medium">{question.label}</dt>
+          <dt class="text-sm font-medium">{row.question.label}</dt>
           <dd>
-            {#if answer === undefined}
-              <span class="text-muted-foreground">Not answered</span>
+            {#if row.status === "answered" && row.answer !== undefined}
+              <Answer
+                question={row.question}
+                value={row.answer.value}
+                display={row.answer.display}
+              />
+            {:else if row.status === "skipped"}
+              <span class="text-muted-foreground">Skipped</span>
             {:else}
-              <Answer {question} value={answer.value} display={answer.display} />
+              <span class="text-muted-foreground">Not shown</span>
             {/if}
           </dd>
         </div>

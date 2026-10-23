@@ -1,26 +1,36 @@
 <script lang="ts">
-  import type { FormDefinition, QuestionSnapshot, QuestionTypeName } from "@fb/core/definition";
+  import {
+    conditionIssues,
+    questionsOf,
+    type FormDefinition,
+    type QuestionSnapshot,
+    type QuestionTypeName,
+  } from "@fb/core/definition";
   import {
     addOption,
     changeQuestionType,
+    clearShowCondition,
     moveQuestion,
     moveQuestionTo,
     reidentifyQuestion,
     removeOption,
     removeQuestion,
     replaceQuestion,
+    setShowCondition,
     type IdSource,
   } from "@fb/core/editing";
   import { tick } from "svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { checkClass, fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
+  import ConditionEditor from "#lib/ConditionEditor.svelte";
   import { editorOf, questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
     question,
     index,
     count,
+    definition,
     edit,
     ids,
     atStart,
@@ -30,6 +40,7 @@
     question: QuestionSnapshot;
     index: number;
     count: number;
+    definition: FormDefinition;
     edit(change: (definition: FormDefinition) => FormDefinition): void;
     ids: IdSource;
     /** Move up stops here. Omitted, the question stops at the start of the form. */
@@ -44,6 +55,33 @@
   const downDisabled = $derived(atEnd ?? index === count - 1);
 
   const Editor = $derived(editorOf(question));
+  const earlier = $derived.by(() => {
+    const questions = questionsOf(definition);
+    const at = questions.findIndex((item) => item.id === question.id);
+    return at <= 0 ? [] : questions.slice(0, at);
+  });
+  const conditionProblems = $derived.by(() => {
+    const prefix = showConditionPath(definition, question.id);
+    if (prefix === undefined) return [];
+    return conditionIssues(definition)
+      .filter((issue) => prefix.every((segment, index) => issue.path[index] === segment))
+      .map((issue) => issue.message);
+  });
+
+  const showConditionPath = (
+    source: FormDefinition,
+    questionId: string,
+  ): readonly (string | number)[] | undefined => {
+    if (source.format === 1) {
+      const at = source.questions.findIndex((item) => item.id === questionId);
+      return at < 0 ? undefined : ["questions", at, "showCondition"];
+    }
+    for (const [pageIndex, page] of source.pages.entries()) {
+      const at = page.questions.findIndex((item) => item.id === questionId);
+      if (at >= 0) return ["pages", pageIndex, "questions", at, "showCondition"];
+    }
+    return undefined;
+  };
   let moveUp = $state<HTMLElement | null>(null);
   let moveDown = $state<HTMLElement | null>(null);
 
@@ -116,6 +154,18 @@
       } as QuestionSnapshot)}
     addOption={() => edit((definition) => addOption(definition, question.id, ids))}
     removeOption={(value) => edit((definition) => removeOption(definition, question.id, value))}
+  />
+
+  <ConditionEditor
+    condition={question.showCondition}
+    {earlier}
+    issues={conditionProblems}
+    onchange={(next) =>
+      edit((current) =>
+        next === undefined
+          ? clearShowCondition(current, question.id)
+          : setShowCondition(current, question.id, next),
+      )}
   />
 
   <div class="flex flex-wrap gap-2 border-t pt-3">
