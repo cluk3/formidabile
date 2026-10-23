@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { Condition, conditionCount, CONDITIONS_CAP } from "./condition.ts";
 import { conditionIssues } from "./condition-issues.ts";
+import { jumpIssues } from "./jump-issues.ts";
 import {
   DraftText,
   toIssues,
@@ -10,12 +11,20 @@ import {
 } from "./question-type.ts";
 import { boolean } from "./types/boolean.ts";
 import { date } from "./types/date.ts";
+import { dateRange } from "./types/date-range.ts";
 import { email } from "./types/email.ts";
 import { multipleChoice } from "./types/multiple-choice.ts";
+import { multipleChoiceMatrix } from "./types/multiple-choice-matrix.ts";
 import { number } from "./types/number.ts";
+import { phone } from "./types/phone.ts";
 import { singleChoice } from "./types/single-choice.ts";
+import { singleChoiceMatrix } from "./types/single-choice-matrix.ts";
 import { text } from "./types/text.ts";
 import { ranking } from "./types/ranking.ts";
+import { url } from "./types/url.ts";
+import { timeOfDay } from "./types/time-of-day.ts";
+import { dateTime } from "./types/date-time.ts";
+import { address } from "./types/address.ts";
 
 export const QuestionSnapshot = z.discriminatedUnion("type", [
   text.snapshot,
@@ -26,6 +35,14 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
   multipleChoice.snapshot,
   boolean.snapshot,
   ranking.snapshot,
+  phone.snapshot,
+  url.snapshot,
+  timeOfDay.snapshot,
+  dateTime.snapshot,
+  dateRange.snapshot,
+  address.snapshot,
+  singleChoiceMatrix.snapshot,
+  multipleChoiceMatrix.snapshot,
 ]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
@@ -204,6 +221,14 @@ export const questionTypes = {
   multiple_choice: multipleChoice,
   boolean,
   ranking,
+  phone,
+  url,
+  time_of_day: timeOfDay,
+  date_time: dateTime,
+  date_range: dateRange,
+  address,
+  single_choice_matrix: singleChoiceMatrix,
+  multiple_choice_matrix: multipleChoiceMatrix,
 } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };
@@ -267,5 +292,6 @@ export const validateForPublish = (
     });
   }
   issues.push(...conditionIssues(definition));
+  issues.push(...jumpIssues(definition));
   return issues.length === 0 ? { ok: true, value: definition } : { ok: false, issues };
 };

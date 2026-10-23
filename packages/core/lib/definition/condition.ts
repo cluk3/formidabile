@@ -1,5 +1,5 @@
 import * as z from "zod/mini";
-import { RANKING_OPTIONS_MAX } from "./operators.ts";
+import { RANKING_OPTIONS_MAX } from "./ranking-limit.ts";
 
 /** ADR-017: a definition holds at most this many leaf conditions, counting show conditions and jumps. */
 export const CONDITIONS_CAP = 1000;
@@ -28,7 +28,7 @@ const constant = z.union([
 
 /**
  * A leaf names a question identity and an operator. `constant` is omitted when the operator needs none.
- * `row` is reserved for matrix conditions; no current question type has rows.
+ * `row` names one matrix row. A type without rows rejects it at publish.
  */
 const leaf = z.strictObject({
   questionId: z.uuid(),

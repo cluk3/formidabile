@@ -4,12 +4,8 @@
   import ChoiceOptions from "#lib/editors/ChoiceOptions.svelte";
   import type { EditorProps } from "#lib/editors/props.ts";
 
-  let {
-    question,
-    setConfig,
-    addOption,
-    removeOption,
-  }: EditorProps<QuestionSnapshotOf<"ranking">> = $props();
+  let { question, setConfig, addOption, removeOption }: EditorProps<QuestionSnapshotOf<"ranking">> =
+    $props();
 </script>
 
 <ChoiceOptions

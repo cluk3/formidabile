@@ -8,9 +8,7 @@
 
   const ranked = $derived(value ?? []);
   const chosen = $derived(new Set(ranked));
-  const unranked = $derived(
-    question.config.options.filter((option) => !chosen.has(option.value)),
-  );
+  const unranked = $derived(question.config.options.filter((option) => !chosen.has(option.value)));
   const labelOf = (optionValue: string) =>
     question.config.options.find((option) => option.value === optionValue)?.label ?? optionValue;
 
@@ -45,11 +43,7 @@
   };
 </script>
 
-<fieldset
-  class="group"
-  aria-invalid={field.invalid ? "true" : undefined}
-  aria-describedby={field.describedBy}
->
+<fieldset class="group" aria-describedby={field.describedBy}>
   <legend class="label" part="label"><Prompt {question} /></legend>
   <Description {question} {field} />
 

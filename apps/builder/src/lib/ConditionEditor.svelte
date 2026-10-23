@@ -1,6 +1,8 @@
 <script lang="ts">
   import {
+    applicableOperators,
     conditionOperators,
+    countryCodes,
     type Condition,
     type ConditionOperator,
     type QuestionSnapshot,
@@ -25,6 +27,7 @@
     earlier,
     issues = [],
     depth = 1,
+    purpose = "show",
     onchange,
   }: {
     condition: Condition | undefined;
@@ -33,6 +36,8 @@
     issues?: readonly string[];
     /** Group nesting, starting at 1. A third group holds only leaves. */
     depth?: number;
+    /** `jump` keeps the condition and names the group for a page jump. */
+    purpose?: "show" | "jump";
     onchange: Change;
   } = $props();
 
@@ -50,6 +55,7 @@
     greater_than: ">",
     at_least: "≥",
     is_on: "is on",
+    is_at: "is at",
     is_before: "is before",
     is_after: "is after",
     is_any_of: "is any of",
@@ -63,18 +69,69 @@
     is_not_answered: "is not answered",
     ranks_in_top: "ranks in the top",
     does_not_rank_in_top: "does not rank in the top",
+    starts_with: "starts with",
+    does_not_start_with: "does not start with",
+    starts_before: "starts before",
+    starts_on: "starts on",
+    starts_after: "starts after",
+    ends_before: "ends before",
+    ends_on: "ends on",
+    ends_after: "ends after",
+    country_is_any_of: "country is any of",
+    country_is_none_of: "country is none of",
   };
+
+  const offered = (question: QuestionSnapshot) =>
+    applicableOperators(question.type, question.config);
+
+  const regionNames = () =>
+    new Intl.DisplayNames([document.documentElement.lang || navigator.language || "en"], {
+      type: "region",
+    });
 
   const isLeaf = (value: Node): value is Leaf => "questionId" in value;
 
   const choiceOptions = (
     question: QuestionSnapshot,
+  ): readonly { readonly value: string; readonly label: string }[] => {
+    if (
+      question.type === "single_choice" ||
+      question.type === "multiple_choice" ||
+      question.type === "ranking"
+    )
+      return question.config.options;
+    if (question.type === "single_choice_matrix" || question.type === "multiple_choice_matrix")
+      return question.config.columns;
+    return [];
+  };
+
+  const matrixRows = (
+    question: QuestionSnapshot | undefined,
   ): readonly { readonly value: string; readonly label: string }[] =>
-    question.type === "single_choice" ||
-    question.type === "multiple_choice" ||
-    question.type === "ranking"
-      ? question.config.options
+    question?.type === "single_choice_matrix" || question?.type === "multiple_choice_matrix"
+      ? question.config.rows
       : [];
+
+  const valuesOf = (question: QuestionSnapshot, operator: ConditionOperator | undefined) => {
+    if (operator?.countries) {
+      const names = regionNames();
+      return countryCodes.map((code) => ({ value: code, label: names.of(code) ?? code }));
+    }
+    return choiceOptions(question);
+  };
+
+  /** A comparison operator names one row. Presence operators may name a row or the whole question. */
+  const rowFor = (
+    operator: ConditionOperator,
+    question: QuestionSnapshot,
+    keep: string | undefined,
+  ): { row?: string } => {
+    if (operator.row !== true) return {};
+    const rows = matrixRows(question);
+    const row =
+      keep !== undefined && rows.some((item) => item.value === keep) ? keep : rows[0]?.value;
+    return row === undefined ? {} : { row };
+  };
 
   const initialConstant = (
     operator: ConditionOperator,
@@ -84,31 +141,36 @@
     if (operator.constant === "none") return {};
     if (operator.constant === "string") return { constant: typeof keep === "string" ? keep : "" };
     if (operator.constant === "number") return typeof keep === "number" ? { constant: keep } : {};
-    if (operator.constant === "date") return typeof keep === "string" ? { constant: keep } : {};
     if (operator.constant === "rank") {
       const options = choiceOptions(question);
       const kept =
-        typeof keep === "object" &&
-        keep !== null &&
-        !Array.isArray(keep) &&
-        "value" in keep &&
-        "n" in keep
-          ? keep
+        typeof keep === "object" && keep !== null && !Array.isArray(keep)
+          ? (keep as { value?: unknown; n?: unknown })
           : undefined;
-      const value = options.some((option) => option.value === kept?.value)
-        ? kept.value
-        : options[0]?.value;
+      const keptValue = kept?.value;
+      const keptN = kept?.n;
+      const value =
+        typeof keptValue === "string" && options.some((option) => option.value === keptValue)
+          ? keptValue
+          : options[0]?.value;
       const n =
-        kept !== undefined &&
-        typeof kept.n === "number" &&
-        Number.isInteger(kept.n) &&
-        kept.n >= 1 &&
-        kept.n <= RANKING_OPTIONS_MAX
-          ? kept.n
+        typeof keptN === "number" &&
+        Number.isInteger(keptN) &&
+        keptN >= 1 &&
+        keptN <= RANKING_OPTIONS_MAX
+          ? keptN
           : 1;
       return value === undefined ? {} : { constant: { value, n } };
     }
-    const values = new Set(choiceOptions(question).map((option) => option.value));
+    if (operator.constant === "date" || operator.constant === "time")
+      return typeof keep === "string" ? { constant: keep } : {};
+    if (operator.constant === "date_time")
+      return typeof keep === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(keep)
+        ? { constant: keep }
+        : {};
+    const values = new Set(
+      operator.countries ? countryCodes : choiceOptions(question).map((option) => option.value),
+    );
     const kept = Array.isArray(keep)
       ? keep.filter((item): item is string => typeof item === "string" && values.has(item))
       : [];
@@ -117,7 +179,7 @@
 
   const blank = (): Leaf => {
     const question = earlier[0]!;
-    const operator = conditionOperators[question.type][0]!;
+    const operator = offered(question)[0]!;
     return {
       questionId: question.id,
       operator: operator.id,
@@ -134,12 +196,14 @@
   const chooseQuestion = (leaf: Leaf, questionId: string, change: Change) => {
     const question = earlier.find((item) => item.id === questionId);
     if (question === undefined) return;
-    const available = conditionOperators[question.type];
+    const available = offered(question);
     const operator = available.find((item) => item.id === leaf.operator) ?? available[0]!;
+    const { row: _row, ...rest } = leafBase(leaf);
     change({
-      ...leafBase(leaf),
+      ...rest,
       questionId,
       operator: operator.id,
+      ...rowFor(operator, question, leaf.row),
       ...initialConstant(
         operator,
         question,
@@ -150,15 +214,22 @@
 
   const chooseOperator = (leaf: Leaf, operatorId: string, change: Change) => {
     const question = earlier.find((item) => item.id === leaf.questionId);
-    const operator = (question === undefined ? [] : conditionOperators[question.type]).find(
+    const operator = (question === undefined ? [] : offered(question)).find(
       (item) => item.id === operatorId,
     );
     if (operator === undefined || question === undefined) return;
+    const { row: _row, ...rest } = leafBase(leaf);
     change({
-      ...leafBase(leaf),
+      ...rest,
       operator: operator.id,
+      ...rowFor(operator, question, leaf.row),
       ...initialConstant(operator, question, leaf.constant),
     });
+  };
+
+  const setRow = (leaf: Leaf, raw: string, change: Change) => {
+    const { row: _row, ...rest } = leaf;
+    change(raw === "" ? rest : { ...rest, row: raw });
   };
 
   const setConstant = (
@@ -176,12 +247,17 @@
     const current = new Set(Array.isArray(leaf.constant) ? leaf.constant : []);
     if (checked) current.add(value);
     else current.delete(value);
+    const operator =
+      question === undefined
+        ? undefined
+        : conditionOperators[question.type].find((item) => item.id === leaf.operator);
     const ordered =
       question === undefined
         ? [...current]
-        : choiceOptions(question)
-            .map((option) => option.value)
-            .filter((item) => current.has(item));
+        : (operator?.countries
+            ? countryCodes
+            : choiceOptions(question).map((option) => option.value)
+          ).filter((item) => current.has(item));
     setConstant(leaf, ordered, change);
   };
 
@@ -221,36 +297,41 @@
 {#snippet branch(current: Condition | undefined, level: number, key: string, change: Change)}
   {@const currentNode = current === undefined ? undefined : (current as Node)}
   <section
-    aria-label={level === 1 ? "Show when" : "Condition"}
+    aria-label={level === 1 ? (purpose === "jump" ? "Jump when" : "Show when") : "Condition"}
     class="flex flex-col gap-2 {level === 1 ? '' : 'rounded-md border p-3'}"
   >
     {#if level === 1}
       {#if issues.length > 0}
-        <ul aria-label="Show condition problems" class="list-disc pl-5 text-sm text-destructive">
+        <ul
+          aria-label={purpose === "jump" ? "Jump condition problems" : "Show condition problems"}
+          class="list-disc pl-5 text-sm text-destructive"
+        >
           {#each issues as issue, index (index)}
             <li>{issue}</li>
           {/each}
         </ul>
       {/if}
-      {#if currentNode === undefined}
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          disabled={earlier.length === 0}
-          onclick={() => change(blank())}>Only show when…</Button
-        >
-      {:else}
-        <Button variant="outline" size="sm" type="button" onclick={() => change(undefined)}
-          >Always show</Button
-        >
+      {#if purpose === "show"}
+        {#if currentNode === undefined}
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={earlier.length === 0}
+            onclick={() => change(blank())}>Only show when…</Button
+          >
+        {:else}
+          <Button variant="outline" size="sm" type="button" onclick={() => change(undefined)}
+            >Always show</Button
+          >
+        {/if}
       {/if}
     {/if}
 
     {#if currentNode !== undefined && isLeaf(currentNode)}
       {@const leaf = currentNode}
       {@const question = earlier.find((item) => item.id === leaf.questionId)}
-      {@const operators = question === undefined ? [] : conditionOperators[question.type]}
+      {@const operators = question === undefined ? [] : offered(question)}
       {@const active = operators.find((operator) => operator.id === leaf.operator)}
       <div class={fieldClass}>
         <label for="{key}-question">Question</label>
@@ -284,10 +365,31 @@
           {/if}
         </select>
       </div>
+      {#if matrixRows(question).length > 0}
+        <div class={fieldClass}>
+          <label for="{key}-row">Row</label>
+          <select
+            id="{key}-row"
+            class={nativeInputClass}
+            value={leaf.row ?? ""}
+            onchange={(event) => setRow(leaf, event.currentTarget.value, change)}
+          >
+            {#if active?.row !== true}
+              <option value="">The whole question</option>
+            {/if}
+            {#each matrixRows(question) as row (row.value)}
+              <option value={row.value}>{row.label.trim() || "Untitled row"}</option>
+            {/each}
+            {#if leaf.row !== undefined && !matrixRows(question).some((row) => row.value === leaf.row)}
+              <option value={leaf.row}>Unknown row</option>
+            {/if}
+          </select>
+        </div>
+      {/if}
       {#if active?.constant === "strings" && question !== undefined}
         <fieldset class="flex flex-col gap-1">
           <legend class="text-sm font-medium">Values</legend>
-          {#each choiceOptions(question) as option (option.value)}
+          {#each valuesOf(question, active) as option (option.value)}
             <label class={checkClass}>
               <input
                 type="checkbox"
@@ -301,7 +403,9 @@
         </fieldset>
       {:else if active?.constant === "rank" && question !== undefined}
         {@const rank =
-          typeof leaf.constant === "object" && leaf.constant !== null && !Array.isArray(leaf.constant)
+          typeof leaf.constant === "object" &&
+          leaf.constant !== null &&
+          !Array.isArray(leaf.constant)
             ? leaf.constant
             : { value: choiceOptions(question)[0]?.value ?? "", n: 1 }}
         <div class={fieldClass}>
@@ -360,6 +464,20 @@
             <input
               class={nativeInputClass}
               type="date"
+              value={typeof leaf.constant === "string" ? leaf.constant : ""}
+              oninput={(event) => setConstant(leaf, event.currentTarget.value || undefined, change)}
+            />
+          {:else if active.constant === "time"}
+            <input
+              class={nativeInputClass}
+              type="time"
+              value={typeof leaf.constant === "string" ? leaf.constant : ""}
+              oninput={(event) => setConstant(leaf, event.currentTarget.value || undefined, change)}
+            />
+          {:else if active.constant === "date_time"}
+            <input
+              class={nativeInputClass}
+              type="datetime-local"
               value={typeof leaf.constant === "string" ? leaf.constant : ""}
               oninput={(event) => setConstant(leaf, event.currentTarget.value || undefined, change)}
             />

@@ -1,16 +1,19 @@
 import type { Condition } from "../definition/condition.ts";
 import {
+  JUMPS_CAP,
   PAGES_CAP,
   QUESTIONS_CAP,
   questionsOf,
   type FormDefinition,
+  type Jump,
   type Page,
   type QuestionSnapshot,
   type QuestionSnapshotOf,
   type QuestionTypeName,
 } from "../definition/form-definition.ts";
-import { RANKING_OPTIONS_MAX } from "../definition/operators.ts";
+import { RANKING_OPTIONS_MAX } from "../definition/ranking-limit.ts";
 import { OPTIONS_CAP } from "../definition/types/choice-options.ts";
+import { COLUMNS_CAP, ROWS_CAP } from "../definition/types/matrix.ts";
 
 /**
  * Mints identifiers for the editing functions. Core has no `crypto`, so the builder supplies one
@@ -41,8 +44,31 @@ const newConfig = {
   date: () => ({}),
   single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
-  boolean: () => ({}),
   ranking: (kept, ids) => ({ options: optionsFrom(kept, 2, ids) }),
+  boolean: () => ({}),
+  phone: () => ({}),
+  url: () => ({}),
+  time_of_day: () => ({}),
+  date_time: () => ({}),
+  date_range: () => ({}),
+  address: () => ({
+    lines: {
+      line1: { shown: true, required: false },
+      line2: { shown: true, required: false },
+      city: { shown: true, required: false },
+      region: { shown: true, required: false },
+      postalCode: { shown: true, required: false },
+      country: { shown: true, required: false },
+    },
+  }),
+  single_choice_matrix: (kept, ids) => ({
+    rows: [{ value: ids.optionValue(), label: "" }],
+    columns: optionsFrom(kept, 2, ids),
+  }),
+  multiple_choice_matrix: (kept, ids) => ({
+    rows: [{ value: ids.optionValue(), label: "" }],
+    columns: optionsFrom(kept, 1, ids),
+  }),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],
@@ -126,15 +152,103 @@ export const addQuestion = <D extends FormDefinition>(
   } as D;
 };
 
+type ConditionTree =
+  | {
+      readonly questionId: string;
+      readonly operator: string;
+      readonly constant?: unknown;
+      readonly row?: string;
+    }
+  | { readonly all: readonly ConditionTree[] }
+  | { readonly any: readonly ConditionTree[] };
+
+/** The same tree, with `from` replaced by `to`. A tree that does not name `from` is returned as-is. */
+const renameNode = (node: ConditionTree, from: string, to: string): ConditionTree => {
+  if ("questionId" in node) return node.questionId === from ? { ...node, questionId: to } : node;
+  if ("all" in node) {
+    let changed = false;
+    const all = node.all.map((child) => {
+      const next = renameNode(child, from, to);
+      if (next !== child) changed = true;
+      return next;
+    });
+    return changed ? { all } : node;
+  }
+  let changed = false;
+  const any = node.any.map((child) => {
+    const next = renameNode(child, from, to);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { any } : node;
+};
+
+const renameInCondition = (condition: Condition, from: string, to: string): Condition => {
+  const node = condition as ConditionTree;
+  const renamed = renameNode(node, from, to);
+  return renamed === node ? condition : (renamed as Condition);
+};
+
+const retargetQuestion = (
+  question: QuestionSnapshot,
+  from: string,
+  to: string,
+): QuestionSnapshot => {
+  if (question.showCondition === undefined) return question;
+  const showCondition = renameInCondition(question.showCondition, from, to);
+  return showCondition === question.showCondition ? question : { ...question, showCondition };
+};
+
+/** Points every show condition and jump condition that names `from` at `to`. */
+const retargetConditions = <D extends FormDefinition>(
+  definition: D,
+  from: string,
+  to: string,
+): D => {
+  if (definition.format === 1) {
+    const questions = definition.questions.map((question) => retargetQuestion(question, from, to));
+    return questions.every((question, index) => question === definition.questions[index])
+      ? definition
+      : ({ ...definition, questions } as D);
+  }
+  let pagesChanged = false;
+  const pages = definition.pages.map((page) => {
+    let changed = false;
+    const questions = page.questions.map((question) => {
+      const next = retargetQuestion(question, from, to);
+      if (next !== question) changed = true;
+      return next;
+    });
+    const jumps = page.jumps.map((jump) => {
+      const condition = renameInCondition(jump.condition, from, to);
+      if (condition === jump.condition) return jump;
+      changed = true;
+      return { ...jump, condition };
+    });
+    if (!changed) return page;
+    pagesChanged = true;
+    return { ...page, questions, jumps };
+  });
+  return pagesChanged ? ({ ...definition, pages } as D) : definition;
+};
+
 /**
  * "Treat as a new question" (ADR 0009): the same content, position and option values under a new
- * question identity, so analytics stop combining it with the old one.
+ * question identity, so analytics stop combining it with the old one. Every condition that named the
+ * old identity, including a jump condition, names the new one (ADR-017).
  */
 export const reidentifyQuestion = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   ids: IdSource,
-): D => replaceQuestion(definition, questionId, (q) => ({ ...q, id: ids.questionId() }));
+): D => {
+  let nextId = "";
+  const renamed = replaceQuestion(definition, questionId, (question) => {
+    nextId = ids.questionId();
+    return { ...question, id: nextId };
+  });
+  return retargetConditions(renamed, questionId, nextId);
+};
 
 /**
  * A question identity keeps one type for life (ADR 0005), so a new type means a new identity. The
@@ -151,11 +265,11 @@ export const changeQuestionType = <D extends FormDefinition>(
   if (current === undefined) throw new RangeError(`No question ${questionId}`);
   if (current.type === type) return definition;
   return replaceQuestion(definition, questionId, ({ id: _id, type: _type, config, ...content }) =>
-    newQuestion(type, content, "options" in config ? config.options : [], ids),
+    newQuestion(type, content, keptOptions(config), ids),
   );
 };
 
-/** Removes a question. Adding it back later mints a new identity, so analytics don't combine the two. */
+/** Removes a question. Conditions that name it stay. Adding it back later mints a new identity, so analytics don't combine the two. */
 export const removeQuestion = <D extends FormDefinition>(definition: D, questionId: string): D => {
   if (definition.format === 1) {
     const index = definition.questions.findIndex((q) => q.id === questionId);
@@ -199,53 +313,132 @@ export const moveQuestion = <D extends FormDefinition>(
 const sameQuestions = (left: readonly QuestionSnapshot[], right: readonly QuestionSnapshot[]) =>
   left.length === right.length && left.every((q, i) => q === right[i]);
 
-const replaceOptions = <D extends FormDefinition>(
-  definition: D,
-  questionId: string,
-  replace: (
-    options: ChoiceOption[],
-    question: QuestionSnapshotOf<"single_choice" | "multiple_choice" | "ranking">,
-  ) => ChoiceOption[],
-): D =>
-  replaceQuestion(definition, questionId, (q) => {
-    if (q.type !== "single_choice" && q.type !== "multiple_choice" && q.type !== "ranking")
-      throw new RangeError(`Question ${questionId} has no options`);
-    return {
-      ...q,
-      config: { ...q.config, options: replace(q.config.options, q) },
-    } as QuestionSnapshot;
-  });
+const keptOptions = (config: QuestionSnapshot["config"]): readonly ChoiceOption[] => {
+  if ("options" in config) return config.options;
+  if ("columns" in config) return config.columns;
+  return [];
+};
+
+/** Choice options, or a matrix's columns. `cap` is what add refuses to pass. */
+const listedOf = (
+  question: QuestionSnapshot,
+):
+  | { readonly kind: "options" | "columns"; readonly items: ChoiceOption[]; readonly cap: number }
+  | undefined => {
+  if (question.type === "single_choice" || question.type === "multiple_choice")
+    return { kind: "options", items: question.config.options, cap: OPTIONS_CAP };
+  if (question.type === "ranking")
+    return { kind: "options", items: question.config.options, cap: RANKING_OPTIONS_MAX };
+  if (question.type === "single_choice_matrix" || question.type === "multiple_choice_matrix")
+    return { kind: "columns", items: question.config.columns, cap: COLUMNS_CAP };
+  return undefined;
+};
 
 /**
- * Appends a blank option with a minted value to a choice question. Throws at the option cap, so the
- * builder disables adding there.
+ * Appends a blank option with a minted value to a choice question, or a blank column to a matrix.
+ * Throws at the cap, so the builder disables adding there.
  */
 export const addOption = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   ids: IdSource,
 ): D =>
-  replaceOptions(definition, questionId, (options, question) => {
-    const cap = question.type === "ranking" ? RANKING_OPTIONS_MAX : OPTIONS_CAP;
-    if (options.length >= cap)
+  replaceQuestion(definition, questionId, (question) => {
+    const listed = listedOf(question);
+    if (listed === undefined) throw new RangeError(`Question ${questionId} has no options`);
+    if (listed.items.length >= listed.cap)
       throw new RangeError(
-        question.type === "ranking"
-          ? `A ranking has at most ${RANKING_OPTIONS_MAX} options`
-          : `A question has at most ${OPTIONS_CAP} options`,
+        listed.kind === "columns"
+          ? `A matrix has at most ${listed.cap} columns`
+          : listed.cap === RANKING_OPTIONS_MAX
+            ? `A ranking has at most ${RANKING_OPTIONS_MAX} options`
+            : `A question has at most ${listed.cap} options`,
       );
-    return optionsFrom(options, options.length + 1, ids);
+    return {
+      ...question,
+      config: {
+        ...question.config,
+        [listed.kind]: optionsFrom(listed.items, listed.items.length + 1, ids),
+      },
+    } as QuestionSnapshot;
   });
 
-/** Removes a choice question's option. Re-adding it later mints a new value. */
+/** Removes a choice question's option. Conditions that name its value stay. Re-adding it later mints a new value. */
 export const removeOption = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   value: string,
 ): D =>
-  replaceOptions(definition, questionId, (options) => {
-    const index = options.findIndex((option) => option.value === value);
+  replaceQuestion(definition, questionId, (question) => {
+    const listed = listedOf(question);
+    if (listed === undefined) throw new RangeError(`Question ${questionId} has no options`);
+    const index = listed.items.findIndex((item) => item.value === value);
     if (index === -1) throw new RangeError(`Question ${questionId} has no option ${value}`);
-    return options.toSpliced(index, 1);
+    return {
+      ...question,
+      config: { ...question.config, [listed.kind]: listed.items.toSpliced(index, 1) },
+    } as QuestionSnapshot;
+  });
+
+type MatrixQuestion = QuestionSnapshotOf<"single_choice_matrix" | "multiple_choice_matrix">;
+type MatrixRow = MatrixQuestion["config"]["rows"][number];
+
+const replaceRows = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  replace: (rows: MatrixRow[]) => MatrixRow[],
+): D =>
+  replaceQuestion(definition, questionId, (question) => {
+    if (question.type !== "single_choice_matrix" && question.type !== "multiple_choice_matrix")
+      throw new RangeError(`Question ${questionId} has no rows`);
+    return {
+      ...question,
+      config: { ...question.config, rows: replace([...question.config.rows]) },
+    } as QuestionSnapshot;
+  });
+
+/**
+ * Appends a blank row with a value minted from the same source as an option value. Throws at the row
+ * cap. Removing the row later does not rewrite conditions that name it.
+ */
+export const addRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  ids: IdSource,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    if (rows.length >= ROWS_CAP) throw new RangeError(`A matrix has at most ${ROWS_CAP} rows`);
+    return [...rows, { value: ids.optionValue(), label: "" }];
+  });
+
+/** Removes a matrix row. A condition that names the row value is left in place. */
+export const removeRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  value: string,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    const index = rows.findIndex((row) => row.value === value);
+    if (index === -1) throw new RangeError(`Question ${questionId} has no row ${value}`);
+    return rows.toSpliced(index, 1);
+  });
+
+/** Moves a matrix row to position `to`. The row value stays, so conditions and analytics keep it. */
+export const moveRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  value: string,
+  to: number,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    const from = rows.findIndex((row) => row.value === value);
+    if (from === -1) throw new RangeError(`Question ${questionId} has no row ${value}`);
+    if (!Number.isInteger(to) || to < 0 || to >= rows.length)
+      throw new RangeError(`No position ${to} among ${rows.length} rows`);
+    if (from === to) return rows;
+    const next = rows.toSpliced(from, 1);
+    next.splice(to, 0, rows[from]!);
+    return next;
   });
 
 /**
@@ -305,9 +498,9 @@ export const addPage = (definition: FormDefinition, ids: IdSource, at?: number):
 };
 
 /**
- * Removes a page and the questions on it. Jumps on other pages are left in place, even when they name
- * this page: deleting a target is what marks a jump broken (ADR-017), and it is not this operation's
- * job to repair it. The last page cannot be removed.
+ * Removes a page and the questions on it. Conditions and jumps on other pages are left in place, even
+ * when they name this page or its questions: deleting a target is what marks the logic broken
+ * (ADR-017), and it is not this operation's job to repair it. The last page cannot be removed.
  */
 export const removePage = (definition: FormDefinition, pageId: string): Format2 => {
   const current = format2(definition);
@@ -418,4 +611,53 @@ export const clearShowCondition = <D extends FormDefinition>(
     if (question.showCondition === undefined) return question;
     const { showCondition: _showCondition, ...rest } = question;
     return rest as QuestionSnapshot;
+  });
+
+const jumpIndex = (page: Page, index: number) => {
+  if (!Number.isInteger(index) || index < 0 || index >= page.jumps.length)
+    throw new RangeError(`No jump ${index} among ${page.jumps.length} jumps`);
+};
+
+/** Appends a jump. The condition and target are stored as given; publish checks that they fit. */
+export const addJump = (definition: FormDefinition, pageId: string, jump: Jump): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    if (page.jumps.length >= JUMPS_CAP)
+      throw new RangeError(`A page has at most ${JUMPS_CAP} jumps`);
+    return { ...page, jumps: [...page.jumps, jump] };
+  });
+
+/** Removes the jump at `index`. Later jumps keep their order. */
+export const removeJump = (definition: FormDefinition, pageId: string, index: number): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, index);
+    return { ...page, jumps: page.jumps.toSpliced(index, 1) };
+  });
+
+/** Moves the jump at `from` to index `to`. `to` is the index it should have afterwards. */
+export const moveJump = (
+  definition: FormDefinition,
+  pageId: string,
+  from: number,
+  to: number,
+): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, from);
+    if (!Number.isInteger(to) || to < 0 || to >= page.jumps.length)
+      throw new RangeError(`No position ${to} among ${page.jumps.length} jumps`);
+    const jumps = [...page.jumps];
+    const [jump] = jumps.splice(from, 1);
+    jumps.splice(to, 0, jump!);
+    return { ...page, jumps };
+  });
+
+/** Replaces the jump at `index`. The page's other jumps stay put. */
+export const setJump = (
+  definition: FormDefinition,
+  pageId: string,
+  index: number,
+  jump: Jump,
+): Format2 =>
+  updatePage(definition, pageId, (page) => {
+    jumpIndex(page, index);
+    return { ...page, jumps: page.jumps.with(index, jump) };
   });

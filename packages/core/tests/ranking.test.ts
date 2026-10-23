@@ -9,7 +9,13 @@ import {
   type FormDefinition,
   type Result,
 } from "@fb/core/definition";
-import { addOption, addQuestion, changeQuestionType, removeOption, type IdSource } from "@fb/core/editing";
+import {
+  addOption,
+  addQuestion,
+  changeQuestionType,
+  removeOption,
+  type IdSource,
+} from "@fb/core/editing";
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
 const rankId = uuid(1);
@@ -113,11 +119,7 @@ describe("ranking", () => {
   });
 
   test("a new ranking starts with the two blank options publish needs, and stops at 20", () => {
-    const added = addQuestion(
-      { format: 1, title: "Feedback", questions: [] },
-      "ranking",
-      ids,
-    );
+    const added = addQuestion({ format: 1, title: "Feedback", questions: [] }, "ranking", ids);
     expect(questionsOf(added)[0]).toMatchObject({
       type: "ranking",
       config: {
@@ -247,20 +249,24 @@ describe("ranking conditions", () => {
 
   test("the constant is an option value and N from 1 to 20", () => {
     expect(definition("ranks_in_top", { value: "a", n: 20 }).format).toBe(2);
-    expect(parseDefinition(page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a", n: 0 } })).ok).toBe(
-      false,
-    );
-    expect(parseDefinition(page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a", n: 21 } })).ok).toBe(
-      false,
-    );
-    expect(parseDefinition(page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a" } })).ok).toBe(
-      false,
-    );
+    expect(
+      parseDefinition(
+        page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a", n: 0 } }),
+      ).ok,
+    ).toBe(false);
+    expect(
+      parseDefinition(
+        page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a", n: 21 } }),
+      ).ok,
+    ).toBe(false);
+    expect(
+      parseDefinition(
+        page({ questionId: rankId, operator: "ranks_in_top", constant: { value: "a" } }),
+      ).ok,
+    ).toBe(false);
 
     const needsOne = definition("ranks_in_top");
-    const wrong = parsed(
-      page({ questionId: rankId, operator: "ranks_in_top", constant: "a" }),
-    );
+    const wrong = parsed(page({ questionId: rankId, operator: "ranks_in_top", constant: "a" }));
     expect(conditionIssues(needsOne).map((issue) => issue.message)).toEqual([
       "This operator needs a constant",
     ]);

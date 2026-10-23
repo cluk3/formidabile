@@ -341,10 +341,12 @@ test("an opened response reads as its own version's questions and answers, not t
   const picked = answerTo("Toppings").getByRole("listitem");
   expect(picked.elements().map((li) => li.textContent?.trim())).toEqual(["Ham, smoked", "Oil"]);
   await expect.element(answerTo("Ready?")).toHaveTextContent("Yes");
-  expect(answerTo("Priorities").getByRole("listitem").elements().map((li) => li.textContent?.trim())).toEqual([
-    "1. Beta",
-    "2. Alpha",
-  ]);
+  expect(
+    answerTo("Priorities")
+      .getByRole("listitem")
+      .elements()
+      .map((li) => li.textContent?.trim()),
+  ).toEqual(["1. Beta", "2. Alpha"]);
   await expect.element(answerTo("Comments")).toHaveTextContent("Skipped");
   expect(detail.getByRole("textbox").elements()).toEqual([]);
   expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);

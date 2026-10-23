@@ -1,11 +1,23 @@
+import { RANKING_OPTIONS_MAX } from "./ranking-limit.ts";
+import { phoneOperators } from "./types/phone.ts";
+import { isLocalDateTime } from "./types/date-time.ts";
+
 /**
- * What a leaf compares an answer with. `date` is an ISO calendar day; `strings` is an option-value list.
+ * What a leaf compares an answer with. `date` is an ISO calendar day; `time` is `HH:MM`;
+ * `date_time` is a local `YYYY-MM-DDTHH:MM`; `strings` is an option-value list.
  * `rank` is an option value and a top-N bound, `{ value, n }`.
  */
-export type ConstantKind = "none" | "string" | "number" | "date" | "strings" | "rank";
+export type ConstantKind =
+  | "none"
+  | "string"
+  | "number"
+  | "date"
+  | "time"
+  | "date_time"
+  | "strings"
+  | "rank";
 
-/** A ranking lists at most this many options, so "top N" stops there (ADR-018). */
-export const RANKING_OPTIONS_MAX = 20;
+export { RANKING_OPTIONS_MAX };
 
 /** `{ value, n }` with N from 1 to {@link RANKING_OPTIONS_MAX}. Anything else is not a rank constant. */
 export const rankConstant = (
@@ -31,6 +43,10 @@ export type ConditionOperator = {
   readonly options?: boolean;
   /** Set by a matrix operator. A `row` on any other type is rejected at publish. */
   readonly row?: boolean;
+  /** Each constant string must be an ISO 3166-1 alpha-2 code. */
+  readonly countries?: boolean;
+  /** When set, the operator is offered only for questions whose config passes. */
+  readonly fits?: (config: unknown) => boolean;
   matches(answer: unknown, constant: unknown): boolean;
 };
 
@@ -155,6 +171,33 @@ const dateOperators = [
   ),
 ];
 
+/** `HH:MM` on a 24-hour clock, zero-padded, with no seconds, so it compares as text. */
+const isTimeOfDay = (value: unknown): value is string =>
+  typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+const timeIs =
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) =>
+    isTimeOfDay(answer) && isTimeOfDay(constant) && compare(answer, constant);
+
+const timeOperators = [
+  define(
+    "is_at",
+    "time",
+    timeIs((answer, constant) => answer === constant),
+  ),
+  define(
+    "is_before",
+    "time",
+    timeIs((answer, constant) => answer < constant),
+  ),
+  define(
+    "is_after",
+    "time",
+    timeIs((answer, constant) => answer > constant),
+  ),
+];
+
 const stringList = (value: unknown): string[] | undefined =>
   Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined;
 
@@ -249,6 +292,69 @@ const rankingOperators = [
   }),
 ];
 
+const dateTimeIs =
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) =>
+    isLocalDateTime(answer) && isLocalDateTime(constant) && compare(answer, constant);
+
+const dateTimeOperators = [
+  define(
+    "is_at",
+    "date_time",
+    dateTimeIs((answer, constant) => answer === constant),
+  ),
+  define(
+    "is_before",
+    "date_time",
+    dateTimeIs((answer, constant) => answer < constant),
+  ),
+  define(
+    "is_after",
+    "date_time",
+    dateTimeIs((answer, constant) => answer > constant),
+  ),
+];
+
+const countryLineShown = (config: unknown): boolean => {
+  if (typeof config !== "object" || config === null || !("lines" in config)) return false;
+  const { lines } = config;
+  if (typeof lines !== "object" || lines === null || !("country" in lines)) return false;
+  const country = lines.country;
+  return (
+    typeof country === "object" && country !== null && "shown" in country && country.shown === true
+  );
+};
+
+const countryOf = (answer: unknown): string | undefined => {
+  if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+  if (!("country" in answer)) return undefined;
+  return typeof answer.country === "string" ? answer.country : undefined;
+};
+
+const countryIs =
+  (anyOf: boolean) =>
+  (answer: unknown, constant: unknown): boolean => {
+    const country = countryOf(answer);
+    const values = stringList(constant);
+    if (country === undefined || values === undefined) return false;
+    const found = values.includes(country);
+    return anyOf ? found : !found;
+  };
+
+const countryOperator = (id: string, anyOf: boolean): ConditionOperator => ({
+  id,
+  constant: "strings",
+  countries: true,
+  fits: countryLineShown,
+  matches: countryIs(anyOf),
+});
+
+/** Country is any of and country is none of exist only while the country line is shown. */
+const addressOperators = [
+  countryOperator("country_is_any_of", true),
+  countryOperator("country_is_none_of", false),
+];
+
 /** Present on every type. `matches` runs only after the evaluator has decided the question was answered. */
 const presence = [
   define("is_answered", "none", () => true),
@@ -256,6 +362,51 @@ const presence = [
 ];
 
 const withPresence = (operators: readonly ConditionOperator[]) => [...operators, ...presence];
+
+const rangeSide =
+  (side: "start" | "end") =>
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return false;
+    const value = (answer as Record<string, unknown>)[side];
+    return isIsoDate(value) && isIsoDate(constant) && compare(value, constant);
+  };
+
+const dateRangeOperators = [
+  define(
+    "starts_before",
+    "date",
+    rangeSide("start")((answer, constant) => answer < constant),
+  ),
+  define(
+    "starts_on",
+    "date",
+    rangeSide("start")((answer, constant) => answer === constant),
+  ),
+  define(
+    "starts_after",
+    "date",
+    rangeSide("start")((answer, constant) => answer > constant),
+  ),
+  define(
+    "ends_before",
+    "date",
+    rangeSide("end")((answer, constant) => answer < constant),
+  ),
+  define(
+    "ends_on",
+    "date",
+    rangeSide("end")((answer, constant) => answer === constant),
+  ),
+  define(
+    "ends_after",
+    "date",
+    rangeSide("end")((answer, constant) => answer > constant),
+  ),
+];
+/** Comparison operators that address one matrix row. Presence operators stay on the shared list. */
+const onRow = (operators: readonly ConditionOperator[]): ConditionOperator[] =>
+  operators.map((operator) => ({ ...operator, row: true }));
 
 /**
  * Operators keyed by question type. Adding a type appends one key; `form-definition.ts` checks the key
@@ -270,6 +421,14 @@ export const conditionOperators = {
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
   ranking: withPresence(rankingOperators),
+  phone: withPresence(phoneOperators),
+  url: withPresence(textOperators),
+  time_of_day: withPresence(timeOperators),
+  date_time: withPresence(dateTimeOperators),
+  date_range: withPresence(dateRangeOperators),
+  address: withPresence(addressOperators),
+  single_choice_matrix: [...onRow(singleOperators), ...presence],
+  multiple_choice_matrix: [...onRow(multipleOperators), ...presence],
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -277,12 +436,36 @@ const operatorsFor = (type: string): readonly ConditionOperator[] =>
     ? conditionOperators[type as keyof typeof conditionOperators]
     : [];
 
-export const operatorById = (type: string, id: string): ConditionOperator | undefined =>
-  operatorsFor(type).find((operator) => operator.id === id);
+/** The operators a question of `type` offers for this config. A `fits` predicate can hide some. */
+export const applicableOperators = (type: string, config: unknown): readonly ConditionOperator[] =>
+  operatorsFor(type).filter((operator) => operator.fits === undefined || operator.fits(config));
 
-/** A type has rows when one of its operators says so. No current type does. */
+export const operatorById = (
+  type: string,
+  id: string,
+  config: unknown,
+): ConditionOperator | undefined =>
+  applicableOperators(type, config).find((operator) => operator.id === id);
+
+/** A type has rows when one of its operators says so. Matrix comparison operators do. */
 export const questionTypeHasRows = (type: string): boolean =>
   operatorsFor(type).some((operator) => operator.row === true);
+
+const namedValues = (config: object, key: string): readonly string[] => {
+  const value = (config as Record<string, unknown>)[key];
+  if (!Array.isArray(value)) return [];
+  const names: string[] = [];
+  for (const item of value) {
+    if (
+      typeof item === "object" &&
+      item !== null &&
+      "value" in item &&
+      typeof item.value === "string"
+    )
+      names.push(item.value);
+  }
+  return names;
+};
 
 const ANY_OF_CAP = 100;
 
@@ -294,6 +477,10 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
       return typeof constant === "string";
     case "date":
       return isIsoDate(constant);
+    case "time":
+      return isTimeOfDay(constant);
+    case "date_time":
+      return isLocalDateTime(constant);
     case "number":
       return finite(constant);
     case "strings":
@@ -308,19 +495,14 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
   }
 };
 
+/** Option values, or a matrix's column values. Both live as `{ value, label }` lists. */
 export const optionValues = (config: unknown): ReadonlySet<string> => {
-  if (typeof config !== "object" || config === null || !("options" in config)) return new Set();
-  const { options } = config;
-  if (!Array.isArray(options)) return new Set();
-  const values = new Set<string>();
-  for (const option of options) {
-    if (
-      typeof option === "object" &&
-      option !== null &&
-      "value" in option &&
-      typeof option.value === "string"
-    )
-      values.add(option.value);
-  }
-  return values;
+  if (typeof config !== "object" || config === null) return new Set();
+  return new Set([...namedValues(config, "options"), ...namedValues(config, "columns")]);
+};
+
+/** Row values of a matrix. Empty when the question has no rows. */
+export const rowValues = (config: unknown): ReadonlySet<string> => {
+  if (typeof config !== "object" || config === null) return new Set();
+  return new Set(namedValues(config, "rows"));
 };

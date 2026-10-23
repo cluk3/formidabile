@@ -68,9 +68,10 @@ test("the advisory schema describes a ranking as every option value once", async
       },
     },
   });
-  expect(data?.required ?? []).not.toContain(prioritiesId);
+  expect((data as { required?: string[] } | undefined)?.required ?? []).not.toContain(prioritiesId);
 
   const ajv = new Ajv2020({ allErrors: true });
+  ajv.addVocabulary(["x-fb-authoritative"]);
   const browser = ajv.compile(data!);
   const server = parseDefinition(definition);
   if (!server.ok) throw new Error("The ranking definition doesn't parse");
@@ -99,7 +100,7 @@ test("GET analytics reports mean position and first place, combined across optio
       body: {
         versionId: form.versionId,
         idempotencyKey: crypto.randomUUID(),
-        answers: ranking === undefined ? {} : { [prioritiesId]: ranking },
+        answers: ranking === undefined ? {} : { [prioritiesId]: [...ranking] },
       },
     });
     expect(submitted.response.status).toBe(201);
@@ -134,7 +135,7 @@ test("GET analytics reports mean position and first place, combined across optio
       body: {
         versionId,
         idempotencyKey: crypto.randomUUID(),
-        answers: ranking === undefined ? {} : { [prioritiesId]: ranking },
+        answers: ranking === undefined ? {} : { [prioritiesId]: [...ranking] },
       },
     });
     expect(submitted.response.status).toBe(201);

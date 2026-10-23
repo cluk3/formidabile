@@ -28,7 +28,7 @@ const responses = (count: number) => `${count} ${count === 1 ? "response" : "res
 
 /** A question's counts over every version, and the responses to versions that didn't ask it. */
 export const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
-  const counts = `${responses(combined.responses)}: ${combined.answered} answered, ${combined.skipped} skipped.`;
+  const counts = `${responses(combined.responses)}: ${combined.shown} shown, ${combined.answered} answered, ${combined.skipped} skipped, ${combined.notShown} not shown.`;
   return combined.absentResponses === 0
     ? counts
     : `${counts} Not asked in ${responses(combined.absentResponses)}, to versions without it.`;
@@ -38,7 +38,7 @@ export const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
 export const offeredEverywhere = (options: ReadonlyArray<{ offeredIn: ReadonlyArray<number> }>) =>
   options.every(({ offeredIn }) => offeredIn.join() === options[0]?.offeredIn.join());
 
-/** One version's result, in a table cell. Text, email and date questions have none beyond their counts. */
+/** One version's result, in a table cell. Text, email, date and phone questions have none beyond their counts. */
 export const resultText = (summary: Summary) => {
   switch (summary.type) {
     case "single_choice":
@@ -62,6 +62,11 @@ export const resultText = (summary: Summary) => {
       if (nps === undefined) return stats;
       return `NPS ${numberText(nps.score)} · Promoters ${nps.promoters} · Passives ${nps.passives} · Detractors ${nps.detractors}. ${stats}`;
     }
+    case "single_choice_matrix":
+    case "multiple_choice_matrix":
+      return summary.cells
+        .map((cell) => `${cell.rowLabel} / ${cell.columnLabel}: ${cell.count}`)
+        .join(" · ");
     default:
       return "";
   }

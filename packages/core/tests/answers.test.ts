@@ -185,6 +185,154 @@ const cases: {
     ],
     rejects: ["true", 0, null],
   },
+  {
+    type: "ranking",
+    config: {
+      options: [
+        { value: "a", label: "Alpha" },
+        { value: "b", label: "Beta" },
+        { value: "c", label: "Gamma" },
+      ],
+    },
+    accepts: [
+      [
+        ["a", "b", "c"],
+        ["a", "b", "c"],
+      ],
+      [
+        ["c", "a", "b"],
+        ["c", "a", "b"],
+      ],
+    ],
+    rejects: [["a", "b"], ["a", "a", "b"], ["a", "b", "c", "d"], ["a", "b", "x"], "a", []],
+  },
+  {
+    type: "phone",
+    config: {},
+    accepts: [
+      ["+14155550100", "+14155550100"],
+      ["+1 (415) 555-0100", "+14155550100"],
+      ["+1.415.555.0100", "+14155550100"],
+      ["+1-415-555-0100", "+14155550100"],
+    ],
+    rejects: ["4155550100", "+", `+${"1".repeat(16)}`, 14155550100],
+  },
+  {
+    type: "url",
+    config: {},
+    accepts: [
+      ["https://example.com", "https://example.com"],
+      ["  HTTPS://Example.COM/a  ", "HTTPS://Example.COM/a"],
+    ],
+    rejects: ["example.com", "ftp://example.com", "javascript:alert(1)", ""],
+  },
+  {
+    type: "time_of_day",
+    config: { earliest: "09:00", latest: "17:00" },
+    accepts: [
+      ["09:00", "09:00"],
+      ["12:30", "12:30"],
+      ["17:00", "17:00"],
+    ],
+    rejects: ["08:59", "17:01", "9:00", "17:00:00", "24:00"],
+  },
+  {
+    type: "date_time",
+    config: { min: "2026-05-01T09:00", max: "2026-05-31T18:00" },
+    accepts: [
+      ["2026-05-01T09:00", "2026-05-01T09:00"],
+      ["2026-05-04T15:30", "2026-05-04T15:30"],
+    ],
+    rejects: ["2026-05-01T08:59", "2026-05-04T15:30:00", "2026-05-04T15:30Z", "2026-02-31T10:00"],
+  },
+  {
+    type: "date_range",
+    config: { min: "2026-05-01", max: "2026-05-31" },
+    accepts: [
+      [
+        { start: "2026-05-01", end: "2026-05-03" },
+        { start: "2026-05-01", end: "2026-05-03" },
+      ],
+      [
+        { start: "2026-05-04", end: "2026-05-04" },
+        { start: "2026-05-04", end: "2026-05-04" },
+      ],
+    ],
+    rejects: [
+      { start: "2026-05-03", end: "2026-05-01" },
+      { start: "2026-05-01" },
+      ["2026-05-01", "2026-05-03"],
+      { start: "2026-04-30", end: "2026-05-02" },
+    ],
+  },
+  {
+    type: "address",
+    config: {
+      lines: {
+        line1: { shown: true, required: true },
+        line2: { shown: false, required: false },
+        city: { shown: true, required: false },
+        region: { shown: false, required: false },
+        postalCode: { shown: false, required: false },
+        country: { shown: true, required: true },
+      },
+    },
+    accepts: [
+      [
+        { line1: "1 High Street", country: "GB" },
+        { line1: "1 High Street", country: "GB" },
+      ],
+      [
+        { line1: "  1 High Street  ", city: " Leeds ", country: "GB" },
+        { line1: "1 High Street", city: "Leeds", country: "GB" },
+      ],
+    ],
+    rejects: [
+      { line1: "1 High Street" },
+      { country: "GB" },
+      { line1: "1 High Street", country: "ZZ" },
+      { line1: "1 High Street", country: "GB", line2: "Flat 2" },
+      "1 High Street, GB",
+    ],
+  },
+  {
+    type: "single_choice_matrix",
+    config: {
+      rows: [
+        { value: "speed", label: "Speed" },
+        { value: "comfort", label: "Comfort" },
+      ],
+      columns: options,
+    },
+    accepts: [
+      [
+        { speed: "o-red", comfort: "o-blue" },
+        { speed: "o-red", comfort: "o-blue" },
+      ],
+    ],
+    rejects: [
+      {},
+      { speed: "o-red" },
+      { speed: "o-red", comfort: "nope" },
+      { speed: ["o-red"], comfort: "o-blue" },
+      { speed: "o-red", comfort: "o-blue", extra: "o-green" },
+    ],
+  },
+  {
+    type: "multiple_choice_matrix",
+    config: {
+      rows: [{ value: "speed", label: "Speed" }],
+      columns: options,
+    },
+    accepts: [[{ speed: ["o-red", "o-blue"] }, { speed: ["o-red", "o-blue"] }]],
+    rejects: [
+      {},
+      { speed: [] },
+      { speed: ["o-red", "o-red"] },
+      { speed: "o-red" },
+      { speed: ["nope"] },
+    ],
+  },
 ];
 
 describe("buildAnswerSchema", () => {

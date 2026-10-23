@@ -59,12 +59,12 @@ test("adding every option and moving one records that order, including from the 
   const moveGamma = page.getByRole("button", { name: "Move Gamma down" });
   moveGamma.element().focus();
   await userEvent.keyboard("{ArrowDown}");
-  await expect.element(page.getByRole("button", { name: "Move Gamma up" })).toHaveFocus();
-  await userEvent.click(page.getByRole("button", { name: "Move Alpha up" }));
+  // The keyboard stays on the same Move down button, so another ArrowDown keeps moving Gamma.
+  await expect.element(page.getByRole("button", { name: "Move Gamma down" })).toHaveFocus();
   await userEvent.click(page.getByRole("button", { name: "Submit" }));
 
   await expect.element(page.getByText("Thank you, your response was received.")).toBeVisible();
-  // Added Gamma, Alpha, Beta, then Gamma moved down and Alpha moved up: Alpha, Gamma, Beta.
+  // Added Gamma, Alpha, Beta, then Gamma moved down one place: Alpha, Gamma, Beta.
   expect(posted(requests)?.answers).toEqual({ [rankingId]: ["a", "c", "b"] });
 });
 

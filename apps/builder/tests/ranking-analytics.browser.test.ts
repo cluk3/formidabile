@@ -15,11 +15,7 @@ const option = (
   firstPlace: number,
   base: number,
   offeredIn: number[],
-): Schemas["AnalyticsSummary"] extends infer S
-  ? S extends { type: "ranking" }
-    ? S["options"][number]
-    : never
-  : never => ({
+): Extract<Schemas["AnalyticsSummary"], { type: "ranking" }>["options"][number] => ({
   value,
   label,
   otherLabels: [],
@@ -45,8 +41,10 @@ const analytics: Schemas["FormAnalytics"] = {
       inCurrentVersion: true,
       combined: {
         responses: 5,
+        shown: 5,
         answered: 3,
         skipped: 2,
+        notShown: 0,
         absentResponses: 0,
         summary: {
           type: "ranking",
@@ -62,8 +60,10 @@ const analytics: Schemas["FormAnalytics"] = {
           version: 1,
           present: true,
           responses: 3,
+          shown: 3,
           answered: 2,
           skipped: 1,
+          notShown: 0,
           summary: {
             type: "ranking",
             options: [
@@ -78,8 +78,10 @@ const analytics: Schemas["FormAnalytics"] = {
           version: 2,
           present: true,
           responses: 2,
+          shown: 2,
           answered: 1,
           skipped: 1,
+          notShown: 0,
           summary: {
             type: "ranking",
             options: [option("a", "Alpha", 2, 0, 1, [2]), option("b", "Beta", 1, 1, 1, [2])],
@@ -103,12 +105,12 @@ test("a ranking shows each option's mean position and first-place count", async 
     signInHref: config.loginUrl,
   });
 
-  const combined = screen.getByRole("table", { name: "All versions" }).nth(1);
+  const combined = screen.getByRole("table", { name: "All versions" }).first();
   await expect.element(combined.getByRole("rowheader", { name: "Alpha" })).toBeVisible();
   await expect.element(combined.getByRole("cell", { name: "1.67" })).toBeVisible();
   await expect.element(combined.getByRole("cell", { name: "33%" })).toBeVisible();
   await expect.element(screen.getByText("Gamma: mean 3, first 0", { exact: false })).toBeVisible();
   await expect
-    .element(screen.getByText("Some options weren't offered in every version."))
+    .element(screen.getByText("Some options weren't offered in every version.", { exact: false }))
     .toBeVisible();
 });

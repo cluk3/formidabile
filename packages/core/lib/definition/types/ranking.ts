@@ -1,5 +1,5 @@
 import * as z from "zod/mini";
-import { RANKING_OPTIONS_MAX } from "../operators.ts";
+import { RANKING_OPTIONS_MAX } from "../ranking-limit.ts";
 import { base, nonEmptyLabel, type Issue, type QuestionType } from "../question-type.ts";
 import { ChoiceOptions, optionIssues, optionLabel, optionValue } from "./choice-options.ts";
 

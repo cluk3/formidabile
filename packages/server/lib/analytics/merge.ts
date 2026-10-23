@@ -13,6 +13,7 @@ import type {
 
 type Question = QuestionSnapshot;
 type ChoiceQuestion = QuestionSnapshotOf<"single_choice" | "multiple_choice">;
+type MatrixQuestion = QuestionSnapshotOf<"single_choice_matrix" | "multiple_choice_matrix">;
 
 export interface NumberAggregate {
   readonly count: number;
@@ -36,6 +37,12 @@ export interface AnalyticsCounts {
   }>;
   /** Answer rows per version and question. */
   readonly answered: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly count: number;
+  }>;
+  /** Stored path rows per version and question: responses that were shown it. */
+  readonly shown: ReadonlyArray<{
     readonly versionId: string;
     readonly questionId: string;
     readonly count: number;
@@ -73,6 +80,21 @@ export interface AnalyticsCounts {
     readonly value: string;
     readonly positionSum: number;
     readonly firstPlace: number;
+  }>;
+  /** Column selections in a matrix, per version, question, row and column. */
+  readonly matrixCells: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly row: string;
+    readonly column: string;
+    readonly count: number;
+  }>;
+  /** Answered rows of a matrix, per version and question. The cell base is summed from these. */
+  readonly matrixAnsweredRows: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly row: string;
+    readonly count: number;
   }>;
 }
 
@@ -140,19 +162,40 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   const current = versions.at(-1)?.number;
 
   const answered = new Map(counts.answered.map((row) => [key(row.versionId, row.questionId), row]));
+  const shown = new Map(counts.shown.map((row) => [key(row.versionId, row.questionId), row]));
   const numbers = new Map(counts.numbers.map((row) => [key(row.versionId, row.questionId), row]));
   const combinedNumbers = new Map(counts.combinedNumbers.map((row) => [row.questionId, row]));
   const nps = new Map(counts.nps.map((row) => [key(row.versionId, row.questionId), row]));
   const rankings = new Map<string, Map<string, { positionSum: number; firstPlace: number }>>();
   for (const row of counts.rankings) {
     const at = key(row.versionId, row.questionId);
-    const values = rankings.get(at) ?? new Map<string, { positionSum: number; firstPlace: number }>();
+    const values =
+      rankings.get(at) ?? new Map<string, { positionSum: number; firstPlace: number }>();
     values.set(row.value, {
       positionSum: Number(row.positionSum),
       firstPlace: Number(row.firstPlace),
     });
     rankings.set(at, values);
   }
+  const matrixCells = new Map(
+    counts.matrixCells.map((cell) => [
+      `${cell.versionId} ${cell.questionId} ${cell.row} ${cell.column}`,
+      cell.count,
+    ]),
+  );
+  const matrixRows = new Map(
+    counts.matrixAnsweredRows.map((row) => [
+      `${row.versionId} ${row.questionId} ${row.row}`,
+      row.count,
+    ]),
+  );
+  const cellCount = (versionId: string, questionId: string, row: string, column: string) =>
+    matrixCells.get(`${versionId} ${questionId} ${row} ${column}`) ?? 0;
+  const answeredRows = (versionId: string, questionId: string, row: string) =>
+    matrixRows.get(`${versionId} ${questionId} ${row}`) ?? 0;
+  /** Whole percentage. Null when no answered row could have chosen the column. */
+  const shareOf = (selected: number, base: number) =>
+    base === 0 ? null : Math.round((selected / base) * 100);
   const choices = new Map<string, Map<string, number>>();
   for (const row of counts.choices) {
     const at = key(row.versionId, row.questionId);
@@ -164,6 +207,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   interface Snapshot {
     readonly versionId: string;
     readonly responses: number;
+    readonly shown: number;
     readonly answered: number;
     readonly values: ReadonlyMap<string, number>;
     readonly ranking: ReadonlyMap<string, { positionSum: number; firstPlace: number }>;
@@ -180,6 +224,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         item: {
           versionId: version.id,
           responses: version.responses,
+          shown: shown.get(at)?.count ?? 0,
           answered: answered.get(at)?.count ?? 0,
           values: choices.get(at) ?? new Map(),
           ranking: rankings.get(at) ?? new Map(),
@@ -257,6 +302,28 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
             };
           }),
         };
+      case "single_choice_matrix":
+      case "multiple_choice_matrix":
+        return {
+          type: question.type,
+          cells: question.config.rows.flatMap((row) =>
+            question.config.columns.map((column) => {
+              const selected = cellCount(versionId, question.id, row.value, column.value);
+              const base = answeredRows(versionId, question.id, row.value);
+              return {
+                row: row.value,
+                rowLabel: row.label,
+                otherRowLabels: [],
+                column: column.value,
+                columnLabel: column.label,
+                otherColumnLabels: [],
+                count: selected,
+                base,
+                share: shareOf(selected, base),
+              };
+            }),
+          ),
+        };
       default:
         return { type: question.type };
     }
@@ -321,10 +388,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         };
       }
       case "ranking": {
-        const offers = new Map<
-          string,
-          Array<Appearance<{ label: string; snapshot: Snapshot }>>
-        >();
+        const offers = new Map<string, Array<Appearance<{ label: string; snapshot: Snapshot }>>>();
         for (const { number, item } of snapshots)
           if (item.question.type === "ranking")
             item.question.config.options.forEach((option, position) => {
@@ -354,9 +418,85 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
           }),
         };
       }
+      case "single_choice_matrix":
+      case "multiple_choice_matrix":
+        return combinedMatrix(snapshots, question);
       default:
         return { type: question.type };
     }
+  };
+
+  const combinedMatrix = (
+    snapshots: ReadonlyArray<Appearance<Snapshot>>,
+    question: MatrixQuestion,
+  ): AnalyticsSummary => {
+    const pairs = new Map<
+      string,
+      Array<
+        Appearance<{
+          readonly row: string;
+          readonly column: string;
+          readonly rowLabel: string;
+          readonly columnLabel: string;
+          readonly snapshot: Snapshot;
+        }>
+      >
+    >();
+    for (const { number, item } of snapshots) {
+      const snapshot = item.question;
+      if (snapshot.type !== "single_choice_matrix" && snapshot.type !== "multiple_choice_matrix")
+        continue;
+      if (snapshot.type !== question.type) continue;
+      snapshot.config.rows.forEach((row, rowIndex) => {
+        snapshot.config.columns.forEach((column, columnIndex) => {
+          const id = `${row.value}\0${column.value}`;
+          const list = pairs.get(id) ?? [];
+          list.push({
+            number,
+            position: rowIndex * 1000 + columnIndex,
+            item: {
+              row: row.value,
+              column: column.value,
+              rowLabel: row.label,
+              columnLabel: column.label,
+              snapshot: item,
+            },
+          });
+          pairs.set(id, list);
+        });
+      });
+    }
+    return {
+      type: question.type,
+      cells: byRecency([...pairs]).map(([, offered]) => {
+        const { row, column } = offered[0]!.item;
+        const selected = offered.reduce(
+          (sum, { item }) => sum + cellCount(item.snapshot.versionId, question.id, row, column),
+          0,
+        );
+        const base = offered.reduce(
+          (sum, { item }) => sum + answeredRows(item.snapshot.versionId, question.id, row),
+          0,
+        );
+        const rowLabels = labelling(
+          offered.map(({ number, item }) => ({ number, label: item.rowLabel })),
+        );
+        const columnLabels = labelling(
+          offered.map(({ number, item }) => ({ number, label: item.columnLabel })),
+        );
+        return {
+          row,
+          rowLabel: rowLabels.label,
+          otherRowLabels: rowLabels.otherLabels,
+          column,
+          columnLabel: columnLabels.label,
+          otherColumnLabels: columnLabels.otherLabels,
+          count: selected,
+          base,
+          share: shareOf(selected, base),
+        };
+      }),
+    };
   };
 
   const questions = byRecency([...appearances]).map(([, snapshots]): QuestionAnalytics => {
@@ -364,6 +504,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
     const question = latest.item.question;
     const present = new Map(snapshots.map((snapshot) => [snapshot.number, snapshot.item]));
     const responses = snapshots.reduce((sum, { item }) => sum + item.responses, 0);
+    const shownCount = snapshots.reduce((sum, { item }) => sum + item.shown, 0);
     const answeredCount = snapshots.reduce((sum, { item }) => sum + item.answered, 0);
     return {
       questionId: question.id,
@@ -372,8 +513,10 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
       inCurrentVersion: latest.number === current,
       combined: {
         responses,
+        shown: shownCount,
         answered: answeredCount,
-        skipped: responses - answeredCount,
+        skipped: shownCount - answeredCount,
+        notShown: responses - shownCount,
         absentResponses: versions
           .filter((version) => !present.has(version.number))
           .reduce((sum, version) => sum + version.responses, 0),
@@ -386,8 +529,10 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
           version: version.number,
           present: true as const,
           responses: snapshot.responses,
+          shown: snapshot.shown,
           answered: snapshot.answered,
-          skipped: snapshot.responses - snapshot.answered,
+          skipped: snapshot.shown - snapshot.answered,
+          notShown: snapshot.responses - snapshot.shown,
           summary: versionSummary(version.number, snapshot),
           constraints: constraintsOf(snapshot.question),
         };

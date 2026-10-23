@@ -1,6 +1,8 @@
 import { pathOf, validateAnswers, type Answers } from "@fb/core/answers";
 import {
+  addressLines,
   questionsOf,
+  type AddressLine,
   type FormDefinition,
   type Issue,
   type QuestionSnapshot,
@@ -18,6 +20,14 @@ type Drafts = {
   multiple_choice: string[];
   boolean: boolean;
   ranking: string[];
+  phone: string;
+  url: string;
+  time_of_day: string;
+  date_time: string;
+  date_range: { start: string; end: string };
+  address: { [K in AddressLine]?: string };
+  single_choice_matrix: Record<string, string>;
+  multiple_choice_matrix: Record<string, string[]>;
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -42,8 +52,43 @@ const answerOf = {
     if (draft.length !== expected.length || new Set(draft).size !== draft.length) return undefined;
     return draft.every((value) => expected.includes(value)) ? draft : undefined;
   },
+  phone: unlessBlank,
+  url: unlessBlank,
+  time_of_day: unlessBlank,
+  date_time: unlessBlank,
+  date_range: (draft) => {
+    if (draft === undefined) return undefined;
+    const start = draft.start.trim();
+    const end = draft.end.trim();
+    // Both empty is unanswered. One side filled is sent, and the server rejects the half range.
+    if (start === "" && end === "") return undefined;
+    return { start, end };
+  },
+  address: (draft) => {
+    if (draft === undefined) return undefined;
+    const filled: Record<string, string> = {};
+    for (const line of addressLines) {
+      const part = draft[line];
+      if (part === undefined) continue;
+      const trimmed = part.trim();
+      if (trimmed !== "") filled[line] = trimmed;
+    }
+    return Object.keys(filled).length === 0 ? undefined : filled;
+  },
+  single_choice_matrix: (draft) =>
+    draft === undefined || Object.keys(draft).length === 0 ? undefined : draft,
+  multiple_choice_matrix: (draft) => {
+    if (draft === undefined) return undefined;
+    const answered = Object.fromEntries(
+      Object.entries(draft).filter(([, columns]) => columns.length > 0),
+    );
+    return Object.keys(answered).length === 0 ? undefined : answered;
+  },
 } satisfies {
-  [T in QuestionTypeName]: (draft: DraftOf<T>, question: QuestionSnapshotOf<T>) => Answer | undefined;
+  [T in QuestionTypeName]: (
+    draft: DraftOf<T>,
+    question: QuestionSnapshotOf<T>,
+  ) => Answer | undefined;
 };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -61,6 +106,42 @@ const draftOf = {
     Array.isArray(answer) && answer.every((item) => typeof item === "string")
       ? [...answer]
       : undefined,
+  phone: stringDraft,
+  url: stringDraft,
+  time_of_day: stringDraft,
+  date_time: stringDraft,
+  date_range: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const { start, end } = answer;
+    if (typeof start !== "string" || typeof end !== "string") return undefined;
+    return { start, end };
+  },
+  address: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: { [K in AddressLine]?: string } = {};
+    for (const line of addressLines) {
+      const part = answer[line];
+      if (typeof part === "string") draft[line] = part;
+    }
+    return Object.keys(draft).length === 0 ? undefined : draft;
+  },
+  single_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string> = {};
+    for (const [row, column] of Object.entries(answer)) {
+      if (typeof column === "string") draft[row] = column;
+    }
+    return draft;
+  },
+  multiple_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string[]> = {};
+    for (const [row, columns] of Object.entries(answer)) {
+      if (Array.isArray(columns) && columns.every((column) => typeof column === "string"))
+        draft[row] = [...columns];
+    }
+    return draft;
+  },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */
