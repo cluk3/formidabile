@@ -63,9 +63,10 @@ test("a URL field offers URL autocomplete and shows https:// added when the sche
   await expect.element(input).toHaveValue("https://example.com:8080/a");
 
   await userEvent.fill(input, "example.com");
+  await userEvent.tab();
+  await expect.element(input).toHaveValue("https://example.com");
   await userEvent.click(page.getByRole("button", { name: "Submit" }));
 
-  await expect.element(input).toHaveValue("https://example.com");
   await expect.element(page.getByText("Thank you, your response was received.")).toBeVisible();
   expect(requests.find(({ method }) => method === "POST")?.body).toEqual({
     versionId,
