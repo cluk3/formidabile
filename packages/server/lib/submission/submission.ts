@@ -1,4 +1,4 @@
-import { validateAnswers } from "@fb/core/answers";
+import { pathOf, validateAnswers } from "@fb/core/answers";
 import type { FormDefinition } from "@fb/core/definition";
 import { Context, Effect, Layer, Option } from "effect";
 import { type Actor, Unauthenticated } from "../authorization/actor.ts";
@@ -177,16 +177,15 @@ export class Submission extends Context.Service<
                   if (responseId !== undefined) return yield* new AlreadyResponded({ responseId });
                 }
                 const version = yield* findVersionContent(tx, form, form.currentVersionId);
-                const valid = validateAnswers(
-                  storedDefinition(version!.definition),
-                  submission.answers,
-                );
+                const definition = storedDefinition(version!.definition);
+                const valid = validateAnswers(definition, submission.answers);
                 if (!valid.ok) return yield* new ValidationFailed({ issues: valid.issues });
                 const inserted = yield* insertResponse(tx, form, {
                   versionId: form.currentVersionId,
                   respondentId,
                   idempotencyKey: submission.idempotencyKey,
                   answers: valid.value,
+                  path: pathOf(definition, valid.value).questions.map((question) => question.id),
                   refs: actor.refs,
                 });
                 return { responseId: inserted.id, revision: String(inserted.revision) };
@@ -266,12 +265,16 @@ export class Submission extends Context.Service<
                   }
                   // A response never moves between versions (ADR 0002).
                   const version = yield* findVersionContent(tx, form, response.versionId);
-                  const valid = validateAnswers(
-                    storedDefinition(version!.definition),
-                    edit.answers,
-                  );
+                  const definition = storedDefinition(version!.definition);
+                  const valid = validateAnswers(definition, edit.answers);
                   if (!valid.ok) return yield* new ValidationFailed({ issues: valid.issues });
-                  const edited = yield* replaceAnswers(tx, form, response, valid.value);
+                  const edited = yield* replaceAnswers(
+                    tx,
+                    form,
+                    response,
+                    valid.value,
+                    pathOf(definition, valid.value).questions.map((question) => question.id),
+                  );
                   return {
                     responseId: edited.id,
                     revision: String(edited.revision),

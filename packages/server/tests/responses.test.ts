@@ -581,6 +581,7 @@ describe("read", () => {
         externalRefs: [],
         answers: { [readyId]: true, [colourId]: "green" },
       },
+      path: [readyId, colourId],
       version: { id: v1.id, number: 1, definition: v1Definition },
     });
   });

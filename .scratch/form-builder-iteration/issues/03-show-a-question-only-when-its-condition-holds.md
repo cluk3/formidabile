@@ -13,9 +13,9 @@
 - [x] A definition accepts at most 1,000 conditions, at most 100 values in an "any of" list, and at most 500 code points in a text constant.
 - [ ] A required question that is off the path does not block submission. The renderer leaves an off-path answer out of the submit body and keeps it on screen, so changing the earlier answer restores it.
 - [ ] A reached page whose questions are all off the path is passed over: the respondent never sees it, and it never enters Back's history.
-- [ ] Submit and edit reject an off-path answer with 422 `ValidationFailed`. Both use the same path function the renderer uses. That function is exported from `@fb/core` for a custom renderer.
-- [ ] Each response records the questions it was shown. Edit replaces that record in the same transaction as the answers. Deleting the response deletes the record, including erasure.
-- [ ] Responses collected before this iteration are recorded as shown every question in their version, so their detail still reads each of those questions as shown.
+- [x] Submit and edit reject an off-path answer with 422 `ValidationFailed`. Both use the same path function the renderer uses. That function is exported from `@fb/core` for a custom renderer.
+- [x] Each response records the questions it was shown. Edit replaces that record in the same transaction as the answers. Deleting the response deletes the record, including erasure.
+- [x] Responses collected before this iteration are recorded as shown every question in their version, so their detail still reads each of those questions as shown.
 - [ ] The response detail shows each question of the version, in order, as answered (with its display value), skipped (on the path, no answer), or not shown (off the path).
 - [x] Draft save stays structural. Publish rejects a condition on a question that is not earlier in the version, an option value the question does not have, an operator or constant that does not fit the question type, and an empty group. Publish reports every problem at once.
 - [ ] A draft whose conditions are valid previews along the path they describe. Broken conditions, jumps, and the aggregate not-shown counts are later tickets.
@@ -50,3 +50,11 @@ Slice A (`@fb/core` only) is on `iter/03a-core-conditions-and-path`. Server path
 Draft evaluation, not publish: a missing question, a question that is not earlier, a row on a type with no rows, or an option value the question does not have reads as unanswered, so only `is_not_answered` holds. An operator or constant that does not fit holds as false (it is not treated as unanswered). An empty `all` holds; an empty `any` does not. Text comparison is NFC, trim, then `toLowerCase()`.
 
 Jump targets are not publish-checked here; ticket 05 owns "not a later page". The path function already skips those targets.
+
+Slice B (`@fb/server`, `@fb/http-api`, `@fb/api-client`) is on `iter/03b-server-path`. Submit and edit call path-aware `validateAnswers` on the stored definition, then `pathOf` on the accepted answers, and write one `form_management.response_path` row per shown question in that same transaction. Edit deletes and inserts the path with the answers; the response row still changes only `revision` and `edited_at`. Deleting a response, including erasure, removes the rows by `ON DELETE CASCADE`, the same way answers go. There is no update trigger on the path rows.
+
+Admin `GET /responses/{responseId}` (`ResponseDetail`) gains a top-level `path: string[]`: the question ids the response was shown, in the version's question order (`form_version_questions.position`). It is not inside `response`. The respondent's own read does not include it. `info.version` stays `1.0.0`.
+
+Migrations, after `20261021021536_response_immutability`: `20261023025755_response_path` creates the table (PK `(response_id, question_id)`, FK to the response and to the version's question key, cascade with the response, index on `(version_id, question_id)`), and `20261023025757_response_path_backfill` inserts a row for every question of every existing response's version. Ticket 06 should count shown from this table and not re-run the path function. The builder should pass `detail.path` as `shown` to `interpretAnswers`.
+
+A required question off the path does not block submit or edit. The renderer still has to leave an off-path answer out of the body, keep it on screen, and pass over an empty page; those boxes stay open. The shared tests box stays open until the renderer and builder tests land. `vp run ready` stays open: it includes e2e and CI.

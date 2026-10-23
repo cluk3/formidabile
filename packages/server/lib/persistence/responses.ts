@@ -5,7 +5,15 @@ import type { ExternalRef, TenantId } from "../authorization/actor.ts";
 import type { Database } from "./database.ts";
 import type { SharedForm } from "./forms.ts";
 import { currentInstant, newId } from "./ids.ts";
-import { answers, forms, formVersions, responseExternalRefs, responses } from "./schema.ts";
+import {
+  answers,
+  forms,
+  formVersionQuestions,
+  formVersions,
+  responseExternalRefs,
+  responsePath,
+  responses,
+} from "./schema.ts";
 
 type Db = Database["Service"];
 
@@ -111,7 +119,7 @@ const inTenant = (db: Db, tenant: TenantId) =>
     db.select({ id: forms.id }).from(forms).where(eq(forms.tenant, tenant)),
   );
 
-/** Answers and references go by cascade. Gives how many responses were deleted. */
+/** Answers, the path and references go by cascade. Gives how many responses were deleted. */
 const deleteResponsesWhere = (db: Db, tenant: TenantId, condition: SQL) =>
   db
     .delete(responses)
@@ -203,6 +211,22 @@ export const findResponseAnswers = (db: Db, responseId: string) =>
     .where(eq(answers.responseId, responseId))
     .pipe(Effect.map(byQuestion));
 
+/** Question ids the response was shown, in its version's question order. */
+export const findResponsePath = (db: Db, responseId: string) =>
+  db
+    .select({ questionId: responsePath.questionId })
+    .from(responsePath)
+    .innerJoin(
+      formVersionQuestions,
+      and(
+        eq(formVersionQuestions.versionId, responsePath.versionId),
+        eq(formVersionQuestions.questionId, responsePath.questionId),
+      ),
+    )
+    .where(eq(responsePath.responseId, responseId))
+    .orderBy(formVersionQuestions.position, responsePath.questionId)
+    .pipe(Effect.map((rows) => rows.map((row) => row.questionId)));
+
 const insertAnswers = (db: Db, responseId: string, versionId: string, given: Answers) => {
   const answered = Object.entries(given);
   return answered.length === 0
@@ -214,16 +238,25 @@ const insertAnswers = (db: Db, responseId: string, versionId: string, given: Ans
         );
 };
 
+const insertPath = (db: Db, responseId: string, versionId: string, path: readonly string[]) =>
+  path.length === 0
+    ? Effect.void
+    : db
+        .insert(responsePath)
+        .values(path.map((questionId) => ({ responseId, questionId, versionId })));
+
 export interface NewResponse {
   readonly versionId: string;
   /** Null when anonymous. */
   readonly respondentId: string | null;
   readonly idempotencyKey: string;
   readonly answers: Answers;
+  /** Question ids the respondent was shown. */
+  readonly path: readonly string[];
   readonly refs: ReadonlyArray<ExternalRef>;
 }
 
-/** Inserts the response at revision 1 with its answer rows and references, under the form's limit. */
+/** Inserts the response at revision 1 with its answers, path and references, under the form's limit. */
 export const insertResponse = Effect.fnUntraced(function* (
   db: Db,
   form: SharedForm,
@@ -244,6 +277,7 @@ export const insertResponse = Effect.fnUntraced(function* (
     })
     .returning({ id: responses.id, revision: responses.revision });
   yield* insertAnswers(db, id, response.versionId, response.answers);
+  yield* insertPath(db, id, response.versionId, response.path);
   if (response.refs.length > 0) {
     yield* db
       .insert(responseExternalRefs)
@@ -252,12 +286,13 @@ export const insertResponse = Effect.fnUntraced(function* (
   return inserted!;
 });
 
-/** Overwrites the answers on the response's own version and moves its revision; references never change. */
+/** Overwrites the answers and the path on the response's own version and moves its revision; references never change. */
 export const replaceAnswers = Effect.fnUntraced(function* (
   db: Db,
   form: SharedForm,
   response: { readonly id: string; readonly versionId: string },
   given: Answers,
+  path: readonly string[],
 ) {
   const [edited] = yield* db
     .update(responses)
@@ -266,5 +301,7 @@ export const replaceAnswers = Effect.fnUntraced(function* (
     .returning({ id: responses.id, revision: responses.revision, editedAt: responses.editedAt });
   yield* db.delete(answers).where(eq(answers.responseId, response.id));
   yield* insertAnswers(db, response.id, response.versionId, given);
+  yield* db.delete(responsePath).where(eq(responsePath.responseId, response.id));
+  yield* insertPath(db, response.id, response.versionId, path);
   return { id: edited!.id, revision: edited!.revision, editedAt: edited!.editedAt! };
 });

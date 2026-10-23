@@ -156,6 +156,7 @@ describe("GET /responses/{responseId}", () => {
         externalRefs: [],
         answers: { [readyId]: true, [colourId]: "green" },
       },
+      path: [readyId, colourId],
       version: { id: form.v1.id, number: 1, definition: v1Definition },
     });
   });

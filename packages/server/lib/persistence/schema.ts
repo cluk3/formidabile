@@ -217,6 +217,31 @@ export const answers = formManagement.table(
   ],
 );
 
+// One row per question the response was shown. Order is the version's question position, not a column (ADR-017).
+export const responsePath = formManagement.table(
+  "response_path",
+  {
+    responseId: uuid("response_id").notNull(),
+    questionId: uuid("question_id").notNull(),
+    versionId: uuid("version_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.responseId, table.questionId] }),
+    foreignKey({
+      name: "response_path_response_fkey",
+      columns: [table.responseId, table.versionId],
+      foreignColumns: [responses.id, responses.versionId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "response_path_question_fkey",
+      columns: [table.versionId, table.questionId],
+      foreignColumns: [formVersionQuestions.versionId, formVersionQuestions.questionId],
+    }),
+    // Shown counts group by question within a version, the same way answers do (ADR-017).
+    index("response_path_version_id_question_id_index").on(table.versionId, table.questionId),
+  ],
+);
+
 // The shape limits the edge also checks, counted in code points (ADR 0012, ADR 0015).
 const externalRefChecks = (
   table: string,

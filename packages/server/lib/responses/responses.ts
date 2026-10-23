@@ -9,6 +9,7 @@ import {
   deleteResponse,
   findResponse,
   findResponseAnswers,
+  findResponsePath,
   findResponseRefs,
   listResponses,
   type ResponseFilter,
@@ -28,12 +29,12 @@ export class Responses extends Context.Service<
   {
     /** The tenant's responses, newest first, a page at a time. */
     readonly list: (actor: Actor, query: ListResponses) => Effect.Effect<ResponsePage, Forbidden>;
-    /** One response with raw answers, embedding the version it was submitted under (ADR 0001 §8.1). */
+    /** One response with raw answers and its stored path, embedding the version it was submitted under (ADR 0001 §8.1). */
     readonly read: (
       actor: Actor,
       responseId: string,
     ) => Effect.Effect<ResponseDetail, Forbidden | NotFound>;
-    /** Hard-deletes one response with its answers and references (ADR 0013). */
+    /** Hard-deletes one response with its answers, path and references (ADR 0013). */
     readonly delete: (
       actor: Actor,
       responseId: string,
@@ -102,9 +103,10 @@ export class Responses extends Context.Service<
                       answers: yield* findResponseAnswers(tx, response.id),
                     },
                     version: { id: response.versionId, number: response.versionNumber, definition },
+                    path: yield* findResponsePath(tx, response.id),
                   } satisfies ResponseDetail;
                 }),
-              // One snapshot, so the answers and references belong to the response read.
+              // One snapshot, so the answers, path and references belong to the response read.
               readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);

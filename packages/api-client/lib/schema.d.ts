@@ -394,6 +394,7 @@ export interface components {
                 number: number;
                 definition: components["schemas"]["FormDefinition"];
             };
+            path: string[];
         };
         FormDefinition: {
             /** @constant */
