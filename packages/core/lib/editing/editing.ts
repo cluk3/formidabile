@@ -10,6 +10,7 @@ import {
   type QuestionTypeName,
 } from "../definition/form-definition.ts";
 import { OPTIONS_CAP } from "../definition/types/choice-options.ts";
+import { COLUMNS_CAP, ROWS_CAP } from "../definition/types/matrix.ts";
 
 /**
  * Mints identifiers for the editing functions. Core has no `crypto`, so the builder supplies one
@@ -41,6 +42,14 @@ const newConfig = {
   single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
+  single_choice_matrix: (kept, ids) => ({
+    rows: [{ value: ids.optionValue(), label: "" }],
+    columns: optionsFrom(kept, 2, ids),
+  }),
+  multiple_choice_matrix: (kept, ids) => ({
+    rows: [{ value: ids.optionValue(), label: "" }],
+    columns: optionsFrom(kept, 1, ids),
+  }),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],
@@ -149,7 +158,7 @@ export const changeQuestionType = <D extends FormDefinition>(
   if (current === undefined) throw new RangeError(`No question ${questionId}`);
   if (current.type === type) return definition;
   return replaceQuestion(definition, questionId, ({ id: _id, type: _type, config, ...content }) =>
-    newQuestion(type, content, "options" in config ? config.options : [], ids),
+    newQuestion(type, content, keptOptions(config), ids),
   );
 };
 
@@ -197,45 +206,128 @@ export const moveQuestion = <D extends FormDefinition>(
 const sameQuestions = (left: readonly QuestionSnapshot[], right: readonly QuestionSnapshot[]) =>
   left.length === right.length && left.every((q, i) => q === right[i]);
 
-const replaceOptions = <D extends FormDefinition>(
-  definition: D,
-  questionId: string,
-  replace: (options: ChoiceOption[]) => ChoiceOption[],
-): D =>
-  replaceQuestion(definition, questionId, (q) => {
-    if (q.type !== "single_choice" && q.type !== "multiple_choice")
-      throw new RangeError(`Question ${questionId} has no options`);
-    return {
-      ...q,
-      config: { ...q.config, options: replace(q.config.options) },
-    } as QuestionSnapshot;
-  });
+const keptOptions = (config: QuestionSnapshot["config"]): readonly ChoiceOption[] => {
+  if ("options" in config) return config.options;
+  if ("columns" in config) return config.columns;
+  return [];
+};
+
+/** Choice options, or a matrix's columns. `cap` is what add refuses to pass. */
+const listedOf = (
+  question: QuestionSnapshot,
+):
+  | { readonly kind: "options" | "columns"; readonly items: ChoiceOption[]; readonly cap: number }
+  | undefined => {
+  if (question.type === "single_choice" || question.type === "multiple_choice")
+    return { kind: "options", items: question.config.options, cap: OPTIONS_CAP };
+  if (question.type === "single_choice_matrix" || question.type === "multiple_choice_matrix")
+    return { kind: "columns", items: question.config.columns, cap: COLUMNS_CAP };
+  return undefined;
+};
 
 /**
- * Appends a blank option with a minted value to a choice question. Throws at the option cap, so the
- * builder disables adding there.
+ * Appends a blank option with a minted value to a choice question, or a blank column to a matrix.
+ * Throws at the cap, so the builder disables adding there.
  */
 export const addOption = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   ids: IdSource,
 ): D =>
-  replaceOptions(definition, questionId, (options) => {
-    if (options.length >= OPTIONS_CAP)
-      throw new RangeError(`A question has at most ${OPTIONS_CAP} options`);
-    return optionsFrom(options, options.length + 1, ids);
+  replaceQuestion(definition, questionId, (question) => {
+    const listed = listedOf(question);
+    if (listed === undefined) throw new RangeError(`Question ${questionId} has no options`);
+    if (listed.items.length >= listed.cap)
+      throw new RangeError(
+        listed.kind === "columns"
+          ? `A matrix has at most ${listed.cap} columns`
+          : `A question has at most ${listed.cap} options`,
+      );
+    return {
+      ...question,
+      config: {
+        ...question.config,
+        [listed.kind]: optionsFrom(listed.items, listed.items.length + 1, ids),
+      },
+    } as QuestionSnapshot;
   });
 
-/** Removes a choice question's option. Re-adding it later mints a new value. */
+/** Removes a choice question's option, or a matrix column. Re-adding it later mints a new value. */
 export const removeOption = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   value: string,
 ): D =>
-  replaceOptions(definition, questionId, (options) => {
-    const index = options.findIndex((option) => option.value === value);
+  replaceQuestion(definition, questionId, (question) => {
+    const listed = listedOf(question);
+    if (listed === undefined) throw new RangeError(`Question ${questionId} has no options`);
+    const index = listed.items.findIndex((item) => item.value === value);
     if (index === -1) throw new RangeError(`Question ${questionId} has no option ${value}`);
-    return options.toSpliced(index, 1);
+    return {
+      ...question,
+      config: { ...question.config, [listed.kind]: listed.items.toSpliced(index, 1) },
+    } as QuestionSnapshot;
+  });
+
+type MatrixQuestion = QuestionSnapshotOf<"single_choice_matrix" | "multiple_choice_matrix">;
+type MatrixRow = MatrixQuestion["config"]["rows"][number];
+
+const replaceRows = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  replace: (rows: MatrixRow[]) => MatrixRow[],
+): D =>
+  replaceQuestion(definition, questionId, (question) => {
+    if (question.type !== "single_choice_matrix" && question.type !== "multiple_choice_matrix")
+      throw new RangeError(`Question ${questionId} has no rows`);
+    return {
+      ...question,
+      config: { ...question.config, rows: replace([...question.config.rows]) },
+    } as QuestionSnapshot;
+  });
+
+/**
+ * Appends a blank row with a value minted from the same source as an option value. Throws at the row
+ * cap. Removing the row later does not rewrite conditions that name it.
+ */
+export const addRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  ids: IdSource,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    if (rows.length >= ROWS_CAP) throw new RangeError(`A matrix has at most ${ROWS_CAP} rows`);
+    return [...rows, { value: ids.optionValue(), label: "" }];
+  });
+
+/** Removes a matrix row. A condition that names the row value is left in place. */
+export const removeRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  value: string,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    const index = rows.findIndex((row) => row.value === value);
+    if (index === -1) throw new RangeError(`Question ${questionId} has no row ${value}`);
+    return rows.toSpliced(index, 1);
+  });
+
+/** Moves a matrix row to position `to`. The row value stays, so conditions and analytics keep it. */
+export const moveRow = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  value: string,
+  to: number,
+): D =>
+  replaceRows(definition, questionId, (rows) => {
+    const from = rows.findIndex((row) => row.value === value);
+    if (from === -1) throw new RangeError(`Question ${questionId} has no row ${value}`);
+    if (!Number.isInteger(to) || to < 0 || to >= rows.length)
+      throw new RangeError(`No position ${to} among ${rows.length} rows`);
+    if (from === to) return rows;
+    const next = rows.toSpliced(from, 1);
+    next.splice(to, 0, rows[from]!);
+    return next;
   });
 
 /**

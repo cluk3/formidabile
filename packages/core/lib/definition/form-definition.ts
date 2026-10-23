@@ -12,8 +12,10 @@ import { boolean } from "./types/boolean.ts";
 import { date } from "./types/date.ts";
 import { email } from "./types/email.ts";
 import { multipleChoice } from "./types/multiple-choice.ts";
+import { multipleChoiceMatrix } from "./types/multiple-choice-matrix.ts";
 import { number } from "./types/number.ts";
 import { singleChoice } from "./types/single-choice.ts";
+import { singleChoiceMatrix } from "./types/single-choice-matrix.ts";
 import { text } from "./types/text.ts";
 
 export const QuestionSnapshot = z.discriminatedUnion("type", [
@@ -24,6 +26,8 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
   singleChoice.snapshot,
   multipleChoice.snapshot,
   boolean.snapshot,
+  singleChoiceMatrix.snapshot,
+  multipleChoiceMatrix.snapshot,
 ]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
@@ -201,6 +205,8 @@ export const questionTypes = {
   single_choice: singleChoice,
   multiple_choice: multipleChoice,
   boolean,
+  single_choice_matrix: singleChoiceMatrix,
+  multiple_choice_matrix: multipleChoiceMatrix,
 } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };
