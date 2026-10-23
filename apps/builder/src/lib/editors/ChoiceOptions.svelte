@@ -22,6 +22,10 @@
     /** Used in the accessible names, for example "column". */
     item?: string;
   } = $props();
+
+  // Choice questions keep the "Option N" name. A matrix passes item "column".
+  const fieldLabel = (index: number) =>
+    item === "option" ? `Option ${index + 1}` : `${item} ${index + 1}`;
 </script>
 
 <fieldset class="flex flex-col gap-2">
@@ -30,7 +34,7 @@
     {#each options as option, i (option.value)}
       <li class="flex items-center gap-2">
         <Input
-          aria-label={`${item} ${i + 1}`}
+          aria-label={fieldLabel(i)}
           value={option.label}
           maxlength={200}
           oninput={(event) =>
@@ -51,6 +55,5 @@
     size="sm"
     disabled={options.length >= OPTIONS_CAP}
     onclick={addOption}>Add {item}</Button
-  >
   >
 </fieldset>

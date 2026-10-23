@@ -185,6 +185,44 @@ const cases: {
     ],
     rejects: ["true", 0, null],
   },
+  {
+    type: "single_choice_matrix",
+    config: {
+      rows: [
+        { value: "speed", label: "Speed" },
+        { value: "comfort", label: "Comfort" },
+      ],
+      columns: options,
+    },
+    accepts: [
+      [
+        { speed: "o-red", comfort: "o-blue" },
+        { speed: "o-red", comfort: "o-blue" },
+      ],
+    ],
+    rejects: [
+      {},
+      { speed: "o-red" },
+      { speed: "o-red", comfort: "nope" },
+      { speed: ["o-red"], comfort: "o-blue" },
+      { speed: "o-red", comfort: "o-blue", extra: "o-green" },
+    ],
+  },
+  {
+    type: "multiple_choice_matrix",
+    config: {
+      rows: [{ value: "speed", label: "Speed" }],
+      columns: options,
+    },
+    accepts: [[{ speed: ["o-red", "o-blue"] }, { speed: ["o-red", "o-blue"] }]],
+    rejects: [
+      {},
+      { speed: [] },
+      { speed: ["o-red", "o-red"] },
+      { speed: "o-red" },
+      { speed: ["nope"] },
+    ],
+  },
 ];
 
 describe("buildAnswerSchema", () => {
