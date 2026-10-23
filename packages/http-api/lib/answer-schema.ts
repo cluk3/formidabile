@@ -24,6 +24,13 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "date_time": {
+      const { min, max } = question.config;
+      return {
+        ...(min === undefined ? {} : { "x-fb-minDateTime": min }),
+        ...(max === undefined ? {} : { "x-fb-maxDateTime": max }),
+      };
+    }
     default:
       return {};
   }

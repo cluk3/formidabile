@@ -9,6 +9,7 @@ type AnswerValue = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  date_time: string;
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

@@ -48,6 +48,7 @@
     greater_than: ">",
     at_least: "≥",
     is_on: "is on",
+    is_at: "is at",
     is_before: "is before",
     is_after: "is after",
     is_any_of: "is any of",
@@ -79,6 +80,10 @@
     if (operator.constant === "string") return { constant: typeof keep === "string" ? keep : "" };
     if (operator.constant === "number") return typeof keep === "number" ? { constant: keep } : {};
     if (operator.constant === "date") return typeof keep === "string" ? { constant: keep } : {};
+    if (operator.constant === "date_time")
+      return typeof keep === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(keep)
+        ? { constant: keep }
+        : {};
     const values = new Set(choiceOptions(question).map((option) => option.value));
     const kept = Array.isArray(keep)
       ? keep.filter((item): item is string => typeof item === "string" && values.has(item))
@@ -291,6 +296,13 @@
             <input
               class={nativeInputClass}
               type="date"
+              value={typeof leaf.constant === "string" ? leaf.constant : ""}
+              oninput={(event) => setConstant(leaf, event.currentTarget.value || undefined, change)}
+            />
+          {:else if active.constant === "date_time"}
+            <input
+              class={nativeInputClass}
+              type="datetime-local"
               value={typeof leaf.constant === "string" ? leaf.constant : ""}
               oninput={(event) => setConstant(leaf, event.currentTarget.value || undefined, change)}
             />

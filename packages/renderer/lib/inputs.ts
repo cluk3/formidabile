@@ -3,6 +3,7 @@ import type { Component } from "svelte";
 import type { DraftOf } from "./drafts.ts";
 import BooleanInput from "./inputs/BooleanInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
+import DateTimeInput from "./inputs/DateTimeInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
@@ -33,4 +34,5 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  date_time: DateTimeInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };
