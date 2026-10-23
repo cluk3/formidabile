@@ -124,15 +124,103 @@ export const addQuestion = <D extends FormDefinition>(
   } as D;
 };
 
+type ConditionTree =
+  | {
+      readonly questionId: string;
+      readonly operator: string;
+      readonly constant?: unknown;
+      readonly row?: string;
+    }
+  | { readonly all: readonly ConditionTree[] }
+  | { readonly any: readonly ConditionTree[] };
+
+/** The same tree, with `from` replaced by `to`. A tree that does not name `from` is returned as-is. */
+const renameNode = (node: ConditionTree, from: string, to: string): ConditionTree => {
+  if ("questionId" in node) return node.questionId === from ? { ...node, questionId: to } : node;
+  if ("all" in node) {
+    let changed = false;
+    const all = node.all.map((child) => {
+      const next = renameNode(child, from, to);
+      if (next !== child) changed = true;
+      return next;
+    });
+    return changed ? { all } : node;
+  }
+  let changed = false;
+  const any = node.any.map((child) => {
+    const next = renameNode(child, from, to);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { any } : node;
+};
+
+const renameInCondition = (condition: Condition, from: string, to: string): Condition => {
+  const node = condition as ConditionTree;
+  const renamed = renameNode(node, from, to);
+  return renamed === node ? condition : (renamed as Condition);
+};
+
+const retargetQuestion = (
+  question: QuestionSnapshot,
+  from: string,
+  to: string,
+): QuestionSnapshot => {
+  if (question.showCondition === undefined) return question;
+  const showCondition = renameInCondition(question.showCondition, from, to);
+  return showCondition === question.showCondition ? question : { ...question, showCondition };
+};
+
+/** Points every show condition and jump condition that names `from` at `to`. */
+const retargetConditions = <D extends FormDefinition>(
+  definition: D,
+  from: string,
+  to: string,
+): D => {
+  if (definition.format === 1) {
+    const questions = definition.questions.map((question) => retargetQuestion(question, from, to));
+    return questions.every((question, index) => question === definition.questions[index])
+      ? definition
+      : ({ ...definition, questions } as D);
+  }
+  let pagesChanged = false;
+  const pages = definition.pages.map((page) => {
+    let changed = false;
+    const questions = page.questions.map((question) => {
+      const next = retargetQuestion(question, from, to);
+      if (next !== question) changed = true;
+      return next;
+    });
+    const jumps = page.jumps.map((jump) => {
+      const condition = renameInCondition(jump.condition, from, to);
+      if (condition === jump.condition) return jump;
+      changed = true;
+      return { ...jump, condition };
+    });
+    if (!changed) return page;
+    pagesChanged = true;
+    return { ...page, questions, jumps };
+  });
+  return pagesChanged ? ({ ...definition, pages } as D) : definition;
+};
+
 /**
  * "Treat as a new question" (ADR 0009): the same content, position and option values under a new
- * question identity, so analytics stop combining it with the old one.
+ * question identity, so analytics stop combining it with the old one. Every condition that named the
+ * old identity, including a jump condition, names the new one (ADR-017).
  */
 export const reidentifyQuestion = <D extends FormDefinition>(
   definition: D,
   questionId: string,
   ids: IdSource,
-): D => replaceQuestion(definition, questionId, (q) => ({ ...q, id: ids.questionId() }));
+): D => {
+  let nextId = "";
+  const renamed = replaceQuestion(definition, questionId, (question) => {
+    nextId = ids.questionId();
+    return { ...question, id: nextId };
+  });
+  return retargetConditions(renamed, questionId, nextId);
+};
 
 /**
  * A question identity keeps one type for life (ADR 0005), so a new type means a new identity. The
@@ -153,7 +241,7 @@ export const changeQuestionType = <D extends FormDefinition>(
   );
 };
 
-/** Removes a question. Adding it back later mints a new identity, so analytics don't combine the two. */
+/** Removes a question. Conditions that name it stay. Adding it back later mints a new identity, so analytics don't combine the two. */
 export const removeQuestion = <D extends FormDefinition>(definition: D, questionId: string): D => {
   if (definition.format === 1) {
     const index = definition.questions.findIndex((q) => q.id === questionId);
@@ -226,7 +314,7 @@ export const addOption = <D extends FormDefinition>(
     return optionsFrom(options, options.length + 1, ids);
   });
 
-/** Removes a choice question's option. Re-adding it later mints a new value. */
+/** Removes a choice question's option. Conditions that name its value stay. Re-adding it later mints a new value. */
 export const removeOption = <D extends FormDefinition>(
   definition: D,
   questionId: string,
@@ -295,9 +383,9 @@ export const addPage = (definition: FormDefinition, ids: IdSource, at?: number):
 };
 
 /**
- * Removes a page and the questions on it. Jumps on other pages are left in place, even when they name
- * this page: deleting a target is what marks a jump broken (ADR-017), and it is not this operation's
- * job to repair it. The last page cannot be removed.
+ * Removes a page and the questions on it. Conditions and jumps on other pages are left in place, even
+ * when they name this page or its questions: deleting a target is what marks the logic broken
+ * (ADR-017), and it is not this operation's job to repair it. The last page cannot be removed.
  */
 export const removePage = (definition: FormDefinition, pageId: string): Format2 => {
   const current = format2(definition);

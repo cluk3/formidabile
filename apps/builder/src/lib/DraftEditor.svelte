@@ -1,6 +1,11 @@
 <script lang="ts">
   import type { FormApiClient, Schemas } from "@fb/api-client";
-  import { parseDefinition, type FormDefinition, type Issue } from "@fb/core/definition";
+  import {
+    conditionIssues,
+    parseDefinition,
+    type FormDefinition,
+    type Issue,
+  } from "@fb/core/definition";
   import { upgradeToFormat2 } from "@fb/core/editing";
   import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
@@ -48,6 +53,8 @@
   let issues = $state.raw<Issue[]>([]);
   /** What `issues` stopped. */
   let refused = $state<"saved" | "published">("saved");
+  /** Broken logic is computed from the open draft. It is never stored. */
+  const brokenLogic = $derived(definition !== null && conditionIssues(definition).length > 0);
 
   const changedSinceOpened = "This draft has changed since you opened it.";
   /** What every write does on a sign-in prompt or a notice. */
@@ -348,7 +355,16 @@
     {#if previewing}
       <section class="rounded-md border" aria-labelledby={`${uid}-preview`}>
         <h2 id={`${uid}-preview`} class="px-4 pt-4 text-lg font-semibold">Preview</h2>
-        <FormRenderer preview={definition} />
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+          {#if brokenLogic}
+            <p role="status" class="px-4 text-sm lg:max-w-xs lg:pt-4">
+              This draft has broken logic. A broken reference counts as unanswered.
+            </p>
+          {/if}
+          <div class="min-w-0 grow">
+            <FormRenderer preview={definition} />
+          </div>
+        </div>
       </section>
     {/if}
 
