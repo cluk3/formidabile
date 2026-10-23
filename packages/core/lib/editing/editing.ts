@@ -1,3 +1,4 @@
+import type { Condition } from "../definition/condition.ts";
 import {
   PAGES_CAP,
   QUESTIONS_CAP,
@@ -386,3 +387,25 @@ export const moveQuestionTo = (
       .with(targetIndex, { ...current.pages[targetIndex]!, questions: inserted }),
   };
 };
+
+/** Sets a question's show condition. The condition is stored as given; publish checks that it fits. */
+export const setShowCondition = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+  condition: Condition,
+): D =>
+  replaceQuestion(definition, questionId, (question) => ({
+    ...question,
+    showCondition: condition,
+  }));
+
+/** Removes a question's show condition, so the question is shown whenever its page is reached. */
+export const clearShowCondition = <D extends FormDefinition>(
+  definition: D,
+  questionId: string,
+): D =>
+  replaceQuestion(definition, questionId, (question) => {
+    if (question.showCondition === undefined) return question;
+    const { showCondition: _showCondition, ...rest } = question;
+    return rest as QuestionSnapshot;
+  });

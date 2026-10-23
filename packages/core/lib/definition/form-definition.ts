@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
-import { Condition } from "./condition.ts";
+import { Condition, conditionCount, CONDITIONS_CAP } from "./condition.ts";
+import { conditionIssues } from "./condition-issues.ts";
 import {
   DraftText,
   toIssues,
@@ -93,41 +94,65 @@ export const FormDefinition = z.discriminatedUnion("format", [Format1, Format2])
           });
         ids.add(q.id);
       });
-      return;
-    }
-    const pageIds = new Set<string>();
-    const questionIds = new Set<string>();
-    let count = 0;
-    definition.pages.forEach((page, p) => {
-      if (pageIds.has(page.id))
-        ctx.issues.push({
-          code: "custom",
-          input: page.id,
-          path: ["pages", p, "id"],
-          message: "Duplicate page id",
-        });
-      pageIds.add(page.id);
-      page.questions.forEach((q, i) => {
-        count += 1;
-        if (questionIds.has(q.id))
+    } else {
+      const pageIds = new Set<string>();
+      const questionIds = new Set<string>();
+      let count = 0;
+      definition.pages.forEach((page, p) => {
+        if (pageIds.has(page.id))
           ctx.issues.push({
             code: "custom",
-            input: q.id,
-            path: ["pages", p, "questions", i, "id"],
-            message: "Duplicate question identity",
+            input: page.id,
+            path: ["pages", p, "id"],
+            message: "Duplicate page id",
           });
-        questionIds.add(q.id);
+        pageIds.add(page.id);
+        page.questions.forEach((q, i) => {
+          count += 1;
+          if (questionIds.has(q.id))
+            ctx.issues.push({
+              code: "custom",
+              input: q.id,
+              path: ["pages", p, "questions", i, "id"],
+              message: "Duplicate question identity",
+            });
+          questionIds.add(q.id);
+        });
       });
-    });
-    if (count > QUESTIONS_CAP)
+      if (count > QUESTIONS_CAP)
+        ctx.issues.push({
+          code: "custom",
+          input: count,
+          path: ["pages"],
+          message: `A form has at most ${QUESTIONS_CAP} questions`,
+        });
+    }
+    const conditions = countConditions(definition);
+    if (conditions > CONDITIONS_CAP)
       ctx.issues.push({
         code: "custom",
-        input: count,
-        path: ["pages"],
-        message: `A form has at most ${QUESTIONS_CAP} questions`,
+        input: conditions,
+        path: definition.format === 1 ? ["questions"] : ["pages"],
+        message: `A form has at most ${CONDITIONS_CAP} conditions`,
       });
   }),
 );
+
+const countConditions = (
+  definition: z.output<typeof Format1> | z.output<typeof Format2>,
+): number => {
+  const leaves = (condition: Condition | undefined) =>
+    condition === undefined ? 0 : conditionCount(condition);
+  if (definition.format === 1)
+    return definition.questions.reduce((sum, question) => sum + leaves(question.showCondition), 0);
+  return definition.pages.reduce(
+    (sum, page) =>
+      sum +
+      page.questions.reduce((inner, question) => inner + leaves(question.showCondition), 0) +
+      page.jumps.reduce((inner, jump) => inner + leaves(jump.condition), 0),
+    0,
+  );
+};
 export type FormDefinition = z.output<typeof FormDefinition>;
 
 /**
@@ -238,5 +263,6 @@ export const validateForPublish = (
       });
     });
   }
+  issues.push(...conditionIssues(definition));
   return issues.length === 0 ? { ok: true, value: definition } : { ok: false, issues };
 };
