@@ -6,6 +6,7 @@ import DateInput from "./inputs/DateInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
+import PhoneInput from "./inputs/PhoneInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
 import TextInput from "./inputs/TextInput.svelte";
 
@@ -33,4 +34,5 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  phone: PhoneInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

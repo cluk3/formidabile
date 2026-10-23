@@ -6,6 +6,7 @@ import DateAnswer from "#lib/answers/DateAnswer.svelte";
 import EmailAnswer from "#lib/answers/EmailAnswer.svelte";
 import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
 import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
+import PhoneAnswer from "#lib/answers/PhoneAnswer.svelte";
 import type { AnswerProps } from "#lib/answers/props.ts";
 import TextAnswer from "#lib/answers/TextAnswer.svelte";
 import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
@@ -13,6 +14,7 @@ import DateEditor from "#lib/editors/DateEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
 import MultipleChoiceEditor from "#lib/editors/MultipleChoiceEditor.svelte";
 import NumberEditor from "#lib/editors/NumberEditor.svelte";
+import PhoneEditor from "#lib/editors/PhoneEditor.svelte";
 import type { EditorProps } from "#lib/editors/props.ts";
 import SingleChoiceEditor from "#lib/editors/SingleChoiceEditor.svelte";
 import TextEditor from "#lib/editors/TextEditor.svelte";
@@ -33,6 +35,7 @@ export const registry = {
     answer: MultipleChoiceAnswer,
   },
   boolean: { name: "Yes/no", editor: BooleanEditor, answer: BooleanAnswer },
+  phone: { name: "Phone", editor: PhoneEditor, answer: PhoneAnswer },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

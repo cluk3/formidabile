@@ -38,7 +38,7 @@ export const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
 export const offeredEverywhere = (options: ReadonlyArray<{ offeredIn: ReadonlyArray<number> }>) =>
   options.every(({ offeredIn }) => offeredIn.join() === options[0]?.offeredIn.join());
 
-/** One version's result, in a table cell. Text, email and date questions have none beyond their counts. */
+/** One version's result, in a table cell. Text, email, date and phone questions have none beyond their counts. */
 export const resultText = (summary: Summary) => {
   switch (summary.type) {
     case "single_choice":

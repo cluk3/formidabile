@@ -180,6 +180,7 @@ const QuestionTypeName = Schema.Literals([
   "single_choice",
   "multiple_choice",
   "boolean",
+  "phone",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -197,7 +198,7 @@ const ChoiceSummary = Schema.Struct({
   ),
 });
 
-/** Tagged by the question's type. Text, email and date questions have no breakdown beyond the counts. */
+/** Tagged by the question's type. Types with no breakdown (text, email, date, phone and the like) report only the counts. */
 export const AnalyticsSummary = Schema.Union([
   ChoiceSummary,
   Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
@@ -221,7 +222,7 @@ export const AnalyticsSummary = Schema.Union([
       }),
     ),
   }),
-  Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
+  Schema.Struct({ type: Schema.Literals(["text", "email", "date", "phone"]) }),
 ]).annotate({ identifier: "AnalyticsSummary" });
 export type AnalyticsSummary = typeof AnalyticsSummary.Type;
 

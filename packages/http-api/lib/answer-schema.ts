@@ -29,6 +29,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "phone":
+      return { pattern: "^\\+[0-9]{1,15}$" };
     default:
       return {};
   }
