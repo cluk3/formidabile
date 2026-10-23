@@ -4,6 +4,7 @@ import type { DraftOf } from "./drafts.ts";
 import BooleanInput from "./inputs/BooleanInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
+import MatrixInput from "./inputs/MatrixInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
@@ -33,4 +34,14 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  single_choice_matrix: MatrixInput as Component<
+    InputProps<"single_choice_matrix">,
+    object,
+    "value"
+  >,
+  multiple_choice_matrix: MatrixInput as Component<
+    InputProps<"multiple_choice_matrix">,
+    object,
+    "value"
+  >,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };
