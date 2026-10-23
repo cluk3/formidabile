@@ -16,6 +16,7 @@ type Drafts = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  date_range: { start: string; end: string };
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -34,6 +35,14 @@ const answerOf = {
   single_choice: unlessBlank,
   multiple_choice: (draft) => (draft === undefined || draft.length === 0 ? undefined : draft),
   boolean: (draft) => draft,
+  date_range: (draft) => {
+    if (draft === undefined) return undefined;
+    const start = draft.start.trim();
+    const end = draft.end.trim();
+    // Both empty is unanswered. One side filled is sent, and the server rejects the half range.
+    if (start === "" && end === "") return undefined;
+    return { start, end };
+  },
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -47,6 +56,12 @@ const draftOf = {
   single_choice: stringDraft,
   multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
   boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+  date_range: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const { start, end } = answer;
+    if (typeof start !== "string" || typeof end !== "string") return undefined;
+    return { start, end };
+  },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */
