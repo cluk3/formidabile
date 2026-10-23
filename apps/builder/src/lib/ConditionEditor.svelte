@@ -23,6 +23,7 @@
     earlier,
     issues = [],
     depth = 1,
+    purpose = "show",
     onchange,
   }: {
     condition: Condition | undefined;
@@ -31,6 +32,8 @@
     issues?: readonly string[];
     /** Group nesting, starting at 1. A third group holds only leaves. */
     depth?: number;
+    /** `jump` keeps the condition and names the group for a page jump. */
+    purpose?: "show" | "jump";
     onchange: Change;
   } = $props();
 
@@ -192,29 +195,34 @@
 {#snippet branch(current: Condition | undefined, level: number, key: string, change: Change)}
   {@const currentNode = current === undefined ? undefined : (current as Node)}
   <section
-    aria-label={level === 1 ? "Show when" : "Condition"}
+    aria-label={level === 1 ? (purpose === "jump" ? "Jump when" : "Show when") : "Condition"}
     class="flex flex-col gap-2 {level === 1 ? '' : 'rounded-md border p-3'}"
   >
     {#if level === 1}
       {#if issues.length > 0}
-        <ul aria-label="Show condition problems" class="list-disc pl-5 text-sm text-destructive">
+        <ul
+          aria-label={purpose === "jump" ? "Jump condition problems" : "Show condition problems"}
+          class="list-disc pl-5 text-sm text-destructive"
+        >
           {#each issues as issue, index (index)}
             <li>{issue}</li>
           {/each}
         </ul>
       {/if}
-      {#if currentNode === undefined}
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          disabled={earlier.length === 0}
-          onclick={() => change(blank())}>Only show when…</Button
-        >
-      {:else}
-        <Button variant="outline" size="sm" type="button" onclick={() => change(undefined)}
-          >Always show</Button
-        >
+      {#if purpose === "show"}
+        {#if currentNode === undefined}
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={earlier.length === 0}
+            onclick={() => change(blank())}>Only show when…</Button
+          >
+        {:else}
+          <Button variant="outline" size="sm" type="button" onclick={() => change(undefined)}
+            >Always show</Button
+          >
+        {/if}
       {/if}
     {/if}
 

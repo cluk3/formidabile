@@ -13,6 +13,7 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
+  import JumpEditor from "#lib/JumpEditor.svelte";
   import QuestionCard from "#lib/QuestionCard.svelte";
 
   let {
@@ -131,4 +132,5 @@
     onclick={() => revise((definition, pageId) => addQuestion(definition, newType, ids, pageId))}
     >Add question</Button
   >
+  <JumpEditor {page} {number} {definition} {edit} {ids} />
 </section>

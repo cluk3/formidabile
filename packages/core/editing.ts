@@ -18,5 +18,9 @@ export {
   setPageDescription,
   setPageTitle,
   upgradeToFormat2,
+  addJump,
+  moveJump,
+  removeJump,
+  setJump,
   type IdSource,
 } from "./lib/editing/editing.ts";
