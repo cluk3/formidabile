@@ -24,6 +24,10 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "single_choice_matrix":
+    case "multiple_choice_matrix":
+      // An optional matrix with no row is unanswered. JSON Schema does not get that from exactOptional.
+      return question.required ? {} : { minProperties: 1 };
     default:
       return {};
   }
