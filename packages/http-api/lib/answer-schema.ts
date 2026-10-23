@@ -34,6 +34,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     case "url":
       // `format` cannot say "http or https, with a host". A URI format would also reject a non-ASCII host the server accepts.
       return { pattern: "^(?i:https?):\\/\\/[^\\s/?#]+[^\\s]*$" };
+    case "time_of_day":
+      return { pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" };
     default:
       return {};
   }

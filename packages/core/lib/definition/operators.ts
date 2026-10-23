@@ -1,7 +1,7 @@
 import { phoneOperators } from "./types/phone.ts";
 
-/** What a leaf compares an answer with. `date` is an ISO calendar day; `strings` is an option-value list. */
-export type ConstantKind = "none" | "string" | "number" | "date" | "strings";
+/** What a leaf compares an answer with. `date` is an ISO calendar day; `time` is `HH:MM`; `strings` is an option-value list. */
+export type ConstantKind = "none" | "string" | "number" | "date" | "time" | "strings";
 
 /**
  * One operator a question type accepts. A later question type registers its row by appending one entry
@@ -138,6 +138,33 @@ const dateOperators = [
   ),
 ];
 
+/** `HH:MM` on a 24-hour clock, zero-padded, with no seconds, so it compares as text. */
+const isTimeOfDay = (value: unknown): value is string =>
+  typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+const timeIs =
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) =>
+    isTimeOfDay(answer) && isTimeOfDay(constant) && compare(answer, constant);
+
+const timeOperators = [
+  define(
+    "is_at",
+    "time",
+    timeIs((answer, constant) => answer === constant),
+  ),
+  define(
+    "is_before",
+    "time",
+    timeIs((answer, constant) => answer < constant),
+  ),
+  define(
+    "is_after",
+    "time",
+    timeIs((answer, constant) => answer > constant),
+  ),
+];
+
 const stringList = (value: unknown): string[] | undefined =>
   Array.isArray(value) && value.every((item) => typeof item === "string") ? value : undefined;
 
@@ -230,6 +257,7 @@ export const conditionOperators = {
   boolean: withPresence(booleanOperators),
   phone: withPresence(phoneOperators),
   url: withPresence(textOperators),
+  time_of_day: withPresence(timeOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -254,6 +282,8 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
       return typeof constant === "string";
     case "date":
       return isIsoDate(constant);
+    case "time":
+      return isTimeOfDay(constant);
     case "number":
       return finite(constant);
     case "strings":

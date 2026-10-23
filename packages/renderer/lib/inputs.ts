@@ -10,6 +10,7 @@ import PhoneInput from "./inputs/PhoneInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
 import TextInput from "./inputs/TextInput.svelte";
 import UrlInput from "./inputs/UrlInput.svelte";
+import TimeInput from "./inputs/TimeInput.svelte";
 
 /** The ids and state the question card hands its input, for labelling and error linking. */
 export type Field = {
@@ -37,4 +38,5 @@ export const inputs = {
   boolean: BooleanInput,
   phone: PhoneInput,
   url: UrlInput,
+  time_of_day: TimeInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

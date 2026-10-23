@@ -18,6 +18,7 @@ import { phone } from "./types/phone.ts";
 import { singleChoice } from "./types/single-choice.ts";
 import { text } from "./types/text.ts";
 import { url } from "./types/url.ts";
+import { timeOfDay } from "./types/time-of-day.ts";
 
 export const QuestionSnapshot = z.discriminatedUnion("type", [
   text.snapshot,
@@ -29,6 +30,7 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
   boolean.snapshot,
   phone.snapshot,
   url.snapshot,
+  timeOfDay.snapshot,
 ]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
@@ -208,6 +210,7 @@ export const questionTypes = {
   boolean,
   phone,
   url,
+  time_of_day: timeOfDay,
 } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };
