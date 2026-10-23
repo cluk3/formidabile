@@ -1,6 +1,8 @@
 import { pathOf, validateAnswers, type Answers } from "@fb/core/answers";
 import {
+  addressLines,
   questionsOf,
+  type AddressLine,
   type FormDefinition,
   type Issue,
   type QuestionSnapshot,
@@ -16,6 +18,7 @@ type Drafts = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  address: { [K in AddressLine]?: string };
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -34,6 +37,17 @@ const answerOf = {
   single_choice: unlessBlank,
   multiple_choice: (draft) => (draft === undefined || draft.length === 0 ? undefined : draft),
   boolean: (draft) => draft,
+  address: (draft) => {
+    if (draft === undefined) return undefined;
+    const filled: Record<string, string> = {};
+    for (const line of addressLines) {
+      const part = draft[line];
+      if (part === undefined) continue;
+      const trimmed = part.trim();
+      if (trimmed !== "") filled[line] = trimmed;
+    }
+    return Object.keys(filled).length === 0 ? undefined : filled;
+  },
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -47,6 +61,15 @@ const draftOf = {
   single_choice: stringDraft,
   multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
   boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+  address: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: { [K in AddressLine]?: string } = {};
+    for (const line of addressLines) {
+      const part = answer[line];
+      if (typeof part === "string") draft[line] = part;
+    }
+    return Object.keys(draft).length === 0 ? undefined : draft;
+  },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */

@@ -1,4 +1,5 @@
 import type { Condition } from "./condition.ts";
+import { isCountryCode } from "./countries.ts";
 import { constantFits, operatorById, optionValues, questionTypeHasRows } from "./operators.ts";
 import type { Issue } from "./question-type.ts";
 
@@ -122,7 +123,7 @@ const walk = (
   if (node.row !== undefined && !questionTypeHasRows(question.type))
     issues.push({ path: [...path, "row"], message: ROWS });
 
-  const operator = operatorById(question.type, node.operator);
+  const operator = operatorById(question.type, node.operator, question.config);
   if (operator === undefined) {
     issues.push({ path: [...path, "operator"], message: OPERATOR });
     return;
@@ -140,6 +141,11 @@ const walk = (
     node.constant.forEach((value, index) => {
       if (typeof value !== "string" || !values.has(value))
         issues.push({ path: [...path, "constant", index], message: OPTION });
+    });
+  } else if (operator.countries && Array.isArray(node.constant)) {
+    node.constant.forEach((value, index) => {
+      if (!isCountryCode(value))
+        issues.push({ path: [...path, "constant", index], message: CONSTANT });
     });
   }
 };

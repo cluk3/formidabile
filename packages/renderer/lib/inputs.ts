@@ -1,6 +1,7 @@
 import type { QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 import type { Component } from "svelte";
 import type { DraftOf } from "./drafts.ts";
+import AddressInput from "./inputs/AddressInput.svelte";
 import BooleanInput from "./inputs/BooleanInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
@@ -33,4 +34,5 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  address: AddressInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

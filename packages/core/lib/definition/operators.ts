@@ -12,6 +12,10 @@ export type ConditionOperator = {
   readonly options?: boolean;
   /** Set by a matrix operator. A `row` on any other type is rejected at publish. */
   readonly row?: boolean;
+  /** Each constant string must be an ISO 3166-1 alpha-2 code. */
+  readonly countries?: boolean;
+  /** When set, the operator is offered only for questions whose config passes. */
+  readonly fits?: (config: unknown) => boolean;
   matches(answer: unknown, constant: unknown): boolean;
 };
 
@@ -206,6 +210,46 @@ const booleanOperators = [
   define("is_no", "none", (answer) => answer === false),
 ];
 
+const countryLineShown = (config: unknown): boolean => {
+  if (typeof config !== "object" || config === null || !("lines" in config)) return false;
+  const { lines } = config;
+  if (typeof lines !== "object" || lines === null || !("country" in lines)) return false;
+  const country = lines.country;
+  return (
+    typeof country === "object" && country !== null && "shown" in country && country.shown === true
+  );
+};
+
+const countryOf = (answer: unknown): string | undefined => {
+  if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+  if (!("country" in answer)) return undefined;
+  return typeof answer.country === "string" ? answer.country : undefined;
+};
+
+const countryIs =
+  (anyOf: boolean) =>
+  (answer: unknown, constant: unknown): boolean => {
+    const country = countryOf(answer);
+    const values = stringList(constant);
+    if (country === undefined || values === undefined) return false;
+    const found = values.includes(country);
+    return anyOf ? found : !found;
+  };
+
+const countryOperator = (id: string, anyOf: boolean): ConditionOperator => ({
+  id,
+  constant: "strings",
+  countries: true,
+  fits: countryLineShown,
+  matches: countryIs(anyOf),
+});
+
+/** Country is any of and country is none of exist only while the country line is shown. */
+const addressOperators = [
+  countryOperator("country_is_any_of", true),
+  countryOperator("country_is_none_of", false),
+];
+
 /** Present on every type. `matches` runs only after the evaluator has decided the question was answered. */
 const presence = [
   define("is_answered", "none", () => true),
@@ -226,6 +270,7 @@ export const conditionOperators = {
   single_choice: withPresence(singleOperators),
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
+  address: withPresence(addressOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -233,8 +278,16 @@ const operatorsFor = (type: string): readonly ConditionOperator[] =>
     ? conditionOperators[type as keyof typeof conditionOperators]
     : [];
 
-export const operatorById = (type: string, id: string): ConditionOperator | undefined =>
-  operatorsFor(type).find((operator) => operator.id === id);
+/** The operators a question of `type` offers for this config. A `fits` predicate can hide some. */
+export const applicableOperators = (type: string, config: unknown): readonly ConditionOperator[] =>
+  operatorsFor(type).filter((operator) => operator.fits === undefined || operator.fits(config));
+
+export const operatorById = (
+  type: string,
+  id: string,
+  config: unknown,
+): ConditionOperator | undefined =>
+  applicableOperators(type, config).find((operator) => operator.id === id);
 
 /** A type has rows when one of its operators says so. No current type does. */
 export const questionTypeHasRows = (type: string): boolean =>

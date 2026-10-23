@@ -1,4 +1,4 @@
-import type { QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
+import type { AddressLine, QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 
 /** The value each question type's answer schema accepts. */
 type AnswerValue = {
@@ -9,6 +9,7 @@ type AnswerValue = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  address: { [K in AddressLine]?: string };
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

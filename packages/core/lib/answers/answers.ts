@@ -18,10 +18,14 @@ import {
 /**
  * Any version's answers: keyed by question identity, with untagged values. Documents the request
  * body; only the version's own schema says whether the answers are valid.
+ *
+ * The object arm is shared by date range, matrix and address. Its values are strings or lists of strings.
  */
+const objectAnswer = z.record(z.string(), z.union([z.string(), z.array(z.string())]));
+
 export const AnyAnswers = z.record(
   z.uuid(),
-  z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+  z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), objectAnswer]),
 );
 export type Answers = z.output<typeof AnyAnswers>;
 

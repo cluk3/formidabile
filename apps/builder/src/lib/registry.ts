@@ -1,5 +1,6 @@
 import type { QuestionSnapshot, QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 import type { Component } from "svelte";
+import AddressAnswer from "#lib/answers/AddressAnswer.svelte";
 import BooleanAnswer from "#lib/answers/BooleanAnswer.svelte";
 import ChoiceAnswer from "#lib/answers/ChoiceAnswer.svelte";
 import DateAnswer from "#lib/answers/DateAnswer.svelte";
@@ -8,6 +9,7 @@ import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
 import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
 import type { AnswerProps } from "#lib/answers/props.ts";
 import TextAnswer from "#lib/answers/TextAnswer.svelte";
+import AddressEditor from "#lib/editors/AddressEditor.svelte";
 import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
 import DateEditor from "#lib/editors/DateEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
@@ -33,6 +35,7 @@ export const registry = {
     answer: MultipleChoiceAnswer,
   },
   boolean: { name: "Yes/no", editor: BooleanEditor, answer: BooleanAnswer },
+  address: { name: "Address", editor: AddressEditor, answer: AddressAnswer },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

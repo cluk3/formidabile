@@ -24,6 +24,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "address":
+      return { minProperties: 1 };
     default:
       return {};
   }

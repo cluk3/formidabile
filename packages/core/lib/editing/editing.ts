@@ -41,6 +41,16 @@ const newConfig = {
   single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
+  address: () => ({
+    lines: {
+      line1: { shown: true, required: false },
+      line2: { shown: true, required: false },
+      city: { shown: true, required: false },
+      region: { shown: true, required: false },
+      postalCode: { shown: true, required: false },
+      country: { shown: true, required: false },
+    },
+  }),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],
