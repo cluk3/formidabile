@@ -21,8 +21,8 @@ type Stored = {
   respondentId: string | null;
   externalRefs: { namespace: string; refId: string }[];
   answers: Answers;
-  /** Question ids the response was shown, in version order. Omitted, the detail treats every question as shown. */
-  path?: readonly string[];
+  /** Question ids the response was shown, in version order. */
+  path: readonly string[];
 };
 
 const version = (number: number, questions: QuestionSnapshot[]): Version => ({
@@ -36,6 +36,7 @@ const response = (
   respondentId: string | null,
   answers: Answers = {},
   externalRefs: Stored["externalRefs"] = [],
+  /** Omitted, every question of the version: a response collected before conditions. */
   path?: readonly string[],
 ): Stored => ({
   id: crypto.randomUUID(),
@@ -43,7 +44,7 @@ const response = (
   respondentId,
   externalRefs,
   answers,
-  ...(path === undefined ? {} : { path: [...path] }),
+  path: [...(path ?? of.definition.questions.map((question) => question.id))],
 });
 
 /**
@@ -125,7 +126,7 @@ const responsesHost = (
         return json(200, {
           response: { ...summary(one!), answers: one!.answers },
           version: { id: of.id, number: of.number, definition: of.definition },
-          ...(one!.path === undefined ? {} : { path: [...one!.path] }),
+          path: [...one!.path],
         });
       }
       if (route === `DELETE /responses/${one?.id}`) {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
   import { interpretAnswers } from "@fb/core/answers";
-  import { parseDefinition, questionsOf } from "@fb/core/definition";
+  import { parseDefinition } from "@fb/core/definition";
   import type { Snippet } from "svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { answerOf } from "#lib/registry.ts";
@@ -18,20 +18,12 @@
   } = $props();
   const uid = $props.id();
 
-  const { response, version } = $derived(detail);
+  const { response, version, path } = $derived(detail);
   // Read back through core's structural checks; the answers passed this version's schema when they were stored.
-  // Admin detail carries `path` beside `response` and `version`: the question ids this response was shown.
-  // The generated client type does not have it yet, so a missing or unreadable path means every question was shown.
+  // `path` is the question ids this response was shown, beside `response` and `version`.
   const interpreted = $derived.by(() => {
     const parsed = parseDefinition(version.definition);
-    if (!parsed.ok) return null;
-    const fields: Record<string, unknown> = detail;
-    const stored = fields.path;
-    const shown =
-      Array.isArray(stored) && stored.every((id) => typeof id === "string")
-        ? stored
-        : questionsOf(parsed.value).map((question) => question.id);
-    return interpretAnswers(parsed.value, response.answers, shown);
+    return parsed.ok ? interpretAnswers(parsed.value, response.answers, path) : null;
   });
 </script>
 
