@@ -186,6 +186,8 @@ const QuestionTypeName = Schema.Literals([
   "date_time",
   "date_range",
   "address",
+  "single_choice_matrix",
+  "multiple_choice_matrix",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -239,6 +241,24 @@ export const AnalyticsSummary = Schema.Union([
       "date_range",
       "address",
     ]),
+  }),
+  Schema.Struct({
+    type: Schema.Literals(["single_choice_matrix", "multiple_choice_matrix"]),
+    cells: Schema.Array(
+      Schema.Struct({
+        row: Schema.String,
+        rowLabel: Schema.String,
+        otherRowLabels: OtherLabels,
+        column: Schema.String,
+        columnLabel: Schema.String,
+        otherColumnLabels: OtherLabels,
+        count: Count,
+        /** Answered rows of the versions that had both this row and this column. */
+        base: Count,
+        /** `count / base` as a whole percentage. Null when `base` is 0. */
+        share: Schema.NullOr(Schema.Int),
+      }),
+    ),
   }),
 ]).annotate({ identifier: "AnalyticsSummary" });
 export type AnalyticsSummary = typeof AnalyticsSummary.Type;

@@ -1,6 +1,12 @@
 import type { Condition } from "./condition.ts";
 import { isCountryCode } from "./countries.ts";
-import { constantFits, operatorById, optionValues, questionTypeHasRows } from "./operators.ts";
+import {
+  constantFits,
+  operatorById,
+  optionValues,
+  questionTypeHasRows,
+  rowValues,
+} from "./operators.ts";
 import type { Issue } from "./question-type.ts";
 
 type Node =
@@ -22,6 +28,8 @@ const TAKES_NO_CONSTANT = "This operator takes no constant";
 const CONSTANT = "This constant does not fit this operator";
 const OPTION = "This condition names an option value the question does not have";
 const ROWS = "This question has no rows";
+const NEEDS_ROW = "This operator needs a row";
+const ROW_VALUE = "This condition names a row value the question does not have";
 const EMPTY = "A condition group cannot be empty";
 
 type ConditionQuestion = {
@@ -122,12 +130,20 @@ const walk = (
 
   if (node.row !== undefined && !questionTypeHasRows(question.type))
     issues.push({ path: [...path, "row"], message: ROWS });
+  if (
+    node.row !== undefined &&
+    questionTypeHasRows(question.type) &&
+    !rowValues(question.config).has(node.row)
+  )
+    issues.push({ path: [...path, "row"], message: ROW_VALUE });
 
   const operator = operatorById(question.type, node.operator, question.config);
   if (operator === undefined) {
     issues.push({ path: [...path, "operator"], message: OPERATOR });
     return;
   }
+  if (operator.row === true && node.row === undefined)
+    issues.push({ path: [...path, "row"], message: NEEDS_ROW });
 
   if (operator.constant === "none") {
     if (node.constant !== undefined)

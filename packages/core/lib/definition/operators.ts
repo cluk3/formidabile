@@ -355,6 +355,9 @@ const dateRangeOperators = [
     rangeSide("end")((answer, constant) => answer > constant),
   ),
 ];
+/** Comparison operators that address one matrix row. Presence operators stay on the shared list. */
+const onRow = (operators: readonly ConditionOperator[]): ConditionOperator[] =>
+  operators.map((operator) => ({ ...operator, row: true }));
 
 /**
  * Operators keyed by question type. Adding a type appends one key; `form-definition.ts` checks the key
@@ -374,6 +377,8 @@ export const conditionOperators = {
   date_time: withPresence(dateTimeOperators),
   date_range: withPresence(dateRangeOperators),
   address: withPresence(addressOperators),
+  single_choice_matrix: [...onRow(singleOperators), ...presence],
+  multiple_choice_matrix: [...onRow(multipleOperators), ...presence],
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -392,9 +397,25 @@ export const operatorById = (
 ): ConditionOperator | undefined =>
   applicableOperators(type, config).find((operator) => operator.id === id);
 
-/** A type has rows when one of its operators says so. No current type does. */
+/** A type has rows when one of its operators says so. Matrix comparison operators do. */
 export const questionTypeHasRows = (type: string): boolean =>
   operatorsFor(type).some((operator) => operator.row === true);
+
+const namedValues = (config: object, key: string): readonly string[] => {
+  const value = (config as Record<string, unknown>)[key];
+  if (!Array.isArray(value)) return [];
+  const names: string[] = [];
+  for (const item of value) {
+    if (
+      typeof item === "object" &&
+      item !== null &&
+      "value" in item &&
+      typeof item.value === "string"
+    )
+      names.push(item.value);
+  }
+  return names;
+};
 
 const ANY_OF_CAP = 100;
 
@@ -422,19 +443,14 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
   }
 };
 
+/** Option values, or a matrix's column values. Both live as `{ value, label }` lists. */
 export const optionValues = (config: unknown): ReadonlySet<string> => {
-  if (typeof config !== "object" || config === null || !("options" in config)) return new Set();
-  const { options } = config;
-  if (!Array.isArray(options)) return new Set();
-  const values = new Set<string>();
-  for (const option of options) {
-    if (
-      typeof option === "object" &&
-      option !== null &&
-      "value" in option &&
-      typeof option.value === "string"
-    )
-      values.add(option.value);
-  }
-  return values;
+  if (typeof config !== "object" || config === null) return new Set();
+  return new Set([...namedValues(config, "options"), ...namedValues(config, "columns")]);
+};
+
+/** Row values of a matrix. Empty when the question has no rows. */
+export const rowValues = (config: unknown): ReadonlySet<string> => {
+  if (typeof config !== "object" || config === null) return new Set();
+  return new Set(namedValues(config, "rows"));
 };

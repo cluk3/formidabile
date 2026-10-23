@@ -24,6 +24,8 @@ type Drafts = {
   date_time: string;
   date_range: { start: string; end: string };
   address: { [K in AddressLine]?: string };
+  single_choice_matrix: Record<string, string>;
+  multiple_choice_matrix: Record<string, string[]>;
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -65,6 +67,15 @@ const answerOf = {
     }
     return Object.keys(filled).length === 0 ? undefined : filled;
   },
+  single_choice_matrix: (draft) =>
+    draft === undefined || Object.keys(draft).length === 0 ? undefined : draft,
+  multiple_choice_matrix: (draft) => {
+    if (draft === undefined) return undefined;
+    const answered = Object.fromEntries(
+      Object.entries(draft).filter(([, columns]) => columns.length > 0),
+    );
+    return Object.keys(answered).length === 0 ? undefined : answered;
+  },
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -96,6 +107,23 @@ const draftOf = {
       if (typeof part === "string") draft[line] = part;
     }
     return Object.keys(draft).length === 0 ? undefined : draft;
+  },
+  single_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string> = {};
+    for (const [row, column] of Object.entries(answer)) {
+      if (typeof column === "string") draft[row] = column;
+    }
+    return draft;
+  },
+  multiple_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string[]> = {};
+    for (const [row, columns] of Object.entries(answer)) {
+      if (Array.isArray(columns) && columns.every((column) => typeof column === "string"))
+        draft[row] = [...columns];
+    }
+    return draft;
   },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 

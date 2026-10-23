@@ -109,6 +109,23 @@
         </tr>
       </tbody>
     </table>
+  {:else if summary.type === "single_choice_matrix" || summary.type === "multiple_choice_matrix"}
+    <table class={tableClass}>
+      <caption class={captionClass}>All versions</caption>
+      <thead>
+        <tr><th>Row</th><th>Column</th><th>Count</th><th>Share</th></tr>
+      </thead>
+      <tbody>
+        {#each summary.cells as cell (`${cell.row}\0${cell.column}`)}
+          <tr>
+            <th scope="row" class="font-normal">{cell.rowLabel}</th>
+            <td>{cell.columnLabel}</td>
+            <td>{cell.count}</td>
+            <td>{@render bar(cell.share)}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   {:else if summary.type === "number"}
     <table class={tableClass}>
       <caption class={captionClass}>All versions</caption>

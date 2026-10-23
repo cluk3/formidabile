@@ -8,6 +8,9 @@ import { storedDefinition } from "../persistence/versions.ts";
 import { mergeAnalytics } from "./merge.ts";
 import {
   answeredPerQuestion,
+  matrixAnsweredRows,
+  matrixMultipleCounts,
+  matrixSingleCounts,
   npsCounts,
   shownPerQuestion,
   numbersCombined,
@@ -64,6 +67,9 @@ export class Analytics extends Context.Service<
                   const numbers = yield* numbersPerVersion(tx, tenant, formId);
                   const combinedNumbers = yield* numbersCombined(tx, tenant, formId);
                   const nps = yield* npsCounts(tx, tenant, formId);
+                  const matrixSingle = yield* matrixSingleCounts(tx, tenant, formId);
+                  const matrixMultiple = yield* matrixMultipleCounts(tx, tenant, formId);
+                  const matrixRows = yield* matrixAnsweredRows(tx, tenant, formId);
                   return mergeAnalytics({
                     formId,
                     versions,
@@ -73,6 +79,8 @@ export class Analytics extends Context.Service<
                     numbers,
                     combinedNumbers,
                     nps,
+                    matrixCells: [...matrixSingle, ...matrixMultiple],
+                    matrixAnsweredRows: matrixRows,
                   });
                 }),
               // One snapshot for every query, so concurrent submissions and edits can't make `answered`

@@ -15,6 +15,8 @@ type AnswerValue = {
   date_time: string;
   date_range: { start: string; end: string };
   address: { [K in AddressLine]?: string };
+  single_choice_matrix: Record<string, string>;
+  multiple_choice_matrix: Record<string, string[]>;
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

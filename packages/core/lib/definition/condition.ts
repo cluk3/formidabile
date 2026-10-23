@@ -20,7 +20,7 @@ const constant = z.union([
 
 /**
  * A leaf names a question identity and an operator. `constant` is omitted when the operator needs none.
- * `row` is reserved for matrix conditions; no current question type has rows.
+ * `row` names one matrix row. A type without rows rejects it at publish.
  */
 const leaf = z.strictObject({
   questionId: z.uuid(),

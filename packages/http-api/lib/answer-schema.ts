@@ -54,6 +54,10 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "address":
       return { minProperties: 1 };
+    case "single_choice_matrix":
+    case "multiple_choice_matrix":
+      // An optional matrix with no row is unanswered. JSON Schema does not get that from exactOptional.
+      return question.required ? {} : { minProperties: 1 };
     default:
       return {};
   }

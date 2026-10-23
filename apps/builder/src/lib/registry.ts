@@ -7,6 +7,7 @@ import DateAnswer from "#lib/answers/DateAnswer.svelte";
 import DateTimeAnswer from "#lib/answers/DateTimeAnswer.svelte";
 import DateRangeAnswer from "#lib/answers/DateRangeAnswer.svelte";
 import EmailAnswer from "#lib/answers/EmailAnswer.svelte";
+import MatrixAnswer from "#lib/answers/MatrixAnswer.svelte";
 import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
 import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
 import PhoneAnswer from "#lib/answers/PhoneAnswer.svelte";
@@ -20,6 +21,7 @@ import DateEditor from "#lib/editors/DateEditor.svelte";
 import DateTimeEditor from "#lib/editors/DateTimeEditor.svelte";
 import DateRangeEditor from "#lib/editors/DateRangeEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
+import MatrixEditor from "#lib/editors/MatrixEditor.svelte";
 import MultipleChoiceEditor from "#lib/editors/MultipleChoiceEditor.svelte";
 import NumberEditor from "#lib/editors/NumberEditor.svelte";
 import PhoneEditor from "#lib/editors/PhoneEditor.svelte";
@@ -51,6 +53,16 @@ export const registry = {
   date_time: { name: "Date and time", editor: DateTimeEditor, answer: DateTimeAnswer },
   date_range: { name: "Date range", editor: DateRangeEditor, answer: DateRangeAnswer },
   address: { name: "Address", editor: AddressEditor, answer: AddressAnswer },
+  single_choice_matrix: {
+    name: "Single-choice matrix",
+    editor: MatrixEditor,
+    answer: MatrixAnswer,
+  },
+  multiple_choice_matrix: {
+    name: "Multiple-choice matrix",
+    editor: MatrixEditor,
+    answer: MatrixAnswer,
+  },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

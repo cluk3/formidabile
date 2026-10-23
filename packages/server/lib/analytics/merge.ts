@@ -13,6 +13,7 @@ import type {
 
 type Question = QuestionSnapshot;
 type ChoiceQuestion = QuestionSnapshotOf<"single_choice" | "multiple_choice">;
+type MatrixQuestion = QuestionSnapshotOf<"single_choice_matrix" | "multiple_choice_matrix">;
 
 export interface NumberAggregate {
   readonly count: number;
@@ -71,6 +72,21 @@ export interface AnalyticsCounts {
     readonly promoters: number;
     readonly passives: number;
     readonly detractors: number;
+  }>;
+  /** Column selections in a matrix, per version, question, row and column. */
+  readonly matrixCells: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly row: string;
+    readonly column: string;
+    readonly count: number;
+  }>;
+  /** Answered rows of a matrix, per version and question. The cell base is summed from these. */
+  readonly matrixAnsweredRows: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly row: string;
+    readonly count: number;
   }>;
 }
 
@@ -142,6 +158,25 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   const numbers = new Map(counts.numbers.map((row) => [key(row.versionId, row.questionId), row]));
   const combinedNumbers = new Map(counts.combinedNumbers.map((row) => [row.questionId, row]));
   const nps = new Map(counts.nps.map((row) => [key(row.versionId, row.questionId), row]));
+  const matrixCells = new Map(
+    counts.matrixCells.map((cell) => [
+      `${cell.versionId} ${cell.questionId} ${cell.row} ${cell.column}`,
+      cell.count,
+    ]),
+  );
+  const matrixRows = new Map(
+    counts.matrixAnsweredRows.map((row) => [
+      `${row.versionId} ${row.questionId} ${row.row}`,
+      row.count,
+    ]),
+  );
+  const cellCount = (versionId: string, questionId: string, row: string, column: string) =>
+    matrixCells.get(`${versionId} ${questionId} ${row} ${column}`) ?? 0;
+  const answeredRows = (versionId: string, questionId: string, row: string) =>
+    matrixRows.get(`${versionId} ${questionId} ${row}`) ?? 0;
+  /** Whole percentage. Null when no answered row could have chosen the column. */
+  const shareOf = (selected: number, base: number) =>
+    base === 0 ? null : Math.round((selected / base) * 100);
   const choices = new Map<string, Map<string, number>>();
   for (const row of counts.choices) {
     const at = key(row.versionId, row.questionId);
@@ -230,6 +265,28 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         const score = npsOf(question, versionId, answered);
         return score === undefined ? summary : { ...summary, nps: score };
       }
+      case "single_choice_matrix":
+      case "multiple_choice_matrix":
+        return {
+          type: question.type,
+          cells: question.config.rows.flatMap((row) =>
+            question.config.columns.map((column) => {
+              const selected = cellCount(versionId, question.id, row.value, column.value);
+              const base = answeredRows(versionId, question.id, row.value);
+              return {
+                row: row.value,
+                rowLabel: row.label,
+                otherRowLabels: [],
+                column: column.value,
+                columnLabel: column.label,
+                otherColumnLabels: [],
+                count: selected,
+                base,
+                share: shareOf(selected, base),
+              };
+            }),
+          ),
+        };
       default:
         return { type: question.type };
     }
@@ -293,9 +350,85 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
           },
         };
       }
+      case "single_choice_matrix":
+      case "multiple_choice_matrix":
+        return combinedMatrix(snapshots, question);
       default:
         return { type: question.type };
     }
+  };
+
+  const combinedMatrix = (
+    snapshots: ReadonlyArray<Appearance<Snapshot>>,
+    question: MatrixQuestion,
+  ): AnalyticsSummary => {
+    const pairs = new Map<
+      string,
+      Array<
+        Appearance<{
+          readonly row: string;
+          readonly column: string;
+          readonly rowLabel: string;
+          readonly columnLabel: string;
+          readonly snapshot: Snapshot;
+        }>
+      >
+    >();
+    for (const { number, item } of snapshots) {
+      const snapshot = item.question;
+      if (snapshot.type !== "single_choice_matrix" && snapshot.type !== "multiple_choice_matrix")
+        continue;
+      if (snapshot.type !== question.type) continue;
+      snapshot.config.rows.forEach((row, rowIndex) => {
+        snapshot.config.columns.forEach((column, columnIndex) => {
+          const id = `${row.value}\0${column.value}`;
+          const list = pairs.get(id) ?? [];
+          list.push({
+            number,
+            position: rowIndex * 1000 + columnIndex,
+            item: {
+              row: row.value,
+              column: column.value,
+              rowLabel: row.label,
+              columnLabel: column.label,
+              snapshot: item,
+            },
+          });
+          pairs.set(id, list);
+        });
+      });
+    }
+    return {
+      type: question.type,
+      cells: byRecency([...pairs]).map(([, offered]) => {
+        const { row, column } = offered[0]!.item;
+        const selected = offered.reduce(
+          (sum, { item }) => sum + cellCount(item.snapshot.versionId, question.id, row, column),
+          0,
+        );
+        const base = offered.reduce(
+          (sum, { item }) => sum + answeredRows(item.snapshot.versionId, question.id, row),
+          0,
+        );
+        const rowLabels = labelling(
+          offered.map(({ number, item }) => ({ number, label: item.rowLabel })),
+        );
+        const columnLabels = labelling(
+          offered.map(({ number, item }) => ({ number, label: item.columnLabel })),
+        );
+        return {
+          row,
+          rowLabel: rowLabels.label,
+          otherRowLabels: rowLabels.otherLabels,
+          column,
+          columnLabel: columnLabels.label,
+          otherColumnLabels: columnLabels.otherLabels,
+          count: selected,
+          base,
+          share: shareOf(selected, base),
+        };
+      }),
+    };
   };
 
   const questions = byRecency([...appearances]).map(([, snapshots]): QuestionAnalytics => {

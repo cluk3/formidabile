@@ -30,6 +30,8 @@ const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "version
     numbers: [],
     combinedNumbers: [],
     nps: [],
+    matrixCells: [],
+    matrixAnsweredRows: [],
     ...input,
   });
 

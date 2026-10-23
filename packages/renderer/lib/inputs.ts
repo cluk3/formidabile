@@ -7,6 +7,7 @@ import DateInput from "./inputs/DateInput.svelte";
 import DateTimeInput from "./inputs/DateTimeInput.svelte";
 import DateRangeInput from "./inputs/DateRangeInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
+import MatrixInput from "./inputs/MatrixInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
 import PhoneInput from "./inputs/PhoneInput.svelte";
@@ -45,4 +46,14 @@ export const inputs = {
   date_time: DateTimeInput,
   date_range: DateRangeInput,
   address: AddressInput,
+  single_choice_matrix: MatrixInput as Component<
+    InputProps<"single_choice_matrix">,
+    object,
+    "value"
+  >,
+  multiple_choice_matrix: MatrixInput as Component<
+    InputProps<"multiple_choice_matrix">,
+    object,
+    "value"
+  >,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

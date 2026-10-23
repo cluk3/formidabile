@@ -14,9 +14,11 @@ import { date } from "./types/date.ts";
 import { dateRange } from "./types/date-range.ts";
 import { email } from "./types/email.ts";
 import { multipleChoice } from "./types/multiple-choice.ts";
+import { multipleChoiceMatrix } from "./types/multiple-choice-matrix.ts";
 import { number } from "./types/number.ts";
 import { phone } from "./types/phone.ts";
 import { singleChoice } from "./types/single-choice.ts";
+import { singleChoiceMatrix } from "./types/single-choice-matrix.ts";
 import { text } from "./types/text.ts";
 import { url } from "./types/url.ts";
 import { timeOfDay } from "./types/time-of-day.ts";
@@ -37,6 +39,8 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
   dateTime.snapshot,
   dateRange.snapshot,
   address.snapshot,
+  singleChoiceMatrix.snapshot,
+  multipleChoiceMatrix.snapshot,
 ]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
@@ -220,6 +224,8 @@ export const questionTypes = {
   date_time: dateTime,
   date_range: dateRange,
   address,
+  single_choice_matrix: singleChoiceMatrix,
+  multiple_choice_matrix: multipleChoiceMatrix,
 } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };

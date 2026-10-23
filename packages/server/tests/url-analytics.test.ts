@@ -31,6 +31,8 @@ describe("url analytics", () => {
       numbers: [],
       combinedNumbers: [],
       nps: [],
+      matrixCells: [],
+      matrixAnsweredRows: [],
     });
 
     expect(analytics.questions).toEqual([
