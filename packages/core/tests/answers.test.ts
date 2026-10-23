@@ -185,6 +185,16 @@ const cases: {
     ],
     rejects: ["true", 0, null],
   },
+  {
+    type: "time_of_day",
+    config: { earliest: "09:00", latest: "17:00" },
+    accepts: [
+      ["09:00", "09:00"],
+      ["12:30", "12:30"],
+      ["17:00", "17:00"],
+    ],
+    rejects: ["08:59", "17:01", "9:00", "17:00:00", "24:00"],
+  },
 ];
 
 describe("buildAnswerSchema", () => {

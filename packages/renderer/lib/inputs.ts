@@ -8,6 +8,7 @@ import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
 import TextInput from "./inputs/TextInput.svelte";
+import TimeInput from "./inputs/TimeInput.svelte";
 
 /** The ids and state the question card hands its input, for labelling and error linking. */
 export type Field = {
@@ -33,4 +34,5 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  time_of_day: TimeInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

@@ -24,6 +24,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "time_of_day":
+      return { pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" };
     default:
       return {};
   }
