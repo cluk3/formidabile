@@ -111,12 +111,16 @@ test("the analytics view counts each version's responses and keeps a dropped que
   await expect(cellsOf(colourByVersion, "Version 1")).toHaveText([
     "2",
     "2",
+    "2",
+    "0",
     "0",
     "Red: 1 · Blue: 1",
   ]);
   await expect(cellsOf(colourByVersion, "Version 2")).toHaveText([
     "1",
     "1",
+    "1",
+    "0",
     "0",
     "Red: 0 · Blue: 0 · Green: 1",
   ]);
@@ -127,10 +131,10 @@ test("the analytics view counts each version's responses and keeps a dropped que
   await expect(dropped.getByText("Not in the current version.")).toBeVisible();
   await expect(
     dropped.getByText(
-      "2 responses: 1 answered, 1 skipped. Not asked in 1 response, to versions without it.",
+      "2 responses: 2 shown, 1 answered, 1 skipped, 0 not shown. Not asked in 1 response, to versions without it.",
     ),
   ).toBeVisible();
   const droppedByVersion = dropped.getByRole("table", { name: "By version" });
-  await expect(cellsOf(droppedByVersion, "Version 1")).toHaveText(["2", "1", "1", ""]);
+  await expect(cellsOf(droppedByVersion, "Version 1")).toHaveText(["2", "2", "1", "1", "0", ""]);
   await expect(cellsOf(droppedByVersion, "Version 2")).toHaveText(["Not in this version"]);
 });
