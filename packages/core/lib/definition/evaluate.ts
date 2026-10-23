@@ -30,11 +30,13 @@ export type EvalState = {
   readonly anchor: number;
 };
 
+/** An object answer (date range, and later a matrix or address) counts as present. `null` does not. */
 const present = (value: unknown): boolean =>
   typeof value === "string" ||
   typeof value === "number" ||
   typeof value === "boolean" ||
-  Array.isArray(value);
+  Array.isArray(value) ||
+  (typeof value === "object" && value !== null);
 
 const namesMissingOption = (question: EvalQuestion, constant: unknown): boolean => {
   const values = optionValues(question.config);

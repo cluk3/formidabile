@@ -20,6 +20,7 @@ type Drafts = {
   url: string;
   time_of_day: string;
   date_time: string;
+  date_range: { start: string; end: string };
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -42,6 +43,14 @@ const answerOf = {
   url: unlessBlank,
   time_of_day: unlessBlank,
   date_time: unlessBlank,
+  date_range: (draft) => {
+    if (draft === undefined) return undefined;
+    const start = draft.start.trim();
+    const end = draft.end.trim();
+    // Both empty is unanswered. One side filled is sent, and the server rejects the half range.
+    if (start === "" && end === "") return undefined;
+    return { start, end };
+  },
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -59,6 +68,12 @@ const draftOf = {
   url: stringDraft,
   time_of_day: stringDraft,
   date_time: stringDraft,
+  date_range: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const { start, end } = answer;
+    if (typeof start !== "string" || typeof end !== "string") return undefined;
+    return { start, end };
+  },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */

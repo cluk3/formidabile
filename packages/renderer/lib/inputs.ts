@@ -4,6 +4,7 @@ import type { DraftOf } from "./drafts.ts";
 import BooleanInput from "./inputs/BooleanInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
 import DateTimeInput from "./inputs/DateTimeInput.svelte";
+import DateRangeInput from "./inputs/DateRangeInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
@@ -41,4 +42,5 @@ export const inputs = {
   url: UrlInput,
   time_of_day: TimeInput,
   date_time: DateTimeInput,
+  date_range: DateRangeInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

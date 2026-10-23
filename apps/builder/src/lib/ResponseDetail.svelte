@@ -1,10 +1,18 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
-  import { interpretAnswers } from "@fb/core/answers";
-  import { parseDefinition } from "@fb/core/definition";
+  import { interpretAnswers, type Answers } from "@fb/core/answers";
+  import { parseDefinition, type QuestionTypeName } from "@fb/core/definition";
   import type { Snippet } from "svelte";
+  import type { AnswerProps } from "#lib/answers/props.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { answerOf } from "#lib/registry.ts";
+
+  /**
+   * The stored value is the shared answers union, including the object arm (date range, matrix, address).
+   * Each answer component takes its own shape. The version schema already checked it.
+   */
+  const asAnswerValue = (value: Answers[string]): AnswerProps<QuestionTypeName>["value"] =>
+    value as AnswerProps<QuestionTypeName>["value"];
 
   let {
     detail,
@@ -63,7 +71,7 @@
             {#if row.status === "answered" && row.answer !== undefined}
               <Answer
                 question={row.question}
-                value={row.answer.value}
+                value={asAnswerValue(row.answer.value)}
                 display={row.answer.display}
               />
             {:else if row.status === "skipped"}

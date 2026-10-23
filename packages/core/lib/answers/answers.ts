@@ -21,7 +21,14 @@ import {
  */
 export const AnyAnswers = z.record(
   z.uuid(),
-  z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.string()),
+    // Date range, matrix, and address share this arm. Keep it a record of string to string or string list.
+    z.record(z.string(), z.union([z.string(), z.array(z.string())])),
+  ]),
 );
 export type Answers = z.output<typeof AnyAnswers>;
 

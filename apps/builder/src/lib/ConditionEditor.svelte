@@ -65,6 +65,12 @@
     is_not_answered: "is not answered",
     starts_with: "starts with",
     does_not_start_with: "does not start with",
+    starts_before: "starts before",
+    starts_on: "starts on",
+    starts_after: "starts after",
+    ends_before: "ends before",
+    ends_on: "ends on",
+    ends_after: "ends after",
   };
 
   const isLeaf = (value: Node): value is Leaf => "questionId" in value;

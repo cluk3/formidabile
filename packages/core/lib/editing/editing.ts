@@ -47,6 +47,7 @@ const newConfig = {
   url: () => ({}),
   time_of_day: () => ({}),
   date_time: () => ({}),
+  date_range: () => ({}),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],

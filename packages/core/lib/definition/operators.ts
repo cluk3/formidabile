@@ -270,6 +270,48 @@ const presence = [
 
 const withPresence = (operators: readonly ConditionOperator[]) => [...operators, ...presence];
 
+const rangeSide =
+  (side: "start" | "end") =>
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return false;
+    const value = (answer as Record<string, unknown>)[side];
+    return isIsoDate(value) && isIsoDate(constant) && compare(value, constant);
+  };
+
+const dateRangeOperators = [
+  define(
+    "starts_before",
+    "date",
+    rangeSide("start")((answer, constant) => answer < constant),
+  ),
+  define(
+    "starts_on",
+    "date",
+    rangeSide("start")((answer, constant) => answer === constant),
+  ),
+  define(
+    "starts_after",
+    "date",
+    rangeSide("start")((answer, constant) => answer > constant),
+  ),
+  define(
+    "ends_before",
+    "date",
+    rangeSide("end")((answer, constant) => answer < constant),
+  ),
+  define(
+    "ends_on",
+    "date",
+    rangeSide("end")((answer, constant) => answer === constant),
+  ),
+  define(
+    "ends_after",
+    "date",
+    rangeSide("end")((answer, constant) => answer > constant),
+  ),
+];
+
 /**
  * Operators keyed by question type. Adding a type appends one key; `form-definition.ts` checks the key
  * against `QuestionTypeName`, and the evaluator never switches on the type name itself.
@@ -286,6 +328,7 @@ export const conditionOperators = {
   url: withPresence(textOperators),
   time_of_day: withPresence(timeOperators),
   date_time: withPresence(dateTimeOperators),
+  date_range: withPresence(dateRangeOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
