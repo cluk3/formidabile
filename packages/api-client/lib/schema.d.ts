@@ -304,8 +304,10 @@ export interface components {
             inCurrentVersion: boolean;
             combined: {
                 responses: number;
+                shown: number;
                 answered: number;
                 skipped: number;
+                notShown: number;
                 absentResponses: number;
                 summary: components["schemas"]["AnalyticsSummary"];
             };
@@ -318,8 +320,10 @@ export interface components {
                 /** @enum {boolean} */
                 present: true;
                 responses: number;
+                shown: number;
                 answered: number;
                 skipped: number;
+                notShown: number;
                 summary: components["schemas"]["AnalyticsSummary"];
                 constraints: components["schemas"]["AnalyticsConstraints"] | null;
             })[];

@@ -1,5 +1,5 @@
 import { mergeAnalytics, type AnalyticsCounts } from "@fb/server";
-import type { QuestionSnapshot } from "@fb/core/definition";
+import { questionsOf, type QuestionSnapshot } from "@fb/core/definition";
 import { describe, expect, test } from "vite-plus/test";
 
 type Question = QuestionSnapshot;
@@ -66,6 +66,16 @@ const version = (number: number, responses: number, questions: ReadonlyArray<Que
   definition: { format: 1 as const, title: "Survey", questions: [...questions] },
 });
 
+/** A stored path that lists every question, as responses collected before this iteration were recorded. */
+const shownToEveryone = (versions: AnalyticsCounts["versions"]) =>
+  versions.flatMap((version) =>
+    questionsOf(version.definition).map((question) => ({
+      versionId: version.id,
+      questionId: question.id,
+      count: version.responses,
+    })),
+  );
+
 const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "versions">) =>
   mergeAnalytics({
     formId: "form",
@@ -75,6 +85,7 @@ const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "version
     combinedNumbers: [],
     nps: [],
     ...input,
+    shown: input.shown ?? shownToEveryone(input.versions),
   });
 
 const question = (analytics: ReturnType<typeof mergeAnalytics>, questionId: string) =>
@@ -112,8 +123,10 @@ describe("one version", () => {
           inCurrentVersion: true,
           combined: {
             responses: 3,
+            shown: 3,
             answered: 2,
             skipped: 1,
+            notShown: 0,
             absentResponses: 0,
             summary: { type: "single_choice", options },
           },
@@ -122,8 +135,10 @@ describe("one version", () => {
               version: 1,
               present: true,
               responses: 3,
+              shown: 3,
               answered: 2,
               skipped: 1,
+              notShown: 0,
               summary: { type: "single_choice", options },
               constraints: null,
             },
@@ -173,8 +188,10 @@ describe("one version", () => {
         id: readyId,
         combined: {
           responses: 4,
+          shown: 4,
           answered: 4,
           skipped: 0,
+          notShown: 0,
           absentResponses: 0,
           summary: { type: "boolean", trueCount: 3, falseCount: 1 },
         },
@@ -182,8 +199,10 @@ describe("one version", () => {
           version: 1,
           present: true,
           responses: 4,
+          shown: 4,
           answered: 4,
           skipped: 0,
+          notShown: 0,
           summary: { type: "boolean", trueCount: 3, falseCount: 1 },
           constraints: null,
         },
@@ -192,8 +211,10 @@ describe("one version", () => {
         id: scoreId,
         combined: {
           responses: 4,
+          shown: 4,
           answered: 3,
           skipped: 1,
+          notShown: 0,
           absentResponses: 0,
           summary: { type: "number", count: 3, min: 1, max: 5, mean: 3, median: 3 },
         },
@@ -201,8 +222,10 @@ describe("one version", () => {
           version: 1,
           present: true,
           responses: 4,
+          shown: 4,
           answered: 3,
           skipped: 1,
+          notShown: 0,
           summary: { type: "number", count: 3, min: 1, max: 5, mean: 3, median: 3 },
           constraints: { type: "number", integer: true, min: 1, max: 5 },
         },
@@ -211,8 +234,10 @@ describe("one version", () => {
         id: toppingsId,
         combined: {
           responses: 4,
+          shown: 4,
           answered: 2,
           skipped: 2,
+          notShown: 0,
           absentResponses: 0,
           summary: {
             type: "multiple_choice",
@@ -240,8 +265,10 @@ describe("one version", () => {
           version: 1,
           present: true,
           responses: 4,
+          shown: 4,
           answered: 2,
           skipped: 2,
+          notShown: 0,
           summary: {
             type: "multiple_choice",
             options: [
@@ -270,8 +297,10 @@ describe("one version", () => {
         id: commentId,
         combined: {
           responses: 4,
+          shown: 4,
           answered: 1,
           skipped: 3,
+          notShown: 0,
           absentResponses: 0,
           summary: { type: "text" },
         },
@@ -279,8 +308,10 @@ describe("one version", () => {
           version: 1,
           present: true,
           responses: 4,
+          shown: 4,
           answered: 1,
           skipped: 3,
+          notShown: 0,
           summary: { type: "text" },
           constraints: null,
         },
@@ -318,8 +349,10 @@ describe("across versions", () => {
       inCurrentVersion: false,
       combined: {
         responses: 3,
+        shown: 3,
         answered: 1,
         skipped: 2,
+        notShown: 0,
         absentResponses: 2,
         summary: { type: "text" },
       },
@@ -328,8 +361,10 @@ describe("across versions", () => {
           version: 1,
           present: true,
           responses: 3,
+          shown: 3,
           answered: 1,
           skipped: 2,
+          notShown: 0,
           summary: { type: "text" },
           constraints: null,
         },
@@ -364,8 +399,10 @@ describe("across versions", () => {
       version: 2,
       present: true,
       responses: 0,
+      shown: 0,
       answered: 0,
       skipped: 0,
+      notShown: 0,
       summary: { type: "boolean", trueCount: 0, falseCount: 0 },
       constraints: null,
     });
@@ -373,8 +410,10 @@ describe("across versions", () => {
       version: 2,
       present: true,
       responses: 0,
+      shown: 0,
       answered: 0,
       skipped: 0,
+      notShown: 0,
       summary: { type: "number", count: 0, min: null, max: null, mean: null, median: null },
       constraints: { type: "number", integer: true, min: 1, max: 5 },
     });
@@ -413,8 +452,10 @@ describe("across versions", () => {
     const colourAnalytics = question(analytics, colourId);
     expect(colourAnalytics.combined).toEqual({
       responses: 10,
+      shown: 10,
       answered: 9,
       skipped: 1,
+      notShown: 0,
       absentResponses: 0,
       summary: {
         type: "single_choice",
@@ -591,8 +632,10 @@ describe("across versions", () => {
         inCurrentVersion: true,
         combined: {
           responses: 2,
+          shown: 2,
           answered: 2,
           skipped: 0,
+          notShown: 0,
           absentResponses: 3,
           summary: { type: "number", count: 2, min: 5, max: 5, mean: 5, median: 5 },
         },
@@ -604,8 +647,10 @@ describe("across versions", () => {
         inCurrentVersion: false,
         combined: {
           responses: 3,
+          shown: 3,
           answered: 3,
           skipped: 0,
+          notShown: 0,
           absentResponses: 2,
           summary: { type: "number", count: 3, min: 1, max: 3, mean: 2, median: 2 },
         },
@@ -629,5 +674,58 @@ describe("across versions", () => {
       scoreId,
       commentId,
     ]);
+  });
+
+  test("skipped is shown minus answered, and not shown is responses minus shown", () => {
+    const analytics = counts({
+      versions: [
+        version(1, 5, [
+          colour([
+            ["red", "Red"],
+            ["green", "Green"],
+          ]),
+          comment,
+        ]),
+      ],
+      shown: [
+        { versionId: "version-1", questionId: colourId, count: 3 },
+        { versionId: "version-1", questionId: commentId, count: 5 },
+      ],
+      answered: [
+        { versionId: "version-1", questionId: colourId, count: 2 },
+        { versionId: "version-1", questionId: commentId, count: 1 },
+      ],
+      choices: [{ versionId: "version-1", questionId: colourId, value: "red", count: 2 }],
+    });
+
+    const colourAnalytics = question(analytics, colourId);
+    expect(colourAnalytics.combined).toMatchObject({
+      responses: 5,
+      shown: 3,
+      answered: 2,
+      skipped: 1,
+      notShown: 2,
+    });
+    expect(colourAnalytics.byVersion[0]).toMatchObject({
+      responses: 5,
+      shown: 3,
+      answered: 2,
+      skipped: 1,
+      notShown: 2,
+    });
+    expect(colourAnalytics.combined.summary).toEqual({
+      type: "single_choice",
+      options: [
+        { value: "red", label: "Red", otherLabels: [], count: 2, base: 2, offeredIn: [1] },
+        { value: "green", label: "Green", otherLabels: [], count: 0, base: 2, offeredIn: [1] },
+      ],
+    });
+    expect(question(analytics, commentId).combined).toMatchObject({
+      responses: 5,
+      shown: 5,
+      answered: 1,
+      skipped: 4,
+      notShown: 0,
+    });
   });
 });

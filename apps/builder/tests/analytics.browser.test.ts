@@ -21,8 +21,10 @@ const rating: Schemas["QuestionAnalytics"] = {
   inCurrentVersion: true,
   combined: {
     responses: 5,
+    shown: 5,
     answered: 4,
     skipped: 1,
+    notShown: 0,
     absentResponses: 0,
     summary: {
       type: "single_choice",
@@ -45,8 +47,10 @@ const rating: Schemas["QuestionAnalytics"] = {
       version: 1,
       present: true,
       responses: 2,
+      shown: 2,
       answered: 2,
       skipped: 0,
+      notShown: 0,
       summary: {
         type: "single_choice",
         options: [
@@ -60,8 +64,10 @@ const rating: Schemas["QuestionAnalytics"] = {
       version: 2,
       present: true,
       responses: 3,
+      shown: 3,
       answered: 2,
       skipped: 1,
+      notShown: 0,
       summary: {
         type: "single_choice",
         options: [
@@ -83,8 +89,10 @@ const days: Schemas["QuestionAnalytics"] = {
   inCurrentVersion: true,
   combined: {
     responses: 5,
+    shown: 5,
     answered: 3,
     skipped: 2,
+    notShown: 0,
     absentResponses: 0,
     summary: { type: "number", count: 3, min: 2, max: 40, mean: 16, median: 6 },
   },
@@ -93,8 +101,10 @@ const days: Schemas["QuestionAnalytics"] = {
       version: 1,
       present: true,
       responses: 2,
+      shown: 2,
       answered: 1,
       skipped: 1,
+      notShown: 0,
       summary: { type: "number", count: 1, min: 6, max: 6, mean: 6, median: 6 },
       constraints: { type: "number", integer: true, min: 0, max: 30 },
     },
@@ -102,8 +112,10 @@ const days: Schemas["QuestionAnalytics"] = {
       version: 2,
       present: true,
       responses: 3,
+      shown: 3,
       answered: 2,
       skipped: 1,
+      notShown: 0,
       summary: { type: "number", count: 2, min: 2, max: 40, mean: 21, median: 21 },
       constraints: { type: "number", integer: true, min: 0, max: 90 },
     },
@@ -118,8 +130,10 @@ const source: Schemas["QuestionAnalytics"] = {
   inCurrentVersion: false,
   combined: {
     responses: 2,
+    shown: 2,
     answered: 1,
     skipped: 1,
+    notShown: 0,
     absentResponses: 3,
     summary: { type: "text" },
   },
@@ -128,8 +142,10 @@ const source: Schemas["QuestionAnalytics"] = {
       version: 1,
       present: true,
       responses: 2,
+      shown: 2,
       answered: 1,
       skipped: 1,
+      notShown: 0,
       summary: { type: "text" },
       constraints: null,
     },
@@ -145,8 +161,10 @@ const recommend: Schemas["QuestionAnalytics"] = {
   inCurrentVersion: true,
   combined: {
     responses: 3,
+    shown: 3,
     answered: 3,
     skipped: 0,
+    notShown: 0,
     absentResponses: 2,
     summary: { type: "boolean", trueCount: 2, falseCount: 1 },
   },
@@ -156,8 +174,10 @@ const recommend: Schemas["QuestionAnalytics"] = {
       version: 2,
       present: true,
       responses: 3,
+      shown: 3,
       answered: 3,
       skipped: 0,
+      notShown: 0,
       summary: { type: "boolean", trueCount: 2, falseCount: 1 },
       constraints: null,
     },
@@ -268,14 +288,18 @@ test("each version's counts sit in their own row, and each version's option labe
     "Version 1",
     "2",
     "2",
+    "2",
+    "0",
     "0",
     "Good: 2 · OK: 0",
   ]);
   expect(await rowText(byVersion, "Version 2")).toEqual([
     "Version 2",
     "3",
+    "3",
     "2",
     "1",
+    "0",
     "Good: 1 · Okay: 0 · Great: 1",
   ]);
 });
@@ -291,12 +315,12 @@ test("a version without the question shows no counts, and the combined result le
   await expect
     .element(
       dropped.getByText(
-        "2 responses: 1 answered, 1 skipped. Not asked in 3 responses, to versions without it.",
+        "2 responses: 2 shown, 1 answered, 1 skipped, 0 not shown. Not asked in 3 responses, to versions without it.",
       ),
     )
     .toBeVisible();
   const byVersion = dropped.getByRole("table", { name: "By version" });
-  expect(await rowText(byVersion, "Version 1")).toEqual(["Version 1", "2", "1", "1", ""]);
+  expect(await rowText(byVersion, "Version 1")).toEqual(["Version 1", "2", "2", "1", "1", "0", ""]);
   expect(await rowText(byVersion, "Version 2")).toEqual(["Version 2", "Not in this version"]);
 });
 
@@ -324,8 +348,10 @@ test("a number question shows its statistics and each version's allowed range", 
   expect(await rowText(byVersion, "Version 1")).toEqual([
     "Version 1",
     "2",
+    "2",
     "1",
     "1",
+    "0",
     "Min 6 · Max 6 · Mean 6 · Median 6 Allowed: whole numbers from 0 to 30",
   ]);
   expect((await rowText(byVersion, "Version 2")).at(-1)).toEqual(
