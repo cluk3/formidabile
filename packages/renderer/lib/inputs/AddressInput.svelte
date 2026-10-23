@@ -15,14 +15,14 @@
     country: "Country",
   };
 
-  const autocomplete: Record<AddressLine, string> = {
+  const autocomplete = {
     line1: "address-line1",
     line2: "address-line2",
     city: "address-level2",
     region: "address-level1",
     postalCode: "postal-code",
     country: "country",
-  };
+  } as const satisfies Record<AddressLine, string>;
 
   const shown = $derived(addressLines.filter((line) => question.config.lines[line].shown));
 
