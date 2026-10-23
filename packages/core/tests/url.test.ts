@@ -92,11 +92,11 @@ describe("url", () => {
 
   test("an answer is at most 2,048 code points", () => {
     const prefix = "https://example.com/";
-    const room = 2048 - [...prefix].length;
+    const room = 2048 - Array.from(prefix).length;
     const within = prefix + "a".repeat(room);
     const withEmoji = prefix + "😀" + "a".repeat(room - 1);
-    expect([...within].length).toBe(2048);
-    expect([...withEmoji].length).toBe(2048);
+    expect(Array.from(within).length).toBe(2048);
+    expect(Array.from(withEmoji).length).toBe(2048);
     expect(withEmoji.length).toBe(2049);
     expect(accepted(within)).toBe(within);
     expect(accepted(withEmoji)).toBe(withEmoji);

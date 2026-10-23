@@ -30,9 +30,9 @@ const definition = {
 };
 
 const prefix = "https://example.com/";
-const within = prefix + "a".repeat(2048 - [...prefix].length);
+const within = prefix + "a".repeat(2048 - Array.from(prefix).length);
 const beyond = within + "a";
-const withEmoji = prefix + "😀" + "a".repeat(2048 - [...prefix].length - 1);
+const withEmoji = prefix + "😀" + "a".repeat(2048 - Array.from(prefix).length - 1);
 
 /** `accepted` is the server's answer. `browser` differs only where JSON Schema cannot say what the server does. */
 const cases: ReadonlyArray<{
