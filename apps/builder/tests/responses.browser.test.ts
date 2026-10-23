@@ -21,6 +21,8 @@ type Stored = {
   respondentId: string | null;
   externalRefs: { namespace: string; refId: string }[];
   answers: Answers;
+  /** Question ids the response was shown, in version order. Omitted, the detail treats every question as shown. */
+  path?: readonly string[];
 };
 
 const version = (number: number, questions: QuestionSnapshot[]): Version => ({
@@ -34,7 +36,15 @@ const response = (
   respondentId: string | null,
   answers: Answers = {},
   externalRefs: Stored["externalRefs"] = [],
-): Stored => ({ id: crypto.randomUUID(), versionId: of.id, respondentId, externalRefs, answers });
+  path?: readonly string[],
+): Stored => ({
+  id: crypto.randomUUID(),
+  versionId: of.id,
+  respondentId,
+  externalRefs,
+  answers,
+  ...(path === undefined ? {} : { path: [...path] }),
+});
 
 /**
  * The responses API for one form, as the module answers it: newest first (the last stored is the newest), 50 to a
@@ -115,6 +125,7 @@ const responsesHost = (
         return json(200, {
           response: { ...summary(one!), answers: one!.answers },
           version: { id: of.id, number: of.number, definition: of.definition },
+          ...(one!.path === undefined ? {} : { path: [...one!.path] }),
         });
       }
       if (route === `DELETE /responses/${one?.id}`) {
@@ -316,9 +327,33 @@ test("an opened response reads as its own version's questions and answers, not t
   const picked = answerTo("Toppings").getByRole("listitem");
   expect(picked.elements().map((li) => li.textContent?.trim())).toEqual(["Ham, smoked", "Oil"]);
   await expect.element(answerTo("Ready?")).toHaveTextContent("Yes");
-  await expect.element(answerTo("Comments")).toHaveTextContent("Not answered");
+  await expect.element(answerTo("Comments")).toHaveTextContent("Skipped");
   expect(detail.getByRole("textbox").elements()).toEqual([]);
   expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);
+});
+
+test("a response detail marks each question answered, skipped, or not shown from the stored path", async () => {
+  const name = textQuestion("Name");
+  const age = textQuestion("Age");
+  const note = textQuestion("Note");
+  const v1 = version(1, [name, age, note]);
+  const host = responsesHost(
+    [v1],
+    [response(v1, "alice", { [name.id]: "Ada" }, [], [name.id, note.id])],
+  );
+  const screen = await renderPage(host.fetch);
+
+  await screen
+    .getByRole("listitem")
+    .filter({ hasText: "alice" })
+    .getByRole("button", { name: "Open" })
+    .click();
+  const detail = screen.getByRole("region", { name: "Response from alice" });
+  const answerTo = (label: string) =>
+    detail.getByRole("definition").nth(v1.definition.questions.findIndex((q) => q.label === label));
+  await expect.element(answerTo("Name")).toHaveTextContent("Ada");
+  await expect.element(answerTo("Age")).toHaveTextContent("Not shown");
+  await expect.element(answerTo("Note")).toHaveTextContent("Skipped");
 });
 
 const openResponseFrom = async (screen: LocatorSelectors, who: string) => {

@@ -21,6 +21,7 @@
     pageCount,
     offset,
     totalQuestions,
+    definition,
     definitionPages,
     edit,
     ids,
@@ -32,6 +33,7 @@
     pageCount: number;
     offset: number;
     totalQuestions: number;
+    definition: FormDefinition;
     definitionPages: readonly PageView[];
     edit(change: (definition: FormDefinition) => FormDefinition): void;
     ids: IdSource;
@@ -113,6 +115,7 @@
           {question}
           index={offset + index}
           count={totalQuestions}
+          {definition}
           atStart={index === 0}
           atEnd={index === page.questions.length - 1}
           {destinations}

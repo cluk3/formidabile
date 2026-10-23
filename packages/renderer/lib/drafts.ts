@@ -1,4 +1,4 @@
-import { validateAnswers, type Answers } from "@fb/core/answers";
+import { pathOf, validateAnswers, type Answers } from "@fb/core/answers";
 import {
   questionsOf,
   type FormDefinition,
@@ -94,16 +94,22 @@ export const answersFromDrafts = (
 };
 
 /**
- * The answers to send, validated by the version's own answer schema, or each invalid question's message. An
- * unanswered optional question has no key.
+ * The answers to send. A question off the path is left out, and a required question off the path is not
+ * demanded. An unanswered optional question on the path has no key.
  */
 export const checkDrafts = (
   definition: FormDefinition,
   drafts: Readonly<Record<string, Draft>>,
 ): Checked => {
-  const answers = answersFromDrafts(definition, drafts);
+  const all = answersFromDrafts(definition, drafts);
+  const questions = pathOf(definition, all).questions;
+  const answers: Answers = {};
+  for (const question of questions) {
+    const answer = all[question.id];
+    if (answer !== undefined) answers[question.id] = answer;
+  }
   const missing: Record<string, string> = {};
-  for (const question of questionsOf(definition))
+  for (const question of questions)
     if (answers[question.id] === undefined && question.required) missing[question.id] = unanswered;
   const result = validateAnswers(definition, answers);
   if (result.ok && Object.keys(missing).length === 0) return { ok: true, answers: result.value };
@@ -112,21 +118,41 @@ export const checkDrafts = (
 
 const checkedPageId = "00000000-0000-4000-8000-00000000c000";
 
+const withoutShowCondition = (question: QuestionSnapshot): QuestionSnapshot => {
+  if (question.showCondition === undefined) return question;
+  const { showCondition: _showCondition, ...rest } = question;
+  return rest;
+};
+
 /**
- * Next checks one page. The page's questions are validated as their own definition, so a required question
- * on another page is not demanded yet. Submit keeps using {@link checkDrafts} for the whole path.
+ * Next checks the questions on the path on this page. The path is decided from the whole definition, so a
+ * condition can read an earlier page, and a required question on another page is not demanded yet.
  */
 export const checkPage = (
   definition: FormDefinition,
   drafts: Readonly<Record<string, Draft>>,
   questions: readonly QuestionSnapshot[],
-): Checked =>
-  checkDrafts(
+): Checked => {
+  const onPath = new Set(
+    pathOf(definition, answersFromDrafts(definition, drafts)).questions.map(
+      (question) => question.id,
+    ),
+  );
+  return checkDrafts(
     {
       format: 2,
       title: definition.title,
       ...(definition.description === undefined ? {} : { description: definition.description }),
-      pages: [{ id: checkedPageId, questions: [...questions], jumps: [] }],
+      pages: [
+        {
+          id: checkedPageId,
+          questions: questions
+            .filter((question) => onPath.has(question.id))
+            .map(withoutShowCondition),
+          jumps: [],
+        },
+      ],
     },
     drafts,
   );
+};

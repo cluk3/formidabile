@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createFormApiClient, type FormApiClient, type Schemas } from "@fb/api-client";
+  import { pathOf } from "@fb/core/answers";
   import { pagesOf, parseDefinition, questionsOf, type FormDefinition } from "@fb/core/definition";
   import { tick, untrack } from "svelte";
   import {
@@ -445,9 +446,11 @@
     {@const pages = pagesOf(form.definition)}
     {@const page = pages[pageIndex] ?? pages[0]!}
     {@const heading = pageTitle(page)}
-    {@const atEnd =
-      nextDestination(form.definition, answersFromDrafts(form.definition, drafts), page).kind ===
-      "end"}
+    {@const answers = answersFromDrafts(form.definition, drafts)}
+    {@const shown = new Set(
+      pathOf(form.definition, answers).questions.map((question) => question.id),
+    )}
+    {@const atEnd = nextDestination(form.definition, answers, page).kind === "end"}
     <!-- Programmatic focus target when the page has no title of its own. Not in the tab order. -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <h2 bind:this={formHeading} class="title" part="title" tabindex="-1">
@@ -469,7 +472,7 @@
     {@const unconfirmed = notice?.code === "submitUnconfirmed"}
     <form bind:this={formElement} novalidate onsubmit={(event) => submit(event, form)}>
       <fieldset class="answers" disabled={unconfirmed}>
-        {#each page.questions as question (question.id)}
+        {#each page.questions.filter( (question) => shown.has(question.id) ) as question (question.id)}
           <QuestionCard {question} bind:value={drafts[question.id]} error={errors[question.id]} />
         {/each}
       </fieldset>

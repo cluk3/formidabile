@@ -37,6 +37,7 @@
         pageCount={pages.length}
         {offset}
         {totalQuestions}
+        {definition}
         definitionPages={pages}
         {edit}
         {ids}
