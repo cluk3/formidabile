@@ -40,6 +40,12 @@ export interface AnalyticsCounts {
     readonly questionId: string;
     readonly count: number;
   }>;
+  /** Stored path rows per version and question: responses that were shown it. */
+  readonly shown: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly count: number;
+  }>;
   /**
    * Single-choice values, boolean values as `"true"` and `"false"`, and each option selected in a
    * multiple-choice answer, per version and question.
@@ -132,6 +138,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   const current = versions.at(-1)?.number;
 
   const answered = new Map(counts.answered.map((row) => [key(row.versionId, row.questionId), row]));
+  const shown = new Map(counts.shown.map((row) => [key(row.versionId, row.questionId), row]));
   const numbers = new Map(counts.numbers.map((row) => [key(row.versionId, row.questionId), row]));
   const combinedNumbers = new Map(counts.combinedNumbers.map((row) => [row.questionId, row]));
   const nps = new Map(counts.nps.map((row) => [key(row.versionId, row.questionId), row]));
@@ -146,6 +153,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   interface Snapshot {
     readonly versionId: string;
     readonly responses: number;
+    readonly shown: number;
     readonly answered: number;
     readonly values: ReadonlyMap<string, number>;
     readonly question: Question;
@@ -161,6 +169,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         item: {
           versionId: version.id,
           responses: version.responses,
+          shown: shown.get(at)?.count ?? 0,
           answered: answered.get(at)?.count ?? 0,
           values: choices.get(at) ?? new Map(),
           question,
@@ -294,6 +303,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
     const question = latest.item.question;
     const present = new Map(snapshots.map((snapshot) => [snapshot.number, snapshot.item]));
     const responses = snapshots.reduce((sum, { item }) => sum + item.responses, 0);
+    const shownCount = snapshots.reduce((sum, { item }) => sum + item.shown, 0);
     const answeredCount = snapshots.reduce((sum, { item }) => sum + item.answered, 0);
     return {
       questionId: question.id,
@@ -302,8 +312,10 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
       inCurrentVersion: latest.number === current,
       combined: {
         responses,
+        shown: shownCount,
         answered: answeredCount,
-        skipped: responses - answeredCount,
+        skipped: shownCount - answeredCount,
+        notShown: responses - shownCount,
         absentResponses: versions
           .filter((version) => !present.has(version.number))
           .reduce((sum, version) => sum + version.responses, 0),
@@ -316,8 +328,10 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
           version: version.number,
           present: true as const,
           responses: snapshot.responses,
+          shown: snapshot.shown,
           answered: snapshot.answered,
-          skipped: snapshot.responses - snapshot.answered,
+          skipped: snapshot.shown - snapshot.answered,
+          notShown: snapshot.responses - snapshot.shown,
           summary: versionSummary(version.number, snapshot),
           constraints: constraintsOf(snapshot.question),
         };
