@@ -1,5 +1,7 @@
 import * as z from "zod/mini";
 
+/** ADR-017: a definition holds at most this many leaf conditions, counting show conditions and jumps. */
+export const CONDITIONS_CAP = 1000;
 /** ADR-017: a text constant is at most 500 code points. Comparison trims later, so this stores the text as written. */
 const TEXT_CONSTANT_CAP = 500;
 /** ADR-017: an "any of" list is at most 100 values, the same bound as `OPTIONS_CAP`. */
@@ -16,11 +18,15 @@ const constant = z.union([
   z.array(z.string()).check(z.maxLength(ANY_OF_CAP)),
 ]);
 
-/** A leaf names a question identity and an operator. `constant` is omitted when the operator needs none. */
+/**
+ * A leaf names a question identity and an operator. `constant` is omitted when the operator needs none.
+ * `row` is reserved for matrix conditions; no current question type has rows.
+ */
 const leaf = z.strictObject({
   questionId: z.uuid(),
   operator: z.string().check(z.minLength(1), z.maxLength(64)),
   constant: z.optional(constant),
+  row: z.optional(z.string().check(z.minLength(1), z.maxLength(64))),
 });
 
 /** A group holds conditions. An empty group parses; publish is what rejects it. */
@@ -40,3 +46,18 @@ const group1 = group(node1);
  */
 export const Condition = z.union([leaf, group1]);
 export type Condition = z.output<typeof Condition>;
+
+type ConditionNode =
+  | { readonly questionId: string }
+  | { readonly all: readonly ConditionNode[] }
+  | { readonly any: readonly ConditionNode[] };
+
+/** How many leaves a condition contributes to {@link CONDITIONS_CAP}. Groups themselves are free. */
+export const conditionCount = (condition: Condition): number => {
+  const walk = (node: ConditionNode): number => {
+    if ("questionId" in node) return 1;
+    const children = "all" in node ? node.all : node.any;
+    return children.reduce((sum, child) => sum + walk(child), 0);
+  };
+  return walk(condition as ConditionNode);
+};

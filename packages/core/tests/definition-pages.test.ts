@@ -262,7 +262,9 @@ describe("answers and upgrade use the same question order", () => {
     const definition = parsed(stored);
     expect(validateAnswers(definition, { [uuid(1)]: "Ada", [uuid(4)]: "Lovelace" }).ok).toBe(true);
     expect(
-      interpretAnswers(definition, { [uuid(1)]: "Ada" }).map((row) => row.question.label),
+      interpretAnswers(definition, { [uuid(1)]: "Ada" }, [uuid(1), uuid(4)]).map(
+        (row) => row.question.label,
+      ),
     ).toEqual(["First", "Second"]);
 
     const formatOne = parsed(format1({ description: "Hello" }));

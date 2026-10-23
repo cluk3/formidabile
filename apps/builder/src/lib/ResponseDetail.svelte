@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
   import { interpretAnswers } from "@fb/core/answers";
-  import { parseDefinition } from "@fb/core/definition";
+  import { parseDefinition, questionsOf } from "@fb/core/definition";
   import type { Snippet } from "svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { answerOf } from "#lib/registry.ts";
@@ -22,7 +22,14 @@
   // Read back through core's structural checks; the answers passed this version's schema when they were stored.
   const interpreted = $derived.by(() => {
     const parsed = parseDefinition(version.definition);
-    return parsed.ok ? interpretAnswers(parsed.value, response.answers) : null;
+    // The stored path arrives with the server slice. Until then every question of the version was shown.
+    return parsed.ok
+      ? interpretAnswers(
+          parsed.value,
+          response.answers,
+          questionsOf(parsed.value).map((question) => question.id),
+        )
+      : null;
   });
 </script>
 

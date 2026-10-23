@@ -7,6 +7,7 @@ import {
 } from "@fb/core/answers";
 import {
   parseDefinition,
+  questionsOf,
   questionTypes,
   type FormDefinition,
   type Result,
@@ -260,8 +261,11 @@ describe("interpretAnswers", () => {
     [q.no]: false,
   };
 
+  const shown = (definition: FormDefinition) =>
+    questionsOf(definition).map((question) => question.id);
+
   const displayed = (definition: FormDefinition, input: Answers) =>
-    interpretAnswers(definition, input).map(({ question, answer }) => [
+    interpretAnswers(definition, input, shown(definition)).map(({ question, answer }) => [
       question.label,
       answer?.display,
     ]);
@@ -280,9 +284,10 @@ describe("interpretAnswers", () => {
   });
 
   test("pairs each question's snapshot with its raw, untagged value", () => {
-    const [first, , , , , multiple] = interpretAnswers(form, answers);
+    const [first, , , , , multiple] = interpretAnswers(form, answers, shown(form));
     expect(first).toEqual({
       question: form.questions[0],
+      status: "answered",
       answer: { value: "Ada", display: "Ada" },
     });
     expect(multiple?.answer?.value).toEqual(["o-blue", "o-red"]);
@@ -290,8 +295,8 @@ describe("interpretAnswers", () => {
 
   test("a missing key reads as skipped", () => {
     const { [q.email]: _skipped, ...rest } = answers;
-    const [, email] = interpretAnswers(form, rest);
-    expect(email).toEqual({ question: form.questions[1] });
+    const [, email] = interpretAnswers(form, rest, shown(form));
+    expect(email).toEqual({ question: form.questions[1], status: "skipped" });
   });
 
   test("questions absent from the response's version don't appear", () => {

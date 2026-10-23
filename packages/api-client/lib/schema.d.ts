@@ -411,24 +411,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -436,6 +440,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -444,12 +449,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -457,6 +464,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -466,18 +474,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -485,6 +496,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -493,12 +505,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -506,6 +520,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -528,24 +543,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -553,6 +572,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -561,12 +581,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -574,6 +596,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -583,18 +606,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -602,6 +628,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -610,12 +637,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -623,6 +652,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -641,24 +671,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -666,6 +700,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -674,12 +709,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -687,6 +724,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -696,18 +734,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -715,6 +756,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -723,12 +765,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -736,6 +780,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -763,24 +808,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -788,6 +837,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -796,12 +846,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -809,6 +861,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -818,18 +871,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -837,6 +893,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -845,12 +902,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -858,6 +917,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -881,24 +941,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -906,6 +970,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -914,12 +979,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -927,6 +994,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -936,18 +1004,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -955,6 +1026,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -963,12 +1035,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -976,6 +1050,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -1001,24 +1076,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1026,6 +1105,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -1034,12 +1114,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1047,6 +1129,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -1056,18 +1139,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1075,6 +1161,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -1083,12 +1170,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1096,6 +1185,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -1121,24 +1211,28 @@ export interface components {
                     questionId: string;
                     operator: string;
                     constant?: string | number | boolean | string[];
+                    row?: string;
                 } | ({
                     all: ({
                         /** Format: uuid */
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1146,6 +1240,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -1154,12 +1249,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1167,6 +1264,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -1176,18 +1274,21 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1195,6 +1296,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     } | {
@@ -1203,12 +1305,14 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: {
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         } | {
                             any: {
@@ -1216,6 +1320,7 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             }[];
                         }))[];
                     }))[];
@@ -1247,24 +1352,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1272,6 +1381,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1280,12 +1390,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1293,6 +1405,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1302,18 +1415,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1321,6 +1437,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1329,12 +1446,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1342,6 +1461,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1364,24 +1484,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1389,6 +1513,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1397,12 +1522,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1410,6 +1537,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1419,18 +1547,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1438,6 +1569,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1446,12 +1578,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1459,6 +1593,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1477,24 +1612,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1502,6 +1641,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1510,12 +1650,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1523,6 +1665,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1532,18 +1675,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1551,6 +1697,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1559,12 +1706,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1572,6 +1721,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1599,24 +1749,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1624,6 +1778,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1632,12 +1787,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1645,6 +1802,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1654,18 +1812,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1673,6 +1834,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1681,12 +1843,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1694,6 +1858,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1717,24 +1882,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1742,6 +1911,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1750,12 +1920,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1763,6 +1935,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1772,18 +1945,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1791,6 +1967,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1799,12 +1976,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1812,6 +1991,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1837,24 +2017,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1862,6 +2046,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1870,12 +2055,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1883,6 +2070,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1892,18 +2080,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1911,6 +2102,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1919,12 +2111,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1932,6 +2126,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -1957,24 +2152,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -1982,6 +2181,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -1990,12 +2190,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2003,6 +2205,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -2012,18 +2215,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2031,6 +2237,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -2039,12 +2246,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2052,6 +2261,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -2068,24 +2278,28 @@ export interface components {
                         questionId: string;
                         operator: string;
                         constant?: string | number | boolean | string[];
+                        row?: string;
                     } | ({
                         all: ({
                             /** Format: uuid */
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2093,6 +2307,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -2101,12 +2316,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2114,6 +2331,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
@@ -2123,18 +2341,21 @@ export interface components {
                             questionId: string;
                             operator: string;
                             constant?: string | number | boolean | string[];
+                            row?: string;
                         } | ({
                             all: ({
                                 /** Format: uuid */
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2142,6 +2363,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         } | {
@@ -2150,12 +2372,14 @@ export interface components {
                                 questionId: string;
                                 operator: string;
                                 constant?: string | number | boolean | string[];
+                                row?: string;
                             } | ({
                                 all: {
                                     /** Format: uuid */
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             } | {
                                 any: {
@@ -2163,6 +2387,7 @@ export interface components {
                                     questionId: string;
                                     operator: string;
                                     constant?: string | number | boolean | string[];
+                                    row?: string;
                                 }[];
                             }))[];
                         }))[];
