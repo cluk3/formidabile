@@ -28,7 +28,7 @@ const responses = (count: number) => `${count} ${count === 1 ? "response" : "res
 
 /** A question's counts over every version, and the responses to versions that didn't ask it. */
 export const countsText = ({ combined }: Schemas["QuestionAnalytics"]) => {
-  const counts = `${responses(combined.responses)}: ${combined.answered} answered, ${combined.skipped} skipped.`;
+  const counts = `${responses(combined.responses)}: ${combined.shown} shown, ${combined.answered} answered, ${combined.skipped} skipped, ${combined.notShown} not shown.`;
   return combined.absentResponses === 0
     ? counts
     : `${counts} Not asked in ${responses(combined.absentResponses)}, to versions without it.`;

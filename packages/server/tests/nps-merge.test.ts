@@ -1,5 +1,5 @@
 import { mergeAnalytics, type AnalyticsCounts } from "@fb/server";
-import type { QuestionSnapshot } from "@fb/core/definition";
+import { questionsOf, type QuestionSnapshot } from "@fb/core/definition";
 import { describe, expect, test } from "vite-plus/test";
 
 type Question = QuestionSnapshot;
@@ -61,6 +61,16 @@ const version = (number: number, responses: number, questions: ReadonlyArray<Que
   definition: { format: 1 as const, title: "Survey", questions: [...questions] },
 });
 
+/** A stored path that lists every question, so the NPS figures stay on answered responses. */
+const shownToEveryone = (versions: AnalyticsCounts["versions"]) =>
+  versions.flatMap((version) =>
+    questionsOf(version.definition).map((question) => ({
+      versionId: version.id,
+      questionId: question.id,
+      count: version.responses,
+    })),
+  );
+
 const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "versions">) =>
   mergeAnalytics({
     formId: "form",
@@ -72,6 +82,7 @@ const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "version
     matrixCells: [],
     matrixAnsweredRows: [],
     ...input,
+    shown: input.shown ?? shownToEveryone(input.versions),
   });
 
 const summary = (analytics: ReturnType<typeof mergeAnalytics>, questionId: string) =>

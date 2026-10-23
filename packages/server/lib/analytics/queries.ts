@@ -6,6 +6,7 @@ import {
   forms,
   formVersionQuestions,
   formVersions,
+  responsePath,
   responses,
 } from "../persistence/schema.ts";
 
@@ -52,6 +53,26 @@ const formAnswers = (db: Db, tenant: TenantId, formId: string) =>
     .innerJoin(forms, eq(forms.id, formVersionQuestions.formId))
     .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
     .as("form_answers");
+
+/** Stored path rows per question. Analytics reads this table and does not re-run the path function. */
+export const shownPerQuestion = (db: Db, tenant: TenantId, formId: string) =>
+  db
+    .select({
+      versionId: responsePath.versionId,
+      questionId: responsePath.questionId,
+      count,
+    })
+    .from(responsePath)
+    .innerJoin(
+      formVersionQuestions,
+      and(
+        eq(formVersionQuestions.versionId, responsePath.versionId),
+        eq(formVersionQuestions.questionId, responsePath.questionId),
+      ),
+    )
+    .innerJoin(forms, eq(forms.id, formVersionQuestions.formId))
+    .where(and(eq(forms.tenant, tenant), eq(forms.id, formId)))
+    .groupBy(responsePath.versionId, responsePath.questionId);
 
 export const answeredPerQuestion = (db: Db, tenant: TenantId, formId: string) => {
   const rows = formAnswers(db, tenant, formId);

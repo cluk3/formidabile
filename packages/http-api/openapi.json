@@ -2869,12 +2869,22 @@
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
               },
+              "shown": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
               "answered": {
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
               },
               "skipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "notShown": {
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
@@ -2890,8 +2900,10 @@
             },
             "required": [
               "responses",
+              "shown",
               "answered",
               "skipped",
+              "notShown",
               "absentResponses",
               "summary"
             ],
@@ -2941,12 +2953,22 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "shown": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "answered": {
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
                     "skipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "notShown": {
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
@@ -2969,8 +2991,10 @@
                     "version",
                     "present",
                     "responses",
+                    "shown",
                     "answered",
                     "skipped",
+                    "notShown",
                     "summary",
                     "constraints"
                   ],

@@ -227,12 +227,33 @@
           {/if}
         </div>
         <p>{countsText(question)}</p>
+        <table class={tableClass}>
+          <caption class={captionClass}>Answered, skipped and not shown</caption>
+          <thead>
+            <tr><th>Outcome</th><th>Count</th><th>Share of responses</th></tr>
+          </thead>
+          <tbody>
+            {#each [["Answered", question.combined.answered], ["Skipped", question.combined.skipped], ["Not shown", question.combined.notShown]] as const as [name, count] (name)}
+              <tr>
+                <th scope="row" class="font-normal">{name}</th>
+                <td>{count}</td>
+                <td>{@render bar(share(count, question.combined.responses))}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
         {@render combinedTable(question)}
         <table class={tableClass}>
           <caption class={captionClass}>By version</caption>
           <thead>
             <tr>
-              <th>Version</th><th>Responses</th><th>Answered</th><th>Skipped</th><th>Result</th>
+              <th>Version</th>
+              <th>Responses</th>
+              <th>Shown</th>
+              <th>Answered</th>
+              <th>Skipped</th>
+              <th>Not shown</th>
+              <th>Result</th>
             </tr>
           </thead>
           <tbody>
@@ -242,8 +263,10 @@
                 {#if entry.present}
                   {@const allowed = constraintsText(entry.constraints)}
                   <td>{entry.responses}</td>
+                  <td>{entry.shown}</td>
                   <td>{entry.answered}</td>
                   <td>{entry.skipped}</td>
+                  <td>{entry.notShown}</td>
                   <td>
                     <span class="block">{resultText(entry.summary)}</span>
                     {#if allowed !== null}
@@ -251,7 +274,7 @@
                     {/if}
                   </td>
                 {:else}
-                  <td colspan="4" class="text-muted-foreground">Not in this version</td>
+                  <td colspan="6" class="text-muted-foreground">Not in this version</td>
                 {/if}
               </tr>
             {/each}
