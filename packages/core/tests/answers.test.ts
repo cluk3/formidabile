@@ -185,6 +185,15 @@ const cases: {
     ],
     rejects: ["true", 0, null],
   },
+  {
+    type: "url",
+    config: {},
+    accepts: [
+      ["https://example.com", "https://example.com"],
+      ["  HTTPS://Example.COM/a  ", "HTTPS://Example.COM/a"],
+    ],
+    rejects: ["example.com", "ftp://example.com", "javascript:alert(1)", ""],
+  },
 ];
 
 describe("buildAnswerSchema", () => {

@@ -13,6 +13,7 @@
   class="control"
   part="input"
   type="email"
+  autocomplete="email"
   bind:value
   aria-invalid={field.invalid ? "true" : undefined}
   aria-describedby={field.describedBy}

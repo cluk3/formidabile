@@ -16,6 +16,7 @@ type Drafts = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  url: string;
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -34,6 +35,7 @@ const answerOf = {
   single_choice: unlessBlank,
   multiple_choice: (draft) => (draft === undefined || draft.length === 0 ? undefined : draft),
   boolean: (draft) => draft,
+  url: unlessBlank,
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -47,6 +49,7 @@ const draftOf = {
   single_choice: stringDraft,
   multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
   boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+  url: stringDraft,
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */

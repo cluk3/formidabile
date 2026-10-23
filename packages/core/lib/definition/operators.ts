@@ -226,6 +226,7 @@ export const conditionOperators = {
   single_choice: withPresence(singleOperators),
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
+  url: withPresence(textOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
