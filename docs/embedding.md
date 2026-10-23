@@ -43,9 +43,10 @@ element.addEventListener("error", (event) => console.log(event.detail.code, even
 
 ### Events
 
-Both are `CustomEvent`s dispatched on the element itself. They don't bubble and don't cross the shadow boundary from inside, so listen on the element.
+All three are `CustomEvent`s dispatched on the element itself. They don't bubble and don't cross the shadow boundary from inside, so listen on the element.
 
 - **`submitted`**: `detail` is `{ responseId }`, after a submit's 201 and after an edit's 200.
+- **`pagechange`**: `detail` is `{ pageId, title }`, each time the respondent reaches a page, including the first one shown. `title` is the page's own title, or `null` when it has none, and the form's title is not substituted. `pageId` is `null` for a format 1 form, which is one page with no stored id. See [Pages and focus](#pages-and-focus).
 - **`error`**: `detail` is `{ code, message }`, each time the element shows a refusal or a failure in place of the form or above it. `message` is the English text shown to the respondent. Per-question validation errors never fire it. The codes are:
 
 | `code`              | When                                                                                                                         |
@@ -66,6 +67,22 @@ Both are `CustomEvent`s dispatched on the element itself. They don't bubble and 
 | `alreadyResponded`  | `AlreadyResponded`; "Edit your response" opens it                                                                            |
 
 A host can use `error` to add its own sign-in link: the reference host does that on `signInRequired` and `sessionExpired`.
+
+### Pages and focus
+
+A form is an ordered list of pages ([ADR 0017](./adr/0017-show-conditions-and-forward-jumps-decide-the-path.md)). The element shows one at a time, and a format 1 form is a single page.
+
+- **The button**: it reads "Submit" when the current answers would end the form from this page, and "Next" otherwise, and it changes as the respondent answers. There's no "page X of Y", because the total depends on the answers. Back returns to the pages the respondent actually visited, and doesn't re-run jumps.
+- **Focus**: on a page change, focus moves to the new page's heading: the page's title, or the form's title when the page has none. The browser scrolls the focused heading into view, and the element makes no scroll calls of its own. A failed Next or Submit lists that page's issues and focuses the first invalid field instead.
+- **What the element never writes**: the host page's `document.title`, its history, and its URL. A host that wants a per-page title or a history entry listens for `pagechange` and sets it itself. The browser's own Back key leaves the host page and loses the answers on screen, as a reload does.
+- **Edit mode**: with `response-id`, the element opens on the first page with the stored answers filled in. Next checks the jumps again against the edited answers, and there's no way to open a page directly.
+
+```ts
+element.addEventListener("pagechange", (event) => {
+  const { title } = event.detail;
+  if (title !== null) document.title = `${title} · Apollo`;
+});
+```
 
 ### Theming
 
@@ -176,7 +193,7 @@ Forms gain and lose references through `POST` and `DELETE /forms/{formId}/extern
 
 ## Strict CSP and Trusted Types
 
-The element works under a strict Content Security Policy: no `'unsafe-inline'`, `'unsafe-eval'`, hashes or nonces anywhere ([ADR 0008](./adr/0008-renderer-element-adopts-constructable-stylesheets.md)). The host allows only the bundle's script origin and the API origin. The element adopts its styles as a constructable stylesheet, which CSP doesn't govern, and its markup has no inline styles.
+The element works under a strict Content Security Policy: no `'unsafe-inline'`, `'unsafe-eval'`, hashes or nonces anywhere ([ADR 0008](./adr/0008-renderer-element-adopts-constructable-stylesheets.md)). The host allows only the bundle's script origin and the API origin. The element adopts its styles as a constructable stylesheet, which CSP doesn't govern, and its markup has no inline styles and no inline script. That holds for paged forms and for every question type, and a page change adds no policy requirement ([ADR 0017](./adr/0017-show-conditions-and-forward-jumps-decide-the-path.md)).
 
 Hosts that enforce Trusted Types allow the policy Svelte creates when it loads, `svelte-trusted-html`. The reference host's policy, which the end-to-end tests check in Chromium, Firefox and WebKit:
 
@@ -202,20 +219,78 @@ Load with `GET /respond/forms/{formId}`, and send `version.id` back as `versionI
 
 - `respondent` is `"anonymous"` or `"identified"`. With `responseLimit: "one_per_respondent"`, an anonymous respondent can't submit, so ask them to sign in before they start.
 - `myResponseId` is set only for an identified respondent who already responded to a one-per-respondent form: go straight to editing it.
+- `version.definition.format` is `1` or `2`. A renderer reads both: see [Format 2 and the path](#format-2-and-the-path).
 
 ### 2. Answers
 
-`answers` maps each question's `id` to an untagged value. An unanswered optional question has no key, and there are no nulls. Unknown keys are refused.
+`answers` maps each question's `id` to an untagged value. An unanswered optional question has no key, and there are no nulls. Unknown keys are refused, and so is an answer to a question that isn't on the [path](#format-2-and-the-path).
 
-| Question type     | Value                                                                                               |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| `text`            | A string, sent trimmed: not blank, at most `config.maxLength` (default 10,000) code points          |
-| `email`           | An email address string, at most 254 characters                                                     |
-| `number`          | A number, an integer when `config.integer`, within `config.min` and `config.max`                    |
-| `date`            | An ISO calendar date, `YYYY-MM-DD`, within `config.min` and `config.max`                            |
-| `boolean`         | `true` or `false`                                                                                   |
-| `single_choice`   | One option's `value`                                                                                |
-| `multiple_choice` | An array of distinct option `value`s, from `minSelected` (default 1) to `maxSelected` (default all) |
+| Question type            | Value                                                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`                   | A string, sent trimmed: not blank, at most `config.maxLength` (default 10,000) code points                                                                                    |
+| `email`                  | An email address string, at most 254 characters                                                                                                                               |
+| `number`                 | A number, an integer when `config.integer`, within `config.min` and `config.max`, on `config.step` when it has one. See [Numbers](#numbers)                                   |
+| `date`                   | An ISO calendar date, `YYYY-MM-DD`, within `config.min` and `config.max`                                                                                                      |
+| `boolean`                | `true` or `false`. With `config.mustBeYes`, only `true`                                                                                                                       |
+| `single_choice`          | One option's `value`                                                                                                                                                          |
+| `multiple_choice`        | An array of distinct option `value`s, from `minSelected` (default 1) to `maxSelected` (default all)                                                                           |
+| `phone`                  | A string in E.164: `+` and at most 15 digits. Spaces, dashes, dots and parentheses are stripped first, and there's no default country                                         |
+| `url`                    | A string, trimmed, at most 2,048 characters, `http` or `https` with a host, stored as typed                                                                                   |
+| `time_of_day`            | `HH:MM` on a 24-hour clock, with no seconds and no time zone, between `config.earliest` and `config.latest`                                                                   |
+| `date_time`              | `YYYY-MM-DDTHH:MM`, local wall-clock time with no seconds and no time zone, between `config.min` and `config.max`                                                             |
+| `date_range`             | `{ "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" }`: both dates, start on or before end, both within `config.min` and `config.max`                                               |
+| `ranking`                | An array holding every option `value` exactly once, in rank order. An optional ranking is complete or absent                                                                  |
+| `single_choice_matrix`   | An object from row `value` to one column `value`. A required matrix needs every row, an optional one accepts any subset of rows, and a matrix with no answered row has no key |
+| `multiple_choice_matrix` | An object from row `value` to a non-empty array of distinct column `value`s, with the same row rules                                                                          |
+| `address`                | An object holding only the filled lines among `line1`, `line2`, `city`, `region`, `postalCode` and `country`                                                                  |
+
+The question types and their answer shapes come from [ADR 0018](./adr/0018-new-question-types-and-what-makes-a-question-type.md).
+
+- **Objects**: a date range, a matrix and an address are all an object whose values are strings or arrays of strings. A date range is an object and not a two-item array, because the answer is untagged and an array's order would carry a meaning nothing in its shape states.
+- **Address**: each question sets every line as shown or hidden and as required or optional (`config.lines.<line>.shown` and `.required`). Send only the shown lines that are filled: each is trimmed and at most 200 code points, and `country` is an ISO 3166-1 alpha-2 code. An optional address with every line empty is unanswered, so it has no key. Once any line is filled, the required lines must be too.
+- **Matrix rows**: a row has a stable `value` like an option does, and answers use it, never the label.
+- **Ranking**: a ranking has 2 to 20 options, and the respondent adds them to the ranking one by one. Show the options unranked at first, because a list in a default order can't tell "I agree with this order" from "I didn't touch it".
+
+#### Numbers
+
+A `number` question's `config.display` is `input` (the default), `rating`, `scale`, `slider` or `nps`. The display changes only the control, and the answer is the same number: a rating, a scale, a slider and NPS all store a plain integer or decimal, and changing the display keeps the question's identity.
+
+| `config.display` | Control and publish rules                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| `input`          | A number field                                                                                               |
+| `rating`         | Stars: whole numbers from 1 to a maximum of 3 to 10                                                          |
+| `scale`          | Whole numbers from 0 or 1 to a maximum of 2 to 10, with an optional `minLabel` and `maxLabel`                |
+| `slider`         | Needs `min`, `max` and `step`. It starts with no answer ("Not answered") until the respondent first moves it |
+| `nps`            | Whole numbers 0 to 10, with `minLabel` and `maxLabel`. Analytics read it and report the NPS score            |
+
+`config.step` is an optional positive decimal with at most 4 decimal places, on any number question. A valid answer is `min` plus a whole number of steps, or a whole multiple of the step when there is no `min`. The check scales both sides to integers, so compare the same way and not with floating-point arithmetic. When only whole numbers are accepted, the step is a whole number.
+
+#### Must be yes
+
+A boolean with `config.mustBeYes` is required, and the only accepted answer is `true`. Show it as one checkbox, where an unticked box means unanswered. Without `mustBeYes`, show two radios, because an unticked checkbox can't tell No from unanswered.
+
+#### Autocomplete
+
+The element sets `autocomplete` tokens so browsers can fill the inputs, and a custom renderer should do the same:
+
+| Input               | Token                                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `email`             | `email`                                                                                                                              |
+| `phone`             | `tel`                                                                                                                                |
+| `url`               | `url`                                                                                                                                |
+| `address` lines     | `address-line1`, `address-line2`, `address-level2` (city), `address-level1` (region), `postal-code` and `country` (the country line) |
+| `text` and the rest | None                                                                                                                                 |
+
+#### Format 2 and the path
+
+[ADR 0017](./adr/0017-show-conditions-and-forward-jumps-decide-the-path.md) makes a form a list of pages with conditions and jumps, in definition `format: 2`. `openapi.json`'s `info.version` went to `1.0.0` for it, a major bump, because a renderer that ignores conditions now has submissions rejected.
+
+- **Both formats are read.** `version.definition` is `{ format: 1, title, questions }` or `{ format: 2, title, pages: [{ id, title?, description?, questions, jumps }] }`. A format 1 form is one page with no conditions, and nothing stored is ever rewritten. Every endpoint that takes a definition accepts both formats and stores it as sent. A missing `format` or an unknown key gives 422.
+- **Show conditions** sit on a question (`showCondition`). A question without one is shown whenever its page is reached. **Jumps** sit on a page: an ordered list of `{ condition, target }`, where `target` is a later page's `id` or `"end"`. They're checked when the respondent leaves the page, the first match wins, and with no match the respondent goes to the next page. A condition names question ids, option values and row values, never labels or positions.
+- **The path** is the questions a respondent is shown, given their answers. **Use the path function exported from `@fb/core/answers`** and don't write your own: `pathOf(definition, answers)` returns `{ pages, questions }`, and `nextDestination(definition, answers, page)` returns `{ kind: "page", page }` or `{ kind: "end" }`. It's pure, it runs in the browser, and it's the function the server uses, so the two can't disagree. A page whose questions are all off the path is passed over.
+- **An answer off the path is 422.** `required` means required on the path, so a hidden required question isn't demanded, and an answer to a question the path doesn't reach gets `ValidationFailed`, the same as an unknown key. Leave answers that fall off the path out of the submit body, and keep them locally so that changing the earlier answer back restores them.
+- **Each response stores the path it was given**, so the admin views and analytics report each question as answered, skipped (on the path, unanswered) or not shown (off it).
+- **A draft may hold broken logic**, such as a condition on a deleted question or a jump to a page that is no longer later. The path function never fails on one: a condition it can't resolve reads that question as unanswered, and a jump whose target isn't a later page or the end is skipped. So a preview of a draft with broken logic still renders, and a host that previews drafts should show a warning beside it. Publish refuses a draft with broken logic, and a published version has passed that check.
 
 ### 3. Optional browser validation
 
@@ -232,12 +307,24 @@ Load with `GET /respond/forms/{formId}`, and send `version.id` back as `versionI
 
   const ajv = new Ajv2020({ allErrors: true });
   addFormats(ajv);
-  ajv.addVocabulary(["x-fb-authoritative", "x-fb-minDate", "x-fb-maxDate"]);
+  ajv.addVocabulary([
+    "x-fb-authoritative",
+    "x-fb-minDate",
+    "x-fb-maxDate",
+    "x-fb-minDateTime",
+    "x-fb-maxDateTime",
+    "x-fb-startOnOrBeforeEnd",
+    "x-fb-step",
+  ]);
   const validate = ajv.compile(answerSchema);
   ```
 
 - **The gaps**: on trimmed answers the schema accepts and refuses exactly what the server does, except:
-  - **Date ranges**: standard JSON Schema can't compare dates, so a date question's `config.min` and `config.max` appear only as `x-fb-minDate` and `x-fb-maxDate` on its property, inclusive `YYYY-MM-DD` strings that a generic validator ignores. Check them yourself: ISO dates compare correctly as strings.
+  - **Dates and times**: standard JSON Schema can't compare dates, so the bounds appear only as annotations that a generic validator ignores, and you check them yourself. ISO dates and local date-times compare correctly as strings.
+    - A `date` question's and a `date_range` question's `config.min` and `config.max` are `x-fb-minDate` and `x-fb-maxDate`, inclusive `YYYY-MM-DD` strings. A date range is also marked `x-fb-startOnOrBeforeEnd: true`: its `start` must not be after its `end`.
+    - A `date_time` question's bounds are `x-fb-minDateTime` and `x-fb-maxDateTime`, inclusive `YYYY-MM-DDTHH:MM` strings.
+    - A `time_of_day` question's `config.earliest` and `config.latest` aren't in the schema. Take them from the definition. The schema holds only the `HH:MM` pattern.
+  - **Steps**: a `number` question's `config.step` is `x-fb-step`, and only the server checks it. Use the scaled-integer check described under [Numbers](#numbers).
   - **Trimming**: the server trims text before checking its length, while the schema checks the string as given. Trim text before validating, as you must before sending.
 
 ### 4. Errors
@@ -266,7 +353,16 @@ When the definition holds a question type the renderer doesn't know, refuse the 
 
 ### 7. New question types
 
-A new question type is a contract change, marked by a minor bump of `openapi.json`'s `info.version` and a changelog entry. The definition's `format` stays at 1 unless an existing shape changes.
+A new question type is a contract change, marked by a bump of `openapi.json`'s `info.version` and a changelog entry. ADR 0018's nine question types, the number displays, the step and must-be-yes shipped with format 2 in the `1.0.0` bump, and formats 1 and 2 accept the same question types ([ADR 0018](./adr/0018-new-question-types-and-what-makes-a-question-type.md)).
+
+### 8. Duplicate, restore and templates
+
+None of these has an endpoint of its own. Each is a read plus a call you already have, and each needs `forms:manage` ([ADR 0019](./adr/0019-duplicate-and-restore-and-form-scoped-question-identity.md)).
+
+- **Duplicate** a form: read the definition you want, then `POST /forms` with it. Read a published version with `GET /forms/{formId}/versions/{versionId}`, or the draft with `GET /forms/{formId}/draft`, in the caller's tenant. The new form is never published, and only the definition is copied: its external references, availability and response limit start at a new form's defaults, because they describe the source form's place in the host. Question ids, option values, row values and page ids are kept, so conditions and jumps carry over unchanged. Question identity belongs to one form, so two forms holding the same question id don't claim to ask the same question. Add " (copy)" to the title yourself if you want it, and keep the title within its 200-character cap.
+- **Restore** one of a form's own published versions: read it with `GET /forms/{formId}/versions/{versionId}`, then `PUT /forms/{formId}/draft` with that definition. Send `expectedRevision: null` when the form has no draft, which creates one, and the draft's `revision` when it has one, so a save made in the meantime gives `RevisionConflict`. Restore creates no version: it replaces the form's one draft, and publishing that draft makes the next version. Ask before replacing a draft that holds changes.
+- **Templates**: the module stores none. A host keeps its template definitions and posts one with `POST /forms` as a new form, in whichever tenant its token names. That is how a template crosses tenants. A definition from any other source, an AI model included, is posted the same way, and publish checks it like any draft.
+- **A definition is stored as sent**, in format 1 or 2. Only the builder upgrades a draft to format 2, when it saves.
 
 ### Never send `externalRefs`
 

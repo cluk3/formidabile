@@ -12,6 +12,12 @@ export const demoProjects = {
 } as const;
 
 /**
+ * A second acme project, holding the paged demo form: show conditions, a jump, and every question type the
+ * iteration added. It is separate from `demoProjects` so `acme-spring-orders` still resolves to one form.
+ */
+export const pagedDemoProject = "acme-trip-planner";
+
+/**
  * The tenant a project belongs to, or `null` for no project. The host keeps no project records: an id names its
  * dev tenant before the first `-` (`acme-spring-orders`), so tests make up projects of their own. Ids are capped
  * at the 255 code points a reference's `refId` may hold.

@@ -6,7 +6,7 @@ import { SqlClient } from "effect/sql";
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { seed } from "../seed/seed.ts";
 import { devJwt } from "../server/dev-users.ts";
-import { demoProjects, resolveProjectForm } from "../server/projects.ts";
+import { demoProjects, pagedDemoProject, resolveProjectForm } from "../server/projects.ts";
 import { clientFor } from "./api.ts";
 
 // The module's handler on a PGlite database the test can also query, checking tokens as the seed's handler does.
@@ -33,6 +33,7 @@ test.each([
     "acme-admin",
     [
       ["Onboarding survey", 4],
+      ["Trip planner", 1],
       ["Customer feedback", 1],
     ],
   ],
@@ -114,6 +115,76 @@ test("the acme onboarding survey's versions exercise every cross-version case", 
     { respondentId: "bob" },
     { respondentId: null },
   ]);
+});
+
+test("the trip planner is one paged form with show conditions, a jump and every new question type", async () => {
+  const resolved = await resolveProjectForm(fetch, "acme", pagedDemoProject);
+  expect(resolved).toEqual({
+    kind: "one",
+    form: { id: expect.any(String), title: "Trip planner" },
+  });
+  const formId = resolved.kind === "one" ? resolved.form.id : "";
+  const admin = clientFor("acme-admin", fetch);
+
+  const { data: draft } = await admin.GET("/forms/{formId}/draft", {
+    params: { path: { formId } },
+  });
+  const { data: versions } = await admin.GET("/forms/{formId}/versions", {
+    params: { path: { formId } },
+  });
+  const version = versions?.versions[0];
+  expect(version).toBeDefined();
+  expect(draft).toEqual({ draft: null });
+  const { data: published } = await admin.GET("/forms/{formId}/versions/{versionId}", {
+    params: { path: { formId, versionId: version?.id ?? "" } },
+  });
+  const definition = published?.definition;
+  if (definition?.format !== 2) throw new Error("the trip planner is format 2");
+  expect(definition.pages.map((page) => page.title)).toEqual([
+    "Your trip",
+    "Your flights",
+    "Your stay",
+    "How we did",
+  ]);
+  expect(definition.pages.flatMap((page) => page.jumps)).toHaveLength(1);
+  const questions = definition.pages.flatMap((page) => page.questions);
+  expect(questions.filter((question) => question.showCondition !== undefined)).toHaveLength(2);
+  const displays = questions.flatMap((question) =>
+    question.type === "number" ? [question.config.display] : [],
+  );
+  expect(displays).toEqual(["rating", "scale", "slider", "nps"]);
+  expect(new Set(questions.map((question) => question.type))).toEqual(
+    new Set([
+      "phone",
+      "url",
+      "boolean",
+      "time_of_day",
+      "date_time",
+      "date_range",
+      "address",
+      "text",
+      "ranking",
+      "single_choice_matrix",
+      "multiple_choice_matrix",
+      "number",
+    ]),
+  );
+  expect(
+    questions.some((question) => question.type === "boolean" && question.config.mustBeYes === true),
+  ).toBe(true);
+
+  // Two responses, one on each side of the jump: what each question shows is counted as not shown, not skipped.
+  const { data: analytics } = await admin.GET("/forms/{formId}/analytics", {
+    params: { path: { formId } },
+  });
+  const counts = (label: string) => {
+    const combined = analytics?.questions.find((question) => question.label === label)?.combined;
+    return [combined?.answered, combined?.skipped, combined?.notShown];
+  };
+  expect(counts("Preferred departure time")).toEqual([1, 0, 1]);
+  expect(counts("Anything we should know about your flights?")).toEqual([1, 0, 1]);
+  expect(counts("What should we improve?")).toEqual([1, 0, 1]);
+  expect(counts("Contact phone")).toEqual([2, 0, 0]);
 });
 
 test.each([

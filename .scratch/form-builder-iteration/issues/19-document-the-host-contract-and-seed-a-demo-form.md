@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] The embedding guide covers pages and focus behaviour, the `pagechange` event, and the rule that the element never writes the host document title, history, or URL.
-- [ ] The guide covers format 2, the path rules (use the exported path function; an answer off the path is 422), and preview of a draft whose logic is broken.
-- [ ] The guide covers the new question types' answer shapes, the number displays, the step constraint, must-be-yes, and the autocomplete tokens.
-- [ ] The guide covers duplicate and restore as reads plus the existing create and draft-save calls, and a host posting a template definition as a new form. The module stores no templates.
-- [ ] The reference host's demo seed creates one paged form through the API, the same way the other seed forms are created. That form uses show conditions, jumps, and each new question type.
+- [x] The embedding guide covers pages and focus behaviour, the `pagechange` event, and the rule that the element never writes the host document title, history, or URL.
+- [x] The guide covers format 2, the path rules (use the exported path function; an answer off the path is 422), and preview of a draft whose logic is broken.
+- [x] The guide covers the new question types' answer shapes, the number displays, the step constraint, must-be-yes, and the autocomplete tokens.
+- [x] The guide covers duplicate and restore as reads plus the existing create and draft-save calls, and a host posting a template definition as a new form. The module stores no templates.
+- [x] The reference host's demo seed creates one paged form through the API, the same way the other seed forms are created. That form uses show conditions, jumps, and each new question type.
 - [ ] `vp run ready` is green locally, and every CI job is green on the PR.

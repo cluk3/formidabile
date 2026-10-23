@@ -137,6 +137,8 @@
   }
   .slider {
     width: 100%;
+    /* WebKit sizes a slider by its thumb, and an unanswered one has none, so it would collapse to nothing. */
+    min-height: 1.5rem;
     margin: 0;
   }
   /* A native slider always has a thumb. Hide it until the respondent moves it. */

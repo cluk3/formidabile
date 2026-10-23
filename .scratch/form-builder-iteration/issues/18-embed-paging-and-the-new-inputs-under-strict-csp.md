@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] The strict-CSP check renders a paged form from the built element. The form uses phone, URL, time of day, date and time, date range, ranking, both matrices, address, rating, scale, slider, NPS, and the must-be-yes checkbox.
-- [ ] That check passes in Chromium, Firefox, and WebKit.
-- [ ] The element still ships no static `style` attribute and no inline script, and it still does not write the host document title, history, or URL.
-- [ ] A page change moves focus to the new page's heading in the accessibility coverage.
+- [x] The strict-CSP check renders a paged form from the built element. The form uses phone, URL, time of day, date and time, date range, ranking, both matrices, address, rating, scale, slider, NPS, and the must-be-yes checkbox.
+- [x] That check passes in Chromium, Firefox, and WebKit.
+- [x] The element still ships no static `style` attribute and no inline script, and it still does not write the host document title, history, or URL.
+- [x] A page change moves focus to the new page's heading in the accessibility coverage.
 - [ ] `vp run ready` is green locally, and every CI job is green on the PR.
