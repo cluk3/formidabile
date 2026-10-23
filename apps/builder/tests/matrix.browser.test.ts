@@ -139,8 +139,10 @@ test("analytics lists a count and a share for each row and column", async () => 
         inCurrentVersion: true,
         combined: {
           responses: 2,
+          shown: 2,
           answered: 2,
           skipped: 0,
+          notShown: 0,
           absentResponses: 0,
           summary: {
             type: "single_choice_matrix" as const,
@@ -175,8 +177,10 @@ test("analytics lists a count and a share for each row and column", async () => 
             version: 1,
             present: true as const,
             responses: 2,
+            shown: 2,
             answered: 2,
             skipped: 0,
+            notShown: 0,
             summary: {
               type: "single_choice_matrix" as const,
               cells: [

@@ -140,7 +140,7 @@ describe("matrix analytics over HTTP", () => {
       api.clientWithToken(() => signToken({ sub: name, tenant: "acme", capabilities: [] }));
     const send = async (
       name: string,
-      answers: Record<string, Record<string, string | string[]>>,
+      answers: Record<string, Record<string, string> | Record<string, string[]>>,
     ) => {
       const response = await respondent(name).POST("/respond/forms/{formId}/responses", {
         params: { path: { formId: form.formId } },

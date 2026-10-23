@@ -2970,9 +2970,11 @@ export interface components {
             }[];
         };
         AnyAnswers: {
-            [key: string]: string | number | boolean | string[] | {
-                [key: string]: string | string[];
-            };
+            [key: string]: string | number | boolean | string[] | ({
+                [key: string]: string;
+            } | {
+                [key: string]: string[];
+            });
         };
         ExternalRef: {
             namespace: string;

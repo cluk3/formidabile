@@ -22251,23 +22251,29 @@
               }
             },
             {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "anyOf": [
-                  {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "propertyNames": {
                     "type": "string"
                   },
-                  {
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   }
-                ]
-              }
+                }
+              ]
             }
           ]
         }
