@@ -48,6 +48,16 @@ const newConfig = {
   time_of_day: () => ({}),
   date_time: () => ({}),
   date_range: () => ({}),
+  address: () => ({
+    lines: {
+      line1: { shown: true, required: false },
+      line2: { shown: true, required: false },
+      city: { shown: true, required: false },
+      region: { shown: true, required: false },
+      postalCode: { shown: true, required: false },
+      country: { shown: true, required: false },
+    },
+  }),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],

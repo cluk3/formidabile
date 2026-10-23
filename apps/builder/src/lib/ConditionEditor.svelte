@@ -1,6 +1,8 @@
 <script lang="ts">
   import {
+    applicableOperators,
     conditionOperators,
+    countryCodes,
     type Condition,
     type ConditionOperator,
     type QuestionSnapshot,
@@ -71,7 +73,17 @@
     ends_before: "ends before",
     ends_on: "ends on",
     ends_after: "ends after",
+    country_is_any_of: "country is any of",
+    country_is_none_of: "country is none of",
   };
+
+  const offered = (question: QuestionSnapshot) =>
+    applicableOperators(question.type, question.config);
+
+  const regionNames = () =>
+    new Intl.DisplayNames([document.documentElement.lang || navigator.language || "en"], {
+      type: "region",
+    });
 
   const isLeaf = (value: Node): value is Leaf => "questionId" in value;
 
@@ -81,6 +93,14 @@
     question.type === "single_choice" || question.type === "multiple_choice"
       ? question.config.options
       : [];
+
+  const valuesOf = (question: QuestionSnapshot, operator: ConditionOperator | undefined) => {
+    if (operator?.countries) {
+      const names = regionNames();
+      return countryCodes.map((code) => ({ value: code, label: names.of(code) ?? code }));
+    }
+    return choiceOptions(question);
+  };
 
   const initialConstant = (
     operator: ConditionOperator,
@@ -96,7 +116,9 @@
       return typeof keep === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(keep)
         ? { constant: keep }
         : {};
-    const values = new Set(choiceOptions(question).map((option) => option.value));
+    const values = new Set(
+      operator.countries ? countryCodes : choiceOptions(question).map((option) => option.value),
+    );
     const kept = Array.isArray(keep)
       ? keep.filter((item): item is string => typeof item === "string" && values.has(item))
       : [];
@@ -105,7 +127,7 @@
 
   const blank = (): Leaf => {
     const question = earlier[0]!;
-    const operator = conditionOperators[question.type][0]!;
+    const operator = offered(question)[0]!;
     return {
       questionId: question.id,
       operator: operator.id,
@@ -122,7 +144,7 @@
   const chooseQuestion = (leaf: Leaf, questionId: string, change: Change) => {
     const question = earlier.find((item) => item.id === questionId);
     if (question === undefined) return;
-    const available = conditionOperators[question.type];
+    const available = offered(question);
     const operator = available.find((item) => item.id === leaf.operator) ?? available[0]!;
     change({
       ...leafBase(leaf),
@@ -138,7 +160,7 @@
 
   const chooseOperator = (leaf: Leaf, operatorId: string, change: Change) => {
     const question = earlier.find((item) => item.id === leaf.questionId);
-    const operator = (question === undefined ? [] : conditionOperators[question.type]).find(
+    const operator = (question === undefined ? [] : offered(question)).find(
       (item) => item.id === operatorId,
     );
     if (operator === undefined || question === undefined) return;
@@ -164,12 +186,17 @@
     const current = new Set(Array.isArray(leaf.constant) ? leaf.constant : []);
     if (checked) current.add(value);
     else current.delete(value);
+    const operator =
+      question === undefined
+        ? undefined
+        : conditionOperators[question.type].find((item) => item.id === leaf.operator);
     const ordered =
       question === undefined
         ? [...current]
-        : choiceOptions(question)
-            .map((option) => option.value)
-            .filter((item) => current.has(item));
+        : (operator?.countries
+            ? countryCodes
+            : choiceOptions(question).map((option) => option.value)
+          ).filter((item) => current.has(item));
     setConstant(leaf, ordered, change);
   };
 
@@ -243,7 +270,7 @@
     {#if currentNode !== undefined && isLeaf(currentNode)}
       {@const leaf = currentNode}
       {@const question = earlier.find((item) => item.id === leaf.questionId)}
-      {@const operators = question === undefined ? [] : conditionOperators[question.type]}
+      {@const operators = question === undefined ? [] : offered(question)}
       {@const active = operators.find((operator) => operator.id === leaf.operator)}
       <div class={fieldClass}>
         <label for="{key}-question">Question</label>
@@ -280,7 +307,7 @@
       {#if active?.constant === "strings" && question !== undefined}
         <fieldset class="flex flex-col gap-1">
           <legend class="text-sm font-medium">Values</legend>
-          {#each choiceOptions(question) as option (option.value)}
+          {#each valuesOf(question, active) as option (option.value)}
             <label class={checkClass}>
               <input
                 type="checkbox"

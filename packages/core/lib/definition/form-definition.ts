@@ -21,6 +21,7 @@ import { text } from "./types/text.ts";
 import { url } from "./types/url.ts";
 import { timeOfDay } from "./types/time-of-day.ts";
 import { dateTime } from "./types/date-time.ts";
+import { address } from "./types/address.ts";
 
 export const QuestionSnapshot = z.discriminatedUnion("type", [
   text.snapshot,
@@ -35,6 +36,7 @@ export const QuestionSnapshot = z.discriminatedUnion("type", [
   timeOfDay.snapshot,
   dateTime.snapshot,
   dateRange.snapshot,
+  address.snapshot,
 ]);
 export type QuestionSnapshot = z.output<typeof QuestionSnapshot>;
 export type QuestionTypeName = QuestionSnapshot["type"];
@@ -217,6 +219,7 @@ export const questionTypes = {
   time_of_day: timeOfDay,
   date_time: dateTime,
   date_range: dateRange,
+  address,
 } satisfies {
   [T in QuestionTypeName]: QuestionType<QuestionSnapshotOf<T>, unknown>;
 };

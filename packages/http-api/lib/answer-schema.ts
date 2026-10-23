@@ -52,6 +52,8 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
         ...(max === undefined ? {} : { "x-fb-maxDate": max }),
       };
     }
+    case "address":
+      return { minProperties: 1 };
     default:
       return {};
   }

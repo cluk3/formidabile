@@ -244,6 +244,36 @@ const cases: {
       { start: "2026-04-30", end: "2026-05-02" },
     ],
   },
+  {
+    type: "address",
+    config: {
+      lines: {
+        line1: { shown: true, required: true },
+        line2: { shown: false, required: false },
+        city: { shown: true, required: false },
+        region: { shown: false, required: false },
+        postalCode: { shown: false, required: false },
+        country: { shown: true, required: true },
+      },
+    },
+    accepts: [
+      [
+        { line1: "1 High Street", country: "GB" },
+        { line1: "1 High Street", country: "GB" },
+      ],
+      [
+        { line1: "  1 High Street  ", city: " Leeds ", country: "GB" },
+        { line1: "1 High Street", city: "Leeds", country: "GB" },
+      ],
+    ],
+    rejects: [
+      { line1: "1 High Street" },
+      { country: "GB" },
+      { line1: "1 High Street", country: "ZZ" },
+      { line1: "1 High Street", country: "GB", line2: "Flat 2" },
+      "1 High Street, GB",
+    ],
+  },
 ];
 
 describe("buildAnswerSchema", () => {

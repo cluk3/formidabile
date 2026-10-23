@@ -1,6 +1,7 @@
 import type { QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 import type { Component } from "svelte";
 import type { DraftOf } from "./drafts.ts";
+import AddressInput from "./inputs/AddressInput.svelte";
 import BooleanInput from "./inputs/BooleanInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
 import DateTimeInput from "./inputs/DateTimeInput.svelte";
@@ -43,4 +44,5 @@ export const inputs = {
   time_of_day: TimeInput,
   date_time: DateTimeInput,
   date_range: DateRangeInput,
+  address: AddressInput,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

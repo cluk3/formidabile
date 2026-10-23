@@ -185,6 +185,7 @@ const QuestionTypeName = Schema.Literals([
   "time_of_day",
   "date_time",
   "date_range",
+  "address",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -236,6 +237,7 @@ export const AnalyticsSummary = Schema.Union([
       "time_of_day",
       "date_time",
       "date_range",
+      "address",
     ]),
   }),
 ]).annotate({ identifier: "AnalyticsSummary" });

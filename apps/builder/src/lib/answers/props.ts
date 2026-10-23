@@ -1,4 +1,4 @@
-import type { QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
+import type { AddressLine, QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 
 /** The value each question type's answer schema accepts. */
 type AnswerValue = {
@@ -14,6 +14,7 @@ type AnswerValue = {
   time_of_day: string;
   date_time: string;
   date_range: { start: string; end: string };
+  address: { [K in AddressLine]?: string };
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */

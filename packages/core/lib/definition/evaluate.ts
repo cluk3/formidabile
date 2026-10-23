@@ -1,4 +1,5 @@
 import type { Condition } from "./condition.ts";
+import { isCountryCode } from "./countries.ts";
 import { constantFits, operatorById, optionValues, questionTypeHasRows } from "./operators.ts";
 
 type Node =
@@ -38,6 +39,9 @@ const present = (value: unknown): boolean =>
   Array.isArray(value) ||
   (typeof value === "object" && value !== null);
 
+const namesUnknownCountry = (constant: unknown): boolean =>
+  !Array.isArray(constant) || constant.some((value) => !isCountryCode(value));
+
 const namesMissingOption = (question: EvalQuestion, constant: unknown): boolean => {
   const values = optionValues(question.config);
   return (
@@ -68,10 +72,11 @@ const holdsNode = (node: Node, state: EvalState): boolean => {
   if (node.row !== undefined && !questionTypeHasRows(question.type))
     return node.operator === "is_not_answered";
 
-  const operator = operatorById(question.type, node.operator);
+  const operator = operatorById(question.type, node.operator, question.config);
   if (operator === undefined) return false;
   if (!constantFits(operator, node.constant)) return false;
   if (operator.options && namesMissingOption(question, node.constant)) return false;
+  if (operator.countries && namesUnknownCountry(node.constant)) return false;
 
   const value = state.shown.has(question.id) ? state.answers[question.id] : undefined;
   if (!present(value)) return operator.id === "is_not_answered";
