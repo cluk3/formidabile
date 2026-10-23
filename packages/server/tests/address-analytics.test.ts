@@ -25,6 +25,7 @@ const counts = (input: Partial<AnalyticsCounts> & Pick<AnalyticsCounts, "version
   mergeAnalytics({
     formId: "form",
     answered: [],
+    shown: [],
     choices: [],
     numbers: [],
     combinedNumbers: [],
@@ -45,13 +46,16 @@ describe("address analytics", () => {
         },
       ],
       answered: [{ versionId: "version-1", questionId: homeId, count: 1 }],
+      shown: [{ versionId: "version-1", questionId: homeId, count: 4 }],
     });
 
     const question = analytics.questions.find((item) => item.questionId === homeId);
     expect(question?.combined).toEqual({
       responses: 4,
+      shown: 4,
       answered: 1,
       skipped: 3,
+      notShown: 0,
       absentResponses: 0,
       summary: { type: "address" },
     });
@@ -60,8 +64,10 @@ describe("address analytics", () => {
         version: 1,
         present: true,
         responses: 4,
+        shown: 4,
         answered: 1,
         skipped: 3,
+        notShown: 0,
         summary: { type: "address" },
         constraints: null,
       },
