@@ -41,6 +41,7 @@ const newConfig = {
   single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
+  phone: () => ({}),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],

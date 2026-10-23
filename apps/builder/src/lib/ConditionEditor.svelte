@@ -59,6 +59,8 @@
     is_no: "is no",
     is_answered: "is answered",
     is_not_answered: "is not answered",
+    starts_with: "starts with",
+    does_not_start_with: "does not start with",
   };
 
   const isLeaf = (value: Node): value is Leaf => "questionId" in value;
