@@ -197,7 +197,7 @@ const ChoiceSummary = Schema.Struct({
   ),
 });
 
-/** Tagged by the question's type. Text, email and date questions report only answered and skipped counts. */
+/** Tagged by the question's type. Text, email and date questions have no breakdown beyond the counts. */
 export const AnalyticsSummary = Schema.Union([
   ChoiceSummary,
   Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
@@ -248,8 +248,13 @@ const VersionAnalytics = Schema.Union([
     version: Schema.Int,
     present: Schema.Literal(true),
     responses: Count,
+    /** Responses whose stored path includes the question. */
+    shown: Count,
     answered: Count,
+    /** Shown minus answered. */
     skipped: Count,
+    /** Responses minus shown. */
+    notShown: Count,
     summary: AnalyticsSummary,
     constraints: Schema.NullOr(AnalyticsConstraints),
   }),
@@ -264,8 +269,13 @@ export const QuestionAnalytics = Schema.Struct({
   inCurrentVersion: Schema.Boolean,
   combined: Schema.Struct({
     responses: Count,
+    /** Responses whose stored path includes the question. */
+    shown: Count,
     answered: Count,
+    /** Shown minus answered. */
     skipped: Count,
+    /** Responses minus shown. */
+    notShown: Count,
     /** The responses of versions without the question. */
     absentResponses: Count,
     summary: AnalyticsSummary,
