@@ -50,12 +50,7 @@ const cases: ReadonlyArray<{
   { name: "IPv6", value: "http://[::1]/", accepted: true },
   { name: "a non-ASCII host", value: "https://münchen.de/ä", accepted: true },
   { name: "2,048 code points", value: within, accepted: true },
-  {
-    name: "2,048 code points in more UTF-16 units",
-    value: withEmoji,
-    accepted: true,
-    browser: false,
-  },
+  { name: "2,048 code points in more UTF-16 units", value: withEmoji, accepted: true },
   { name: "2,049 code points", value: beyond, accepted: false },
   { name: "surrounding spaces", value: "  https://example.com  ", accepted: true, browser: false },
   {
@@ -107,6 +102,7 @@ describe("the URL answer schema", () => {
 
     const ajv = new Ajv2020({ allErrors: true });
     formats.default(ajv);
+    ajv.addVocabulary(["x-fb-authoritative", "x-fb-minDate", "x-fb-maxDate"]);
     const browser = ajv.compile(data!);
     const server = parseDefinition(definition);
     if (!server.ok) throw new Error("The test definition doesn't parse");
