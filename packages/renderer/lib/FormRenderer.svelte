@@ -128,7 +128,7 @@
    */
   let headingFocus = $state(0);
   let announcedPage = "";
-  const controls = "input, select, textarea";
+  const controls = "input, select, textarea, button";
 
   const stop = (code: ProblemCode) => {
     loaded = { state: "stopped", code };

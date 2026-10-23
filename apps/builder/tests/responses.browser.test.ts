@@ -291,10 +291,22 @@ test("an opened response reads as its own version's questions and answers, not t
       },
     },
     { id: crypto.randomUUID(), type: "boolean", label: "Ready?", required: true, config: {} },
+    {
+      id: crypto.randomUUID(),
+      type: "ranking",
+      label: "Priorities",
+      required: true,
+      config: {
+        options: [
+          { value: "o-a", label: "Alpha" },
+          { value: "o-b", label: "Beta" },
+        ],
+      },
+    },
     textQuestion("Comments"),
   ]);
   const v2 = version(2, [{ ...name, label: "Full name" }]);
-  const [, email, age, born, , toppings, ready] = v1.definition.questions;
+  const [, email, age, born, , toppings, ready, priorities] = v1.definition.questions;
   const answered = response(v1, "alice", {
     [name.id]: "Ada",
     [email!.id]: "ada@example.com",
@@ -303,6 +315,7 @@ test("an opened response reads as its own version's questions and answers, not t
     [colour.id]: "o-blue",
     [toppings!.id]: ["o-ham", "o-oil"],
     [ready!.id]: true,
+    [priorities!.id]: ["o-b", "o-a"],
   });
   const host = responsesHost([v1, v2], [answered, response(v2, "bob")]);
   const screen = await renderPage(host.fetch);
@@ -328,6 +341,10 @@ test("an opened response reads as its own version's questions and answers, not t
   const picked = answerTo("Toppings").getByRole("listitem");
   expect(picked.elements().map((li) => li.textContent?.trim())).toEqual(["Ham, smoked", "Oil"]);
   await expect.element(answerTo("Ready?")).toHaveTextContent("Yes");
+  expect(answerTo("Priorities").getByRole("listitem").elements().map((li) => li.textContent?.trim())).toEqual([
+    "1. Beta",
+    "2. Alpha",
+  ]);
   await expect.element(answerTo("Comments")).toHaveTextContent("Skipped");
   expect(detail.getByRole("textbox").elements()).toEqual([]);
   expect(detail.getByRole("button", { name: "Submit" }).elements()).toEqual([]);

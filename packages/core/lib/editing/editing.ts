@@ -9,6 +9,7 @@ import {
   type QuestionSnapshotOf,
   type QuestionTypeName,
 } from "../definition/form-definition.ts";
+import { RANKING_OPTIONS_MAX } from "../definition/operators.ts";
 import { OPTIONS_CAP } from "../definition/types/choice-options.ts";
 
 /**
@@ -41,6 +42,7 @@ const newConfig = {
   single_choice: (kept, ids) => ({ options: optionsFrom(kept, 2, ids), display: "radio" }),
   multiple_choice: (kept, ids) => ({ options: optionsFrom(kept, 1, ids) }),
   boolean: () => ({}),
+  ranking: (kept, ids) => ({ options: optionsFrom(kept, 2, ids) }),
 } satisfies {
   [T in QuestionTypeName]: (
     kept: readonly ChoiceOption[],
@@ -200,14 +202,17 @@ const sameQuestions = (left: readonly QuestionSnapshot[], right: readonly Questi
 const replaceOptions = <D extends FormDefinition>(
   definition: D,
   questionId: string,
-  replace: (options: ChoiceOption[]) => ChoiceOption[],
+  replace: (
+    options: ChoiceOption[],
+    question: QuestionSnapshotOf<"single_choice" | "multiple_choice" | "ranking">,
+  ) => ChoiceOption[],
 ): D =>
   replaceQuestion(definition, questionId, (q) => {
-    if (q.type !== "single_choice" && q.type !== "multiple_choice")
+    if (q.type !== "single_choice" && q.type !== "multiple_choice" && q.type !== "ranking")
       throw new RangeError(`Question ${questionId} has no options`);
     return {
       ...q,
-      config: { ...q.config, options: replace(q.config.options) },
+      config: { ...q.config, options: replace(q.config.options, q) },
     } as QuestionSnapshot;
   });
 
@@ -220,9 +225,14 @@ export const addOption = <D extends FormDefinition>(
   questionId: string,
   ids: IdSource,
 ): D =>
-  replaceOptions(definition, questionId, (options) => {
-    if (options.length >= OPTIONS_CAP)
-      throw new RangeError(`A question has at most ${OPTIONS_CAP} options`);
+  replaceOptions(definition, questionId, (options, question) => {
+    const cap = question.type === "ranking" ? RANKING_OPTIONS_MAX : OPTIONS_CAP;
+    if (options.length >= cap)
+      throw new RangeError(
+        question.type === "ranking"
+          ? `A ranking has at most ${RANKING_OPTIONS_MAX} options`
+          : `A question has at most ${OPTIONS_CAP} options`,
+      );
     return optionsFrom(options, options.length + 1, ids);
   });
 

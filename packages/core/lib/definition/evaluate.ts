@@ -1,5 +1,11 @@
 import type { Condition } from "./condition.ts";
-import { constantFits, operatorById, optionValues, questionTypeHasRows } from "./operators.ts";
+import {
+  constantFits,
+  operatorById,
+  optionValues,
+  questionTypeHasRows,
+  rankConstant,
+} from "./operators.ts";
 
 type Node =
   | {
@@ -69,6 +75,11 @@ const holdsNode = (node: Node, state: EvalState): boolean => {
   const operator = operatorById(question.type, node.operator);
   if (operator === undefined) return false;
   if (!constantFits(operator, node.constant)) return false;
+  if (operator.constant === "rank") {
+    const rank = rankConstant(node.constant);
+    // A named option the question no longer has reads as unanswered: the operator does not hold.
+    if (rank === undefined || !optionValues(question.config).has(rank.value)) return false;
+  }
   if (operator.options && namesMissingOption(question, node.constant)) return false;
 
   const value = state.shown.has(question.id) ? state.answers[question.id] : undefined;

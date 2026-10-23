@@ -4,6 +4,7 @@ import {
   type FormDefinition,
   type Issue,
   type QuestionSnapshot,
+  type QuestionSnapshotOf,
   type QuestionTypeName,
 } from "@fb/core/definition";
 
@@ -16,6 +17,7 @@ type Drafts = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  ranking: string[];
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -34,7 +36,15 @@ const answerOf = {
   single_choice: unlessBlank,
   multiple_choice: (draft) => (draft === undefined || draft.length === 0 ? undefined : draft),
   boolean: (draft) => draft,
-} satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
+  ranking: (draft, question) => {
+    if (draft === undefined) return undefined;
+    const expected = question.config.options.map((option) => option.value);
+    if (draft.length !== expected.length || new Set(draft).size !== draft.length) return undefined;
+    return draft.every((value) => expected.includes(value)) ? draft : undefined;
+  },
+} satisfies {
+  [T in QuestionTypeName]: (draft: DraftOf<T>, question: QuestionSnapshotOf<T>) => Answer | undefined;
+};
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
 
@@ -47,6 +57,10 @@ const draftOf = {
   single_choice: stringDraft,
   multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
   boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+  ranking: (answer) =>
+    Array.isArray(answer) && answer.every((item) => typeof item === "string")
+      ? [...answer]
+      : undefined,
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */
@@ -85,9 +99,9 @@ export const answersFromDrafts = (
 ): Answers => {
   const answers: Answers = {};
   for (const question of questionsOf(definition)) {
-    const answer = (answerOf[question.type] as (draft: Draft) => Answer | undefined)(
-      drafts[question.id],
-    );
+    const answer = (
+      answerOf[question.type] as (draft: Draft, question: QuestionSnapshot) => Answer | undefined
+    )(drafts[question.id], question);
     if (answer !== undefined) answers[question.id] = answer;
   }
   return answers;

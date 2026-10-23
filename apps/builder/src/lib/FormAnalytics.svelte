@@ -89,6 +89,39 @@
         versions that offered the option, so the shares don't add up to 100%.
       </p>
     {/if}
+  {:else if summary.type === "ranking"}
+    <table class={tableClass}>
+      <caption class={captionClass}>All versions</caption>
+      <thead>
+        <tr>
+          <th>Option</th><th>Mean position</th><th>First place</th><th>Share of first</th><th
+            >Offered in</th
+          >
+        </tr>
+      </thead>
+      <tbody>
+        {#each summary.options as option (option.value)}
+          <tr>
+            <th scope="row" class="font-normal">{option.label}</th>
+            <td>{numberText(option.meanPosition)}</td>
+            <td>{option.firstPlace}</td>
+            <td>{@render bar(share(option.firstPlace, option.base))}</td>
+            <td>
+              {versionsText(option.offeredIn)}
+              {#if option.otherLabels.length > 0}
+                ({otherLabelsText(option.otherLabels)})
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    {#if !offeredEverywhere(summary.options)}
+      <p class="text-sm text-muted-foreground">
+        Some options weren't offered in every version. Each mean counts only the answers from
+        versions that offered the option.
+      </p>
+    {/if}
   {:else if summary.type === "boolean"}
     {@const answered = summary.trueCount + summary.falseCount}
     <table class={tableClass}>

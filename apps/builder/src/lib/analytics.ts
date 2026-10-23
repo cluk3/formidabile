@@ -46,6 +46,13 @@ export const resultText = (summary: Summary) => {
       return summary.options.map((option) => `${option.label}: ${option.count}`).join(" · ");
     case "boolean":
       return `Yes: ${summary.trueCount} · No: ${summary.falseCount}`;
+    case "ranking":
+      return summary.options
+        .map(
+          (option) =>
+            `${option.label}: mean ${numberText(option.meanPosition)}, first ${option.firstPlace}`,
+        )
+        .join(" · ");
     case "number": {
       const stats =
         summary.count === 0

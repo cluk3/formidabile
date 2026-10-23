@@ -129,6 +129,37 @@ export const numbersCombined = (db: Db, tenant: TenantId, formId: string) => {
     .groupBy(rows.questionId);
 };
 
+/**
+ * Sum of 1-based places, and first-place counts, for each option in a ranking answer.
+ * Only ranking rows are expanded: `jsonb_array_elements_text` errors on a scalar.
+ */
+export const rankingPositions = (db: Db, tenant: TenantId, formId: string) => {
+  const rows = formAnswers(db, tenant, formId);
+  const placed = db
+    .select({
+      versionId: rows.versionId,
+      questionId: rows.questionId,
+      value: sql<string>`item.value`.as("value"),
+      ordinality: sql<number>`item.ordinality::int`.as("ordinality"),
+    })
+    .from(rows)
+    .crossJoinLateral(
+      sql`jsonb_array_elements_text(${rows.value}) with ordinality as item(value, ordinality)`,
+    )
+    .where(eq(rows.type, "ranking"))
+    .as("placed");
+  return db
+    .select({
+      versionId: placed.versionId,
+      questionId: placed.questionId,
+      value: placed.value,
+      positionSum: sql<number>`sum(${placed.ordinality})::float8`,
+      firstPlace: sql<number>`count(*) filter (where ${placed.ordinality} = 1)::int`,
+    })
+    .from(placed)
+    .groupBy(placed.versionId, placed.questionId, placed.value);
+};
+
 /** Promoter, passive and detractor counts for every number question. The merge drops non-NPS versions. */
 export const npsCounts = (db: Db, tenant: TenantId, formId: string) => {
   const rows = formAnswers(db, tenant, formId);

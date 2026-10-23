@@ -12,6 +12,7 @@ import {
   numbersCombined,
   numbersPerVersion,
   optionCounts,
+  rankingPositions,
   responsesPerVersion,
   valueCounts,
 } from "./queries.ts";
@@ -62,6 +63,7 @@ export class Analytics extends Context.Service<
                   const numbers = yield* numbersPerVersion(tx, tenant, formId);
                   const combinedNumbers = yield* numbersCombined(tx, tenant, formId);
                   const nps = yield* npsCounts(tx, tenant, formId);
+                  const rankings = yield* rankingPositions(tx, tenant, formId);
                   return mergeAnalytics({
                     formId,
                     versions,
@@ -70,6 +72,7 @@ export class Analytics extends Context.Service<
                     numbers,
                     combinedNumbers,
                     nps,
+                    rankings,
                   });
                 }),
               // One snapshot for every query, so concurrent submissions and edits can't make `answered`

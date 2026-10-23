@@ -180,6 +180,7 @@ const QuestionTypeName = Schema.Literals([
   "single_choice",
   "multiple_choice",
   "boolean",
+  "ranking",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -222,6 +223,23 @@ export const AnalyticsSummary = Schema.Union([
     ),
   }),
   Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
+  Schema.Struct({
+    type: Schema.Literal("ranking"),
+    options: Schema.Array(
+      Schema.Struct({
+        value: Schema.String,
+        label: Schema.String,
+        otherLabels: OtherLabels,
+        /** Mean 1-based place. Null when no answered response offered the option. */
+        meanPosition: Schema.NullOr(Schema.Finite),
+        /** How often the option was placed first. */
+        firstPlace: Count,
+        /** Answered responses of the versions that offered the option. */
+        base: Count,
+        offeredIn: VersionNumbers,
+      }),
+    ),
+  }),
 ]).annotate({ identifier: "AnalyticsSummary" });
 export type AnalyticsSummary = typeof AnalyticsSummary.Type;
 

@@ -5,14 +5,16 @@
     type ConditionOperator,
     type QuestionSnapshot,
   } from "@fb/core/definition";
+  import { RANKING_OPTIONS_MAX } from "@fb/core/editing";
   import { Button } from "#lib/components/ui/button/index.js";
   import { checkClass, fieldClass, nativeInputClass } from "#lib/fields.ts";
 
   /** A condition node. Nested groups share this shape; the root value is a {@link Condition}. */
+  type RankConstant = { value: string; n: number };
   type Leaf = {
     questionId: string;
     operator: string;
-    constant?: string | number | string[];
+    constant?: string | number | string[] | RankConstant;
     row?: string;
   };
   type Node = Leaf | { all: Node[] } | { any: Node[] };
@@ -59,6 +61,8 @@
     is_no: "is no",
     is_answered: "is answered",
     is_not_answered: "is not answered",
+    ranks_in_top: "ranks in the top",
+    does_not_rank_in_top: "does not rank in the top",
   };
 
   const isLeaf = (value: Node): value is Leaf => "questionId" in value;
@@ -66,7 +70,9 @@
   const choiceOptions = (
     question: QuestionSnapshot,
   ): readonly { readonly value: string; readonly label: string }[] =>
-    question.type === "single_choice" || question.type === "multiple_choice"
+    question.type === "single_choice" ||
+    question.type === "multiple_choice" ||
+    question.type === "ranking"
       ? question.config.options
       : [];
 
@@ -74,11 +80,34 @@
     operator: ConditionOperator,
     question: QuestionSnapshot,
     keep: unknown,
-  ): { constant?: string | number | string[] } => {
+  ): { constant?: string | number | string[] | RankConstant } => {
     if (operator.constant === "none") return {};
     if (operator.constant === "string") return { constant: typeof keep === "string" ? keep : "" };
     if (operator.constant === "number") return typeof keep === "number" ? { constant: keep } : {};
     if (operator.constant === "date") return typeof keep === "string" ? { constant: keep } : {};
+    if (operator.constant === "rank") {
+      const options = choiceOptions(question);
+      const kept =
+        typeof keep === "object" &&
+        keep !== null &&
+        !Array.isArray(keep) &&
+        "value" in keep &&
+        "n" in keep
+          ? keep
+          : undefined;
+      const value = options.some((option) => option.value === kept?.value)
+        ? kept.value
+        : options[0]?.value;
+      const n =
+        kept !== undefined &&
+        typeof kept.n === "number" &&
+        Number.isInteger(kept.n) &&
+        kept.n >= 1 &&
+        kept.n <= RANKING_OPTIONS_MAX
+          ? kept.n
+          : 1;
+      return value === undefined ? {} : { constant: { value, n } };
+    }
     const values = new Set(choiceOptions(question).map((option) => option.value));
     const kept = Array.isArray(keep)
       ? keep.filter((item): item is string => typeof item === "string" && values.has(item))
@@ -134,7 +163,7 @@
 
   const setConstant = (
     leaf: Leaf,
-    constant: string | number | string[] | undefined,
+    constant: string | number | string[] | RankConstant | undefined,
     change: Change,
   ) =>
     change({
@@ -270,7 +299,47 @@
             </label>
           {/each}
         </fieldset>
-      {:else if active !== undefined && active.constant !== "none" && active.constant !== "strings"}
+      {:else if active?.constant === "rank" && question !== undefined}
+        {@const rank =
+          typeof leaf.constant === "object" && leaf.constant !== null && !Array.isArray(leaf.constant)
+            ? leaf.constant
+            : { value: choiceOptions(question)[0]?.value ?? "", n: 1 }}
+        <div class={fieldClass}>
+          <label for="{key}-option">Option</label>
+          <select
+            id="{key}-option"
+            class={nativeInputClass}
+            value={rank.value}
+            onchange={(event) =>
+              setConstant(leaf, { value: event.currentTarget.value, n: rank.n }, change)}
+          >
+            {#each choiceOptions(question) as option (option.value)}
+              <option value={option.value}>{option.label.trim() || option.value}</option>
+            {/each}
+          </select>
+        </div>
+        <label class={fieldClass}>
+          In the top
+          <input
+            class={nativeInputClass}
+            type="number"
+            min="1"
+            max={RANKING_OPTIONS_MAX}
+            aria-label="Top N"
+            value={String(rank.n)}
+            oninput={(event) => {
+              const n = Number(event.currentTarget.value);
+              setConstant(
+                leaf,
+                Number.isInteger(n) && n >= 1 && n <= RANKING_OPTIONS_MAX
+                  ? { value: rank.value, n }
+                  : undefined,
+                change,
+              );
+            }}
+          />
+        </label>
+      {:else if active !== undefined && active.constant !== "none" && active.constant !== "strings" && active.constant !== "rank"}
         <label class={fieldClass}>
           Value
           {#if active.constant === "number"}

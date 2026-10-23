@@ -1,5 +1,24 @@
-/** What a leaf compares an answer with. `date` is an ISO calendar day; `strings` is an option-value list. */
-export type ConstantKind = "none" | "string" | "number" | "date" | "strings";
+/**
+ * What a leaf compares an answer with. `date` is an ISO calendar day; `strings` is an option-value list.
+ * `rank` is an option value and a top-N bound, `{ value, n }`.
+ */
+export type ConstantKind = "none" | "string" | "number" | "date" | "strings" | "rank";
+
+/** A ranking lists at most this many options, so "top N" stops there (ADR-018). */
+export const RANKING_OPTIONS_MAX = 20;
+
+/** `{ value, n }` with N from 1 to {@link RANKING_OPTIONS_MAX}. Anything else is not a rank constant. */
+export const rankConstant = (
+  constant: unknown,
+): { readonly value: string; readonly n: number } | undefined => {
+  if (typeof constant !== "object" || constant === null) return undefined;
+  if (!("value" in constant) || !("n" in constant)) return undefined;
+  const { value, n } = constant;
+  if (typeof value !== "string" || value.length < 1 || value.length > 64) return undefined;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > RANKING_OPTIONS_MAX)
+    return undefined;
+  return { value, n };
+};
 
 /**
  * One operator a question type accepts. A later question type registers its row by appending one entry
@@ -206,6 +225,30 @@ const booleanOperators = [
   define("is_no", "none", (answer) => answer === false),
 ];
 
+/** 1-based place of `value` in a ranking, when the answer actually lists it. */
+const rankPosition = (
+  answer: unknown,
+  constant: unknown,
+): { readonly index: number; readonly n: number } | undefined => {
+  const ranking = stringList(answer);
+  const rank = rankConstant(constant);
+  if (ranking === undefined || rank === undefined) return undefined;
+  const index = ranking.indexOf(rank.value);
+  return index < 0 ? undefined : { index, n: rank.n };
+};
+
+const rankingOperators = [
+  define("ranks_in_top", "rank", (answer, constant) => {
+    const at = rankPosition(answer, constant);
+    // Place 1 is index 0, so the top N is every index below N.
+    return at !== undefined && at.index < at.n;
+  }),
+  define("does_not_rank_in_top", "rank", (answer, constant) => {
+    const at = rankPosition(answer, constant);
+    return at !== undefined && at.index >= at.n;
+  }),
+];
+
 /** Present on every type. `matches` runs only after the evaluator has decided the question was answered. */
 const presence = [
   define("is_answered", "none", () => true),
@@ -226,6 +269,7 @@ export const conditionOperators = {
   single_choice: withPresence(singleOperators),
   multiple_choice: withPresence(multipleOperators),
   boolean: withPresence(booleanOperators),
+  ranking: withPresence(rankingOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -259,6 +303,8 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
         constant.length <= ANY_OF_CAP &&
         constant.every((value) => typeof value === "string")
       );
+    case "rank":
+      return rankConstant(constant) !== undefined;
   }
 };
 

@@ -1,5 +1,11 @@
 import type { Condition } from "./condition.ts";
-import { constantFits, operatorById, optionValues, questionTypeHasRows } from "./operators.ts";
+import {
+  constantFits,
+  operatorById,
+  optionValues,
+  questionTypeHasRows,
+  rankConstant,
+} from "./operators.ts";
 import type { Issue } from "./question-type.ts";
 
 type Node =
@@ -135,6 +141,10 @@ const walk = (
     issues.push({ path: [...path, "constant"], message: NEEDS_CONSTANT });
   } else if (!constantFits(operator, node.constant)) {
     issues.push({ path: [...path, "constant"], message: CONSTANT });
+  } else if (operator.constant === "rank") {
+    const rank = rankConstant(node.constant);
+    if (rank !== undefined && !optionValues(question.config).has(rank.value))
+      issues.push({ path: [...path, "constant", "value"], message: OPTION });
   } else if (operator.options && Array.isArray(node.constant)) {
     const values = optionValues(question.config);
     node.constant.forEach((value, index) => {

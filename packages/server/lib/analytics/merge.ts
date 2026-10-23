@@ -66,6 +66,14 @@ export interface AnalyticsCounts {
     readonly passives: number;
     readonly detractors: number;
   }>;
+  /** Sum of 1-based places and first-place counts, per version, question and option. */
+  readonly rankings: ReadonlyArray<{
+    readonly versionId: string;
+    readonly questionId: string;
+    readonly value: string;
+    readonly positionSum: number;
+    readonly firstPlace: number;
+  }>;
 }
 
 const noNumbers: NumberAggregate = { count: 0, min: null, max: null, mean: null, median: null };
@@ -135,6 +143,16 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   const numbers = new Map(counts.numbers.map((row) => [key(row.versionId, row.questionId), row]));
   const combinedNumbers = new Map(counts.combinedNumbers.map((row) => [row.questionId, row]));
   const nps = new Map(counts.nps.map((row) => [key(row.versionId, row.questionId), row]));
+  const rankings = new Map<string, Map<string, { positionSum: number; firstPlace: number }>>();
+  for (const row of counts.rankings) {
+    const at = key(row.versionId, row.questionId);
+    const values = rankings.get(at) ?? new Map<string, { positionSum: number; firstPlace: number }>();
+    values.set(row.value, {
+      positionSum: Number(row.positionSum),
+      firstPlace: Number(row.firstPlace),
+    });
+    rankings.set(at, values);
+  }
   const choices = new Map<string, Map<string, number>>();
   for (const row of counts.choices) {
     const at = key(row.versionId, row.questionId);
@@ -148,6 +166,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
     readonly responses: number;
     readonly answered: number;
     readonly values: ReadonlyMap<string, number>;
+    readonly ranking: ReadonlyMap<string, { positionSum: number; firstPlace: number }>;
     readonly question: Question;
   }
   const appearances = new Map<string, Array<Appearance<Snapshot>>>();
@@ -163,6 +182,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
           responses: version.responses,
           answered: answered.get(at)?.count ?? 0,
           values: choices.get(at) ?? new Map(),
+          ranking: rankings.get(at) ?? new Map(),
           question,
         },
       });
@@ -192,7 +212,7 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
   /** A version's own choice summary lists only the options it offered. */
   const versionSummary = (
     number: number,
-    { question, answered, values, versionId }: Snapshot,
+    { question, answered, values, versionId, ranking }: Snapshot,
   ): AnalyticsSummary => {
     switch (question.type) {
       case "single_choice":
@@ -221,6 +241,22 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
         const score = npsOf(question, versionId, answered);
         return score === undefined ? summary : { ...summary, nps: score };
       }
+      case "ranking":
+        return {
+          type: "ranking",
+          options: question.config.options.map((option) => {
+            const row = ranking.get(option.value);
+            return {
+              value: option.value,
+              label: option.label,
+              otherLabels: [],
+              meanPosition: answered === 0 ? null : (row?.positionSum ?? 0) / answered,
+              firstPlace: row?.firstPlace ?? 0,
+              base: answered,
+              offeredIn: [number],
+            };
+          }),
+        };
       default:
         return { type: question.type };
     }
@@ -282,6 +318,40 @@ export const mergeAnalytics = (counts: AnalyticsCounts): FormAnalytics => {
             answered,
             score: npsPercent(promoters, detractors, answered),
           },
+        };
+      }
+      case "ranking": {
+        const offers = new Map<
+          string,
+          Array<Appearance<{ label: string; snapshot: Snapshot }>>
+        >();
+        for (const { number, item } of snapshots)
+          if (item.question.type === "ranking")
+            item.question.config.options.forEach((option, position) => {
+              const list = offers.get(option.value) ?? [];
+              list.push({ number, position, item: { label: option.label, snapshot: item } });
+              offers.set(option.value, list);
+            });
+        return {
+          type: "ranking",
+          options: byRecency([...offers]).map(([value, offered]) => {
+            const base = offered.reduce((sum, { item }) => sum + item.snapshot.answered, 0);
+            const positionSum = offered.reduce(
+              (sum, { item }) => sum + (item.snapshot.ranking.get(value)?.positionSum ?? 0),
+              0,
+            );
+            return {
+              value,
+              ...labelling(offered.map(({ number, item }) => ({ number, label: item.label }))),
+              meanPosition: base === 0 ? null : positionSum / base,
+              firstPlace: offered.reduce(
+                (sum, { item }) => sum + (item.snapshot.ranking.get(value)?.firstPlace ?? 0),
+                0,
+              ),
+              base,
+              offeredIn: offered.map(({ number }) => number),
+            };
+          }),
         };
       }
       default:

@@ -11,11 +11,14 @@
     setOptions,
     addOption,
     removeOption,
+    cap = OPTIONS_CAP,
   }: {
     options: readonly Option[];
     setOptions(options: Option[]): void;
     addOption(): void;
     removeOption(value: string): void;
+    /** Defaults to the choice cap. A ranking stops at 20. */
+    cap?: number;
   } = $props();
 </script>
 
@@ -44,7 +47,7 @@
     class="self-start"
     variant="outline"
     size="sm"
-    disabled={options.length >= OPTIONS_CAP}
+    disabled={options.length >= cap}
     onclick={addOption}>Add option</Button
   >
 </fieldset>

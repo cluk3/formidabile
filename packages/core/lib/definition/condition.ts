@@ -1,4 +1,5 @@
 import * as z from "zod/mini";
+import { RANKING_OPTIONS_MAX } from "./operators.ts";
 
 /** ADR-017: a definition holds at most this many leaf conditions, counting show conditions and jumps. */
 export const CONDITIONS_CAP = 1000;
@@ -11,11 +12,18 @@ const ANY_OF_CAP = 100;
  * A constant a condition compares with an answer. Which constant an operator needs, and whether it fits the
  * question, is a publish rule. The shape is what draft save accepts.
  */
+/** An option value and how far down the ranking still counts as the top. */
+const rankConstant = z.strictObject({
+  value: z.string().check(z.minLength(1), z.maxLength(64)),
+  n: z.int().check(z.gte(1), z.lte(RANKING_OPTIONS_MAX)),
+});
+
 const constant = z.union([
   z.string().check(z.maxLength(TEXT_CONSTANT_CAP)),
   z.number(),
   z.boolean(),
   z.array(z.string()).check(z.maxLength(ANY_OF_CAP)),
+  rankConstant,
 ]);
 
 /**

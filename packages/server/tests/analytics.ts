@@ -424,6 +424,96 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
       });
     });
 
+    test("a ranking reports mean position and first place for the versions that offered each option", async () => {
+      const prioritiesId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b1";
+      const priorities = (entries: ReadonlyArray<readonly [string, string]>) => ({
+        id: prioritiesId,
+        type: "ranking",
+        label: "Priorities",
+        required: false,
+        config: { options: entries.map(([value, label]) => ({ value, label })) },
+      });
+      const option = (
+        value: string,
+        label: string,
+        meanPosition: number | null,
+        firstPlace: number,
+        base: number,
+        offeredIn: number[],
+      ) => ({
+        value,
+        label,
+        otherLabels: [],
+        meanPosition,
+        firstPlace,
+        base,
+        offeredIn,
+      });
+      const { result } = await run(
+        Effect.gen(function* () {
+          const { formId, v1 } = yield* openForm(
+            admin,
+            definition([priorities([["a", "Alpha"], ["b", "Beta"], ["c", "Gamma"]])]),
+          );
+          // Places: a 1 then 2, b 2 then 1, c 3 then 3. Carol skips, so the base is 2.
+          yield* submit(respondent("alice"), formId, v1.id, { [prioritiesId]: ["a", "b", "c"] });
+          yield* submit(respondent("bob"), formId, v1.id, { [prioritiesId]: ["b", "a", "c"] });
+          yield* submit(respondent("carol"), formId, v1.id, {});
+          const v2 = yield* publish(
+            formId,
+            definition([priorities([["a", "Alpha"], ["b", "Beta"]])]),
+          );
+          yield* submit(respondent("dave"), formId, v2.id, { [prioritiesId]: ["b", "a"] });
+          yield* submit(respondent("erin"), formId, v2.id, {});
+          return { result: yield* analytics(formId) };
+        }),
+      );
+
+      const view = result.questions.find((question) => question.questionId === prioritiesId)!;
+      expect(view.combined).toMatchObject({ responses: 5, answered: 3, skipped: 2 });
+      expect(view.combined.summary).toEqual({
+        type: "ranking",
+        options: [
+          option("a", "Alpha", 5 / 3, 1, 3, [1, 2]),
+          option("b", "Beta", 4 / 3, 2, 3, [1, 2]),
+          option("c", "Gamma", 3, 0, 2, [1]),
+        ],
+      });
+      expect(view.byVersion).toEqual([
+        {
+          version: 1,
+          present: true,
+          responses: 3,
+          answered: 2,
+          skipped: 1,
+          summary: {
+            type: "ranking",
+            options: [
+              option("a", "Alpha", 1.5, 1, 2, [1]),
+              option("b", "Beta", 1.5, 1, 2, [1]),
+              option("c", "Gamma", 3, 0, 2, [1]),
+            ],
+          },
+          constraints: null,
+        },
+        {
+          version: 2,
+          present: true,
+          responses: 2,
+          answered: 1,
+          skipped: 1,
+          summary: {
+            type: "ranking",
+            options: [
+              option("a", "Alpha", 2, 0, 1, [2]),
+              option("b", "Beta", 1, 1, 1, [2]),
+            ],
+          },
+          constraints: null,
+        },
+      ]);
+    });
+
     test("an analyst with only responses:read gets the analytics", async () => {
       const analyst = Actor.Identified({ ...admin, capabilities: ["responses:read"] });
       const result = await run(

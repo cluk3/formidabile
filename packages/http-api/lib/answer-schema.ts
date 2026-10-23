@@ -24,6 +24,12 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
     }
     case "number":
       return question.config.step === undefined ? {} : { "x-fb-step": question.config.step };
+    case "ranking":
+      return {
+        uniqueItems: true,
+        minItems: question.config.options.length,
+        maxItems: question.config.options.length,
+      };
     default:
       return {};
   }

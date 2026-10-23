@@ -1,4 +1,5 @@
 export { JUMPS_CAP, PAGES_CAP, QUESTIONS_CAP } from "./lib/definition/form-definition.ts";
+export { RANKING_OPTIONS_MAX } from "./lib/definition/operators.ts";
 export { OPTIONS_CAP } from "./lib/definition/types/choice-options.ts";
 export {
   addOption,
