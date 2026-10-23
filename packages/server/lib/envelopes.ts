@@ -151,10 +151,12 @@ export const ResponsePage = Schema.Struct({
 }).annotate({ identifier: "ResponsePage" });
 export type ResponsePage = typeof ResponsePage.Type;
 
-/** A response as an admin reads it: raw answers, with the version it was submitted under. */
+/** A response as an admin reads it: raw answers and the path it was shown, with its version. */
 export const ResponseDetail = Schema.Struct({
   response: Schema.Struct({ ...ResponseSummary.fields, answers: AnswersJson }),
   version: RespondentVersion,
+  /** Question ids the response was shown, in the version's question order (ADR-017). */
+  path: Schema.Array(Schema.String),
 }).annotate({ identifier: "ResponseDetail" });
 export type ResponseDetail = typeof ResponseDetail.Type;
 
@@ -178,6 +180,15 @@ const QuestionTypeName = Schema.Literals([
   "single_choice",
   "multiple_choice",
   "boolean",
+  "ranking",
+  "phone",
+  "url",
+  "time_of_day",
+  "date_time",
+  "date_range",
+  "address",
+  "single_choice_matrix",
+  "multiple_choice_matrix",
 ] satisfies ReadonlyArray<QuestionTypeName>);
 
 /** Each option's share is `count / base`; `base` counts only the versions that offered it. */
@@ -195,11 +206,11 @@ const ChoiceSummary = Schema.Struct({
   ),
 });
 
-/** Tagged by the question's type. Text, email and date questions report only answered and skipped counts. */
+/** Tagged by the question's type. Types with no breakdown (text, email, date, phone and the like) report only the counts. */
 export const AnalyticsSummary = Schema.Union([
   ChoiceSummary,
   Schema.Struct({ type: Schema.Literal("boolean"), trueCount: Count, falseCount: Count }),
-  // All but `count` are null when nothing was answered.
+  // All but `count` are null when nothing was answered. `nps` is set only for the NPS display.
   Schema.Struct({
     type: Schema.Literal("number"),
     count: Count,
@@ -207,8 +218,66 @@ export const AnalyticsSummary = Schema.Union([
     max: Schema.NullOr(Schema.Finite),
     mean: Schema.NullOr(Schema.Finite),
     median: Schema.NullOr(Schema.Finite),
+    nps: Schema.optionalKey(
+      Schema.Struct({
+        promoters: Count,
+        passives: Count,
+        detractors: Count,
+        /** Answered responses of the versions whose snapshot uses the NPS display. */
+        answered: Count,
+        /** Promoters' share minus detractors' share, in percentage points. Null when nobody answered. */
+        score: Schema.NullOr(Schema.Int),
+      }),
+    ),
   }),
-  Schema.Struct({ type: Schema.Literals(["text", "email", "date"]) }),
+  Schema.Struct({
+    type: Schema.Literals([
+      "text",
+      "email",
+      "date",
+      "phone",
+      "url",
+      "time_of_day",
+      "date_time",
+      "date_range",
+      "address",
+    ]),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("ranking"),
+    options: Schema.Array(
+      Schema.Struct({
+        value: Schema.String,
+        label: Schema.String,
+        otherLabels: OtherLabels,
+        /** Mean 1-based place. Null when no answered response offered the option. */
+        meanPosition: Schema.NullOr(Schema.Finite),
+        /** How often the option was placed first. */
+        firstPlace: Count,
+        /** Answered responses of the versions that offered the option. */
+        base: Count,
+        offeredIn: VersionNumbers,
+      }),
+    ),
+  }),
+  Schema.Struct({
+    type: Schema.Literals(["single_choice_matrix", "multiple_choice_matrix"]),
+    cells: Schema.Array(
+      Schema.Struct({
+        row: Schema.String,
+        rowLabel: Schema.String,
+        otherRowLabels: OtherLabels,
+        column: Schema.String,
+        columnLabel: Schema.String,
+        otherColumnLabels: OtherLabels,
+        count: Count,
+        /** Answered rows of the versions that had both this row and this column. */
+        base: Count,
+        /** `count / base` as a whole percentage. Null when `base` is 0. */
+        share: Schema.NullOr(Schema.Int),
+      }),
+    ),
+  }),
 ]).annotate({ identifier: "AnalyticsSummary" });
 export type AnalyticsSummary = typeof AnalyticsSummary.Type;
 
@@ -235,8 +304,13 @@ const VersionAnalytics = Schema.Union([
     version: Schema.Int,
     present: Schema.Literal(true),
     responses: Count,
+    /** Responses whose stored path includes the question. */
+    shown: Count,
     answered: Count,
+    /** Shown minus answered. */
     skipped: Count,
+    /** Responses minus shown. */
+    notShown: Count,
     summary: AnalyticsSummary,
     constraints: Schema.NullOr(AnalyticsConstraints),
   }),
@@ -251,8 +325,13 @@ export const QuestionAnalytics = Schema.Struct({
   inCurrentVersion: Schema.Boolean,
   combined: Schema.Struct({
     responses: Count,
+    /** Responses whose stored path includes the question. */
+    shown: Count,
     answered: Count,
+    /** Shown minus answered. */
     skipped: Count,
+    /** Responses minus shown. */
+    notShown: Count,
     /** The responses of versions without the question. */
     absentResponses: Count,
     summary: AnalyticsSummary,

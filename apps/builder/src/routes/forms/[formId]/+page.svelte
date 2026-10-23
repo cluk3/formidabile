@@ -21,6 +21,7 @@
       formId={params.formId}
       signInHref={signInUrl(data.config.loginUrl, page.url.href)}
       onDeleted={() => goto("/")}
+      onDuplicated={(formId) => goto(`/forms/${formId}`)}
     />
   {/key}
 </main>

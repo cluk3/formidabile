@@ -20,6 +20,8 @@ export const seedProject = async (
     readonly title: string;
     readonly availability: "open" | "closed";
     readonly questions?: ReadonlyArray<object>;
+    /** Posted as the definition when a test needs pages. Otherwise a format-1 list of `questions`. */
+    readonly definition?: object;
   }>,
 ) => {
   const projectId = `acme-e2e-${randomUUID()}`;
@@ -35,9 +37,9 @@ export const seedProject = async (
     return response.json();
   };
   const ids: string[] = [];
-  for (const { title, availability, questions = [readyQuestion()] } of forms) {
+  for (const { title, availability, questions = [readyQuestion()], definition } of forms) {
     const { form, draft } = await api("POST", "/forms", {
-      definition: { format: 1, title, questions },
+      definition: definition ?? { format: 1, title, questions },
     });
     await api("POST", `/forms/${form.id}/external-refs`, {
       namespace: "project",

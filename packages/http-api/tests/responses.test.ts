@@ -156,6 +156,7 @@ describe("GET /responses/{responseId}", () => {
         externalRefs: [],
         answers: { [readyId]: true, [colourId]: "green" },
       },
+      path: [readyId, colourId],
       version: { id: form.v1.id, number: 1, definition: v1Definition },
     });
   });
@@ -275,8 +276,10 @@ describe("DELETE /responses/{responseId}", () => {
           version: 1,
           present: true,
           responses: 0,
+          shown: 0,
           answered: 0,
           skipped: 0,
+          notShown: 0,
           summary: { type: "boolean", trueCount: 0, falseCount: 0 },
           constraints: null,
         },

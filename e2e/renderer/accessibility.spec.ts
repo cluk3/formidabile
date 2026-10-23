@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { pagedDefinition } from "./paged-form.ts";
 import { seedProject } from "./projects.ts";
 
 const ids = Array.from({ length: 7 }, () => randomUUID());
@@ -86,6 +87,87 @@ test("axe finds no WCAG 2.2 AA violation while answering or showing errors", asy
   await element.getByRole("button", { name: "Submit" }).click();
   await expect(element.locator("[part=error]")).toHaveCount(questions.length);
   expect(await axeViolations(page)).toEqual([]);
+});
+
+test("axe finds no WCAG 2.2 AA violation on any page of a form with every new input", async ({
+  page,
+  request,
+}) => {
+  const title = `Every input ${randomUUID()}`;
+  const { definition } = pagedDefinition(title);
+  const seeded = await seedProject(request, [{ title, availability: "open", definition }]);
+  await page.goto(`/projects/${seeded.projectId}`);
+  const element = page.locator("form-renderer");
+
+  const headings = ["How to reach you", "When you travel", "What you prefer", "How it went"];
+  for (const [index, heading] of headings.entries()) {
+    await expect(element.getByRole("heading", { name: heading })).toBeFocused();
+    expect(await axeViolations(page), heading).toEqual([]);
+    await element.getByRole("button", { name: "Next" }).click();
+    const following = headings[index + 1] ?? "Before you send";
+    await expect(element.getByRole("heading", { name: following })).toBeFocused();
+  }
+
+  // The last page's checkbox is required: its error is part of the page, and the page stays clean.
+  expect(await axeViolations(page)).toEqual([]);
+  await element.getByRole("button", { name: "Submit" }).click();
+  await expect(element.locator("[part=error]")).toHaveCount(1);
+  expect(await axeViolations(page)).toEqual([]);
+});
+
+test("moving to the next page focuses that page's heading", async ({ page, request }) => {
+  const title = `Paged sign-up ${randomUUID()}`;
+  const seeded = await seedProject(request, [
+    {
+      title,
+      availability: "open",
+      definition: {
+        format: 2,
+        title,
+        pages: [
+          {
+            id: randomUUID(),
+            questions: [
+              {
+                id: randomUUID(),
+                type: "text",
+                label: "Your name",
+                required: true,
+                config: { display: "single_line" },
+              },
+            ],
+            jumps: [],
+          },
+          {
+            id: randomUUID(),
+            title: "The second page",
+            questions: [
+              {
+                id: randomUUID(),
+                type: "text",
+                label: "City",
+                required: true,
+                config: { display: "single_line" },
+              },
+            ],
+            jumps: [],
+          },
+        ],
+      },
+    },
+  ]);
+  await page.goto(`/projects/${seeded.projectId}`);
+  const element = page.locator("form-renderer");
+  await expect(element.getByRole("heading", { name: title })).toBeVisible();
+  await expect(element.getByText("Page 1")).toHaveCount(0);
+  await expect(element.getByText(/page \d+ of \d+/i)).toHaveCount(0);
+
+  await element.getByLabel("Your name").fill("Ada");
+  await element.getByRole("button", { name: "Next" }).click();
+
+  await expect(element.getByRole("heading", { name: "The second page" })).toBeFocused();
+  await expect(element.getByLabel("City")).toBeVisible();
+  await expect(element.getByText("Page 2")).toHaveCount(0);
 });
 
 test("a failed submit moves focus through the shadow root to the first error", async ({

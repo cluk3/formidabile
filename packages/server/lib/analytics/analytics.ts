@@ -8,9 +8,15 @@ import { storedDefinition } from "../persistence/versions.ts";
 import { mergeAnalytics } from "./merge.ts";
 import {
   answeredPerQuestion,
+  matrixAnsweredRows,
+  matrixMultipleCounts,
+  matrixSingleCounts,
+  npsCounts,
+  shownPerQuestion,
   numbersCombined,
   numbersPerVersion,
   optionCounts,
+  rankingPositions,
   responsesPerVersion,
   valueCounts,
 } from "./queries.ts";
@@ -56,21 +62,32 @@ export class Analytics extends Context.Service<
                           ],
                   );
                   const answered = yield* answeredPerQuestion(tx, tenant, formId);
+                  const shown = yield* shownPerQuestion(tx, tenant, formId);
                   const values = yield* valueCounts(tx, tenant, formId);
                   const options = yield* optionCounts(tx, tenant, formId);
                   const numbers = yield* numbersPerVersion(tx, tenant, formId);
                   const combinedNumbers = yield* numbersCombined(tx, tenant, formId);
+                  const nps = yield* npsCounts(tx, tenant, formId);
+                  const rankings = yield* rankingPositions(tx, tenant, formId);
+                  const matrixSingle = yield* matrixSingleCounts(tx, tenant, formId);
+                  const matrixMultiple = yield* matrixMultipleCounts(tx, tenant, formId);
+                  const matrixRows = yield* matrixAnsweredRows(tx, tenant, formId);
                   return mergeAnalytics({
                     formId,
                     versions,
                     answered,
+                    shown,
                     choices: [...values, ...options],
                     numbers,
                     combinedNumbers,
+                    nps,
+                    rankings,
+                    matrixCells: [...matrixSingle, ...matrixMultiple],
+                    matrixAnsweredRows: matrixRows,
                   });
                 }),
-              // One snapshot for all six queries, so concurrent submissions and edits can't make `answered`
-              // exceed `responses`.
+              // One snapshot for every query, so concurrent submissions and edits can't make `answered`
+              // exceed `shown`, or `shown` exceed `responses`.
               readOnlySnapshot,
             )
             .pipe(dieOnDatabaseError);

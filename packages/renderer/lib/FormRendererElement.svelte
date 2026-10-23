@@ -37,7 +37,7 @@
 <script lang="ts">
   import FormRenderer from "./FormRenderer.svelte";
   import type { RendererError } from "./problems.ts";
-  import type { GetToken } from "./props.ts";
+  import type { GetToken, PageChange } from "./props.ts";
 
   let {
     apiBaseUrl,
@@ -51,6 +51,9 @@
     element.dispatchEvent(new CustomEvent("submitted", { detail }));
   const onerror = (detail: RendererError) =>
     element.dispatchEvent(new CustomEvent("error", { detail }));
+  // The host owns document.title, history, and the URL. This event is how it learns the page.
+  const onpagechange = (detail: PageChange) =>
+    element.dispatchEvent(new CustomEvent("pagechange", { detail }));
 </script>
 
 <!-- Nothing renders until the host has given all three required inputs; `response-id` is optional. -->
@@ -63,6 +66,7 @@
       {getToken}
       {onsubmitted}
       {onerror}
+      {onpagechange}
     />
   {/key}
 {/if}

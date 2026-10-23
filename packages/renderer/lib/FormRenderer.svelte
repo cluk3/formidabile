@@ -1,14 +1,31 @@
 <script lang="ts">
   import { createFormApiClient, type FormApiClient, type Schemas } from "@fb/api-client";
-  import { parseDefinition, type FormDefinition } from "@fb/core/definition";
-  import { tick } from "svelte";
-  import { checkDrafts, draftsOf, questionErrors, type Draft } from "./drafts.ts";
+  import { pathOf } from "@fb/core/answers";
+  import { pagesOf, parseDefinition, questionsOf, type FormDefinition } from "@fb/core/definition";
+  import { tick, untrack } from "svelte";
+  import {
+    answersFromDrafts,
+    checkDrafts,
+    checkPage,
+    draftsOf,
+    questionErrors,
+    type Draft,
+  } from "./drafts.ts";
+  import { nextDestination, pageTitle } from "./paging.ts";
   import { messages, unauthenticated, type ProblemCode } from "./problems.ts";
   import type { RendererProps } from "./props.ts";
   import QuestionCard from "./QuestionCard.svelte";
 
-  const { preview, apiBaseUrl, formId, responseId, getToken, onsubmitted, onerror }: RendererProps =
-    $props();
+  const {
+    preview,
+    apiBaseUrl,
+    formId,
+    responseId,
+    getToken,
+    onsubmitted,
+    onerror,
+    onpagechange,
+  }: RendererProps = $props();
 
   /** A response of the respondent's, saved over the revision its last read returned. */
   type Editing = { readonly responseId: string; readonly revision: string };
@@ -99,7 +116,19 @@
   // One submission attempt: minted at the first Submit, resent by every later one until a 201 (ADR 0016).
   let idempotencyKey: string | undefined;
   let formElement = $state<HTMLFormElement>();
-  const controls = "input, select, textarea";
+  let formHeading = $state<HTMLElement>();
+  let pageHeading = $state<HTMLElement>();
+  /** Index into `pagesOf`. Edit mode and a new response both start on the first page. */
+  let pageIndex = $state(0);
+  /** Pages the respondent left by Next, newest at the end. Back pops this and does not re-run jumps. */
+  let history = $state<number[]>([]);
+  /**
+   * Bumped when a page should take focus on its heading. Validation failure focuses the invalid field
+   * instead, and does not bump this.
+   */
+  let headingFocus = $state(0);
+  let announcedPage = "";
+  const controls = "input, select, textarea, button";
 
   const stop = (code: ProblemCode) => {
     loaded = { state: "stopped", code };
@@ -177,6 +206,8 @@
   const open = (target = live?.responseId) => {
     if (live === undefined) return;
     const { client, formId } = live;
+    pageIndex = 0;
+    history = [];
     loaded = { state: "loading" };
     (target === undefined ? openForm(client, formId) : openResponse(client, target)).catch(() =>
       stop("loadFailed"),
@@ -185,6 +216,51 @@
 
   $effect(() => {
     open();
+  });
+
+  // The first page of a form, and each later one, focuses its heading. A failed Next focuses the field instead.
+  $effect(() => {
+    if (view.state !== "answering") {
+      if (headingFocus !== 0) headingFocus = 0;
+      return;
+    }
+    if (headingFocus === 0) headingFocus = 1;
+  });
+
+  $effect(() => {
+    const token = headingFocus;
+    if (view.state !== "answering" || token === 0) return;
+    // Page index is not a dependency: a validation failure moves the page without taking heading focus.
+    // The effect runs after the heading is in the document, so focus is synchronous. Deferring it would
+    // land after the respondent's first Tab and steal that focus.
+    const index = untrack(() => pageIndex);
+    const page = pagesOf(view.form.definition)[index];
+    if (page === undefined) return;
+    // `focus()` lets the browser scroll the heading into view. Nothing here calls `scrollIntoView`.
+    (pageTitle(page) === null ? formHeading : pageHeading)?.focus();
+  });
+
+  $effect(() => {
+    if (view.state !== "answering") {
+      announcedPage = "";
+      return;
+    }
+    const count = pagesOf(view.form.definition).length;
+    if (pageIndex < count) return;
+    pageIndex = Math.max(0, count - 1);
+    history = history.filter((index) => index < pageIndex);
+    headingFocus += 1;
+  });
+
+  $effect(() => {
+    if (view.state !== "answering") return;
+    const page = pagesOf(view.form.definition)[pageIndex];
+    if (page === undefined) return;
+    const detail = { pageId: page.id, title: pageTitle(page) };
+    const key = `${detail.pageId ?? ""}\n${detail.title ?? ""}`;
+    if (key === announcedPage) return;
+    announcedPage = key;
+    onpagechange?.(detail);
   });
 
   const showErrors = async (next: Record<string, string>) => {
@@ -198,11 +274,58 @@
     control?.focus();
   };
 
+  /** Shows `next` on the page of the first invalid question, in definition order. */
+  const revealErrors = (form: Loaded, next: Record<string, string>) => {
+    const pages = pagesOf(form.definition);
+    const first = questionsOf(form.definition).find((question) => next[question.id] !== undefined);
+    const target =
+      first === undefined
+        ? pageIndex
+        : pages.findIndex((candidate) =>
+            candidate.questions.some((question) => question.id === first.id),
+          );
+    if (target >= 0 && target !== pageIndex) {
+      const at = history.indexOf(target);
+      history =
+        at === -1 ? Array.from({ length: target }, (_, index) => index) : history.slice(0, at);
+      pageIndex = target;
+    }
+    return showErrors(next);
+  };
+
+  /** Next: the following page, once this page's questions are valid. */
+  const goNext = async (form: Loaded, pageId: string | null) => {
+    const pages = pagesOf(form.definition);
+    const page = pages[pageIndex];
+    if (page === undefined) return;
+    notice = undefined;
+    previewed = false;
+    const checked = checkPage(form.definition, drafts, page.questions);
+    if (!checked.ok) return revealErrors(form, checked.errors);
+    const nextIndex = pages.findIndex((candidate) => candidate.id === pageId);
+    if (nextIndex < 0) return;
+    errors = {};
+    history = [...history, pageIndex];
+    pageIndex = nextIndex;
+    headingFocus += 1;
+  };
+
+  const back = () => {
+    const previous = history.at(-1);
+    if (previous === undefined || sending) return;
+    history = history.slice(0, -1);
+    pageIndex = previous;
+    errors = {};
+    previewed = false;
+    headingFocus += 1;
+  };
+
   const refuse = async (error: Refusal) => {
     switch (error._tag) {
       case "ValidationFailed": {
         const next = questionErrors(error.issues);
-        if (Object.keys(next).length > 0) return showErrors(next);
+        if (Object.keys(next).length > 0 && view.state === "answering")
+          return revealErrors(view.form, next);
         break;
       }
       case "Unauthenticated":
@@ -270,10 +393,20 @@
     if (sending) return;
     if (live !== undefined && notice?.code === "submitUnconfirmed")
       return post(live.client, live.formId, notice.submission);
+    const pages = pagesOf(form.definition);
+    const page = pages[pageIndex];
+    if (page !== undefined) {
+      const destination = nextDestination(
+        form.definition,
+        answersFromDrafts(form.definition, drafts),
+        page,
+      );
+      if (destination.kind === "page") return goNext(form, destination.pageId);
+    }
     notice = undefined;
     previewed = false;
     const checked = checkDrafts(form.definition, drafts);
-    if (!checked.ok) return showErrors(checked.errors);
+    if (!checked.ok) return revealErrors(form, checked.errors);
     errors = {};
     if (live === undefined) {
       previewed = true;
@@ -310,17 +443,36 @@
     </p>
   {:else}
     {@const form = view.form}
-    <h2 class="title" part="title">{form.definition.title}</h2>
+    {@const pages = pagesOf(form.definition)}
+    {@const page = pages[pageIndex] ?? pages[0]!}
+    {@const heading = pageTitle(page)}
+    {@const answers = answersFromDrafts(form.definition, drafts)}
+    {@const shown = new Set(
+      pathOf(form.definition, answers).questions.map((question) => question.id),
+    )}
+    {@const atEnd = nextDestination(form.definition, answers, page).kind === "end"}
+    <!-- Programmatic focus target when the page has no title of its own. Not in the tab order. -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+    <h2 bind:this={formHeading} class="title" part="title" tabindex="-1">
+      {form.definition.title}
+    </h2>
     {#if form.definition.description}
       <p class="description" part="description">{form.definition.description}</p>
     {/if}
     {#if form.editing}
       <p class="description" part="description">You're editing the response you sent.</p>
     {/if}
+    {#if heading !== null}
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <h2 bind:this={pageHeading} class="title" tabindex="-1">{heading}</h2>
+    {/if}
+    {#if page.description}
+      <p class="description">{page.description}</p>
+    {/if}
     {@const unconfirmed = notice?.code === "submitUnconfirmed"}
     <form bind:this={formElement} novalidate onsubmit={(event) => submit(event, form)}>
       <fieldset class="answers" disabled={unconfirmed}>
-        {#each form.definition.questions as question (question.id)}
+        {#each page.questions.filter( (question) => shown.has(question.id) ) as question (question.id)}
           <QuestionCard {question} bind:value={drafts[question.id]} error={errors[question.id]} />
         {/each}
       </fieldset>
@@ -358,15 +510,30 @@
       {:else if previewed}
         <p class="notice" role="status">Preview: these answers are valid. Nothing was sent.</p>
       {/if}
-      <button class="submit" part="submit" type="submit" aria-disabled={sending}>
-        {#if form.editing}
-          {sending ? "Saving…" : "Save changes"}
-        {:else if unconfirmed}
-          {sending ? "Sending…" : "Retry"}
-        {:else}
-          {sending ? "Sending…" : "Submit"}
+      <div class="actions">
+        {#if history.length > 0}
+          <button
+            class="action"
+            part="back"
+            type="button"
+            disabled={unconfirmed || sending}
+            onclick={back}
+          >
+            Back
+          </button>
         {/if}
-      </button>
+        <button class="submit" part="submit" type="submit" aria-disabled={sending}>
+          {#if !atEnd}
+            Next
+          {:else if form.editing}
+            {sending ? "Saving…" : "Save changes"}
+          {:else if unconfirmed}
+            {sending ? "Sending…" : "Retry"}
+          {:else}
+            {sending ? "Sending…" : "Submit"}
+          {/if}
+        </button>
+      </div>
     </form>
   {/if}
 </section>

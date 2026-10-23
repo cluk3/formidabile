@@ -89,6 +89,39 @@
         versions that offered the option, so the shares don't add up to 100%.
       </p>
     {/if}
+  {:else if summary.type === "ranking"}
+    <table class={tableClass}>
+      <caption class={captionClass}>All versions</caption>
+      <thead>
+        <tr>
+          <th>Option</th><th>Mean position</th><th>First place</th><th>Share of first</th><th
+            >Offered in</th
+          >
+        </tr>
+      </thead>
+      <tbody>
+        {#each summary.options as option (option.value)}
+          <tr>
+            <th scope="row" class="font-normal">{option.label}</th>
+            <td>{numberText(option.meanPosition)}</td>
+            <td>{option.firstPlace}</td>
+            <td>{@render bar(share(option.firstPlace, option.base))}</td>
+            <td>
+              {versionsText(option.offeredIn)}
+              {#if option.otherLabels.length > 0}
+                ({otherLabelsText(option.otherLabels)})
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    {#if !offeredEverywhere(summary.options)}
+      <p class="text-sm text-muted-foreground">
+        Some options weren't offered in every version. Each mean counts only the answers from
+        versions that offered the option.
+      </p>
+    {/if}
   {:else if summary.type === "boolean"}
     {@const answered = summary.trueCount + summary.falseCount}
     <table class={tableClass}>
@@ -109,6 +142,23 @@
         </tr>
       </tbody>
     </table>
+  {:else if summary.type === "single_choice_matrix" || summary.type === "multiple_choice_matrix"}
+    <table class={tableClass}>
+      <caption class={captionClass}>All versions</caption>
+      <thead>
+        <tr><th>Row</th><th>Column</th><th>Count</th><th>Share</th></tr>
+      </thead>
+      <tbody>
+        {#each summary.cells as cell (`${cell.row}\0${cell.column}`)}
+          <tr>
+            <th scope="row" class="font-normal">{cell.rowLabel}</th>
+            <td>{cell.columnLabel}</td>
+            <td>{cell.count}</td>
+            <td>{@render bar(cell.share)}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   {:else if summary.type === "number"}
     <table class={tableClass}>
       <caption class={captionClass}>All versions</caption>
@@ -121,6 +171,36 @@
         {/each}
       </tbody>
     </table>
+    {#if summary.nps}
+      {@const nps = summary.nps}
+      <table class={tableClass}>
+        <caption class={captionClass}>NPS</caption>
+        <thead>
+          <tr><th>Group</th><th>Count</th><th>Share</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row" class="font-normal">Promoters</th>
+            <td>{nps.promoters}</td>
+            <td>{@render bar(share(nps.promoters, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Passives</th>
+            <td>{nps.passives}</td>
+            <td>{@render bar(share(nps.passives, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Detractors</th>
+            <td>{nps.detractors}</td>
+            <td>{@render bar(share(nps.detractors, nps.answered))}</td>
+          </tr>
+          <tr>
+            <th scope="row" class="font-normal">Score</th>
+            <td colspan="2">{numberText(nps.score)}</td>
+          </tr>
+        </tbody>
+      </table>
+    {/if}
   {/if}
 {/snippet}
 
@@ -180,12 +260,33 @@
           {/if}
         </div>
         <p>{countsText(question)}</p>
+        <table class={tableClass}>
+          <caption class={captionClass}>Answered, skipped and not shown</caption>
+          <thead>
+            <tr><th>Outcome</th><th>Count</th><th>Share of responses</th></tr>
+          </thead>
+          <tbody>
+            {#each [["Answered", question.combined.answered], ["Skipped", question.combined.skipped], ["Not shown", question.combined.notShown]] as const as [name, count] (name)}
+              <tr>
+                <th scope="row" class="font-normal">{name}</th>
+                <td>{count}</td>
+                <td>{@render bar(share(count, question.combined.responses))}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
         {@render combinedTable(question)}
         <table class={tableClass}>
           <caption class={captionClass}>By version</caption>
           <thead>
             <tr>
-              <th>Version</th><th>Responses</th><th>Answered</th><th>Skipped</th><th>Result</th>
+              <th>Version</th>
+              <th>Responses</th>
+              <th>Shown</th>
+              <th>Answered</th>
+              <th>Skipped</th>
+              <th>Not shown</th>
+              <th>Result</th>
             </tr>
           </thead>
           <tbody>
@@ -195,8 +296,10 @@
                 {#if entry.present}
                   {@const allowed = constraintsText(entry.constraints)}
                   <td>{entry.responses}</td>
+                  <td>{entry.shown}</td>
                   <td>{entry.answered}</td>
                   <td>{entry.skipped}</td>
+                  <td>{entry.notShown}</td>
                   <td>
                     <span class="block">{resultText(entry.summary)}</span>
                     {#if allowed !== null}
@@ -204,7 +307,7 @@
                     {/if}
                   </td>
                 {:else}
-                  <td colspan="4" class="text-muted-foreground">Not in this version</td>
+                  <td colspan="6" class="text-muted-foreground">Not in this version</td>
                 {/if}
               </tr>
             {/each}

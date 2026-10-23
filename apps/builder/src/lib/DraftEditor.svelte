@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { FormApiClient, Schemas } from "@fb/api-client";
   import {
+    conditionIssues,
     parseDefinition,
     type FormDefinition,
     type Issue,
-    type QuestionTypeName,
   } from "@fb/core/definition";
-  import { addQuestion, QUESTIONS_CAP } from "@fb/core/editing";
+  import { upgradeToFormat2 } from "@fb/core/editing";
   import { FormRenderer } from "@fb/renderer";
   import { onMount } from "svelte";
   import { outcome, settleWrite, type Outcome } from "#lib/api.ts";
@@ -15,21 +15,23 @@
   import { fieldClass, nativeInputClass, optionalText } from "#lib/fields.ts";
   import FormSettings from "#lib/FormSettings.svelte";
   import { webCryptoIds } from "#lib/ids.ts";
+  import PageList from "#lib/PageList.svelte";
   import PublicationHistory from "#lib/PublicationHistory.svelte";
-  import QuestionCard from "#lib/QuestionCard.svelte";
-  import { questionTypeNames, registry } from "#lib/registry.ts";
 
   let {
     client,
     formId,
     signInHref,
     onDeleted,
+    onDuplicated,
   }: {
     client: FormApiClient;
     formId: string;
     signInHref: string;
     /** The form was deleted: leave its editor. */
     onDeleted: () => void;
+    /** A duplicate was created: open that form. */
+    onDuplicated?: (formId: string) => void;
   } = $props();
   const uid = $props.id();
   const path = $derived({ params: { path: { formId } } });
@@ -51,7 +53,8 @@
   let issues = $state.raw<Issue[]>([]);
   /** What `issues` stopped. */
   let refused = $state<"saved" | "published">("saved");
-  let newType = $state<QuestionTypeName>("text");
+  /** Broken logic is computed from the open draft. It is never stored. */
+  const brokenLogic = $derived(definition !== null && conditionIssues(definition).length > 0);
 
   const changedSinceOpened = "This draft has changed since you opened it.";
   /** What every write does on a sign-in prompt or a notice. */
@@ -194,7 +197,8 @@
 
   const save = async () => {
     if (definition === null) return;
-    const sent = definition;
+    const sent = upgradeToFormat2(definition, webCryptoIds);
+    if (definition !== sent) definition = sent;
     begin();
     const result = await outcome(() =>
       client.PUT("/forms/{formId}/draft", {
@@ -351,7 +355,16 @@
     {#if previewing}
       <section class="rounded-md border" aria-labelledby={`${uid}-preview`}>
         <h2 id={`${uid}-preview`} class="px-4 pt-4 text-lg font-semibold">Preview</h2>
-        <FormRenderer preview={definition} />
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+          {#if brokenLogic}
+            <p role="status" class="px-4 text-sm lg:max-w-xs lg:pt-4">
+              This draft has broken logic. A broken reference counts as unanswered.
+            </p>
+          {/if}
+          <div class="min-w-0 grow">
+            <FormRenderer preview={definition} />
+          </div>
+        </div>
       </section>
     {/if}
 
@@ -380,35 +393,7 @@
         }}></textarea>
     </div>
 
-    <ol class="flex flex-col gap-4">
-      {#each definition.questions as question, index (question.id)}
-        <li>
-          <QuestionCard
-            {question}
-            {index}
-            count={definition.questions.length}
-            {edit}
-            ids={webCryptoIds}
-          />
-        </li>
-      {/each}
-    </ol>
-
-    <div class="flex items-end gap-2">
-      <div class={fieldClass}>
-        <label for={`${uid}-new-type`}>New question type</label>
-        <select id={`${uid}-new-type`} class={nativeInputClass} bind:value={newType}>
-          {#each questionTypeNames as type (type)}
-            <option value={type}>{registry[type].name}</option>
-          {/each}
-        </select>
-      </div>
-      <Button
-        variant="outline"
-        disabled={definition.questions.length >= QUESTIONS_CAP}
-        onclick={() => edit((d) => addQuestion(d, newType, webCryptoIds))}>Add question</Button
-      >
-    </div>
+    <PageList {definition} {edit} ids={webCryptoIds} />
 
     <FormSettings
       {client}
@@ -420,7 +405,14 @@
       signIn={() => (signedOut = true)}
     />
 
-    <PublicationHistory {client} {form} signIn={() => (signedOut = true)} />
+    <PublicationHistory
+      {client}
+      {form}
+      signIn={() => (signedOut = true)}
+      onDuplicated={(id) => onDuplicated?.(id)}
+      onRestored={load}
+      onRevisionConflict={() => (conflict = changedSinceOpened)}
+    />
 
     <section class="flex flex-col gap-3" aria-labelledby={`${uid}-refs`}>
       <h2 id={`${uid}-refs`} class="text-lg font-semibold">External references</h2>

@@ -1,4 +1,4 @@
-import type { FormDefinition } from "@fb/core/definition";
+import type { FormDefinition, QuestionSnapshot } from "@fb/core/definition";
 import { vi } from "vite-plus/test";
 
 export const formId = "0192f0c4-0000-7000-8000-000000000001";
@@ -152,7 +152,7 @@ export const questions = {
     },
   },
   parking: { id: id(9), type: "boolean", label: "Need parking?", required: true, config: {} },
-} satisfies Record<string, FormDefinition["questions"][number]>;
+} satisfies Record<string, QuestionSnapshot>;
 
 /** The respondent's read of their own response `id` to `definition`, on version `versionId`. */
 export const responseRead = (
@@ -176,6 +176,6 @@ export const responseRead = (
   });
 
 export const definitionOf = (
-  questions: FormDefinition["questions"],
+  questions: QuestionSnapshot[],
   title = "Event feedback",
 ): FormDefinition => ({ format: 1, title, questions });

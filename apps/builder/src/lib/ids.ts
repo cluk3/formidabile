@@ -7,4 +7,5 @@ import type { IdSource } from "@fb/core/editing";
 export const webCryptoIds: IdSource = {
   questionId: () => crypto.randomUUID(),
   optionValue: () => crypto.randomUUID(),
+  pageId: () => crypto.randomUUID(),
 };

@@ -53,6 +53,52 @@ test("with a response-id the element edits that response and fires submitted aft
   ]);
 });
 
+test("the element fires pagechange and leaves the host title, history, and URL alone", async () => {
+  const pageA = "00000000-0000-4000-8000-0000000000b1";
+  const pageB = "00000000-0000-4000-8000-0000000000b2";
+  fakeApi({
+    format: 2,
+    title: "Paged",
+    pages: [
+      { id: pageA, questions: [questions.name], jumps: [] },
+      { id: pageB, title: "Second", questions: [questions.email], jumps: [] },
+    ],
+  });
+  const title = document.title;
+  const href = location.href;
+  const length = history.length;
+  const push = vi.spyOn(history, "pushState");
+  const replaceState = vi.spyOn(history, "replaceState");
+  const host = element({ "api-base-url": apiBaseUrl, "form-id": formId });
+  const changes: unknown[] = [];
+  host.addEventListener("pagechange", (event) => changes.push((event as CustomEvent).detail));
+  document.body.append(host);
+
+  await expect.poll(() => changes).toEqual([{ pageId: pageA, title: null }]);
+  const name = host.shadowRoot.querySelector("input");
+  if (name === null) throw new Error("name field");
+  name.value = "Ada";
+  name.dispatchEvent(new Event("input", { bubbles: true }));
+  host.shadowRoot.querySelector<HTMLButtonElement>("[part=submit]")?.click();
+
+  await expect
+    .poll(() => changes)
+    .toEqual([
+      { pageId: pageA, title: null },
+      { pageId: pageB, title: "Second" },
+    ]);
+  await expect.poll(() => host.shadowRoot.activeElement?.textContent).toContain("Second");
+  expect(document.title).toBe(title);
+  expect(location.href).toBe(href);
+  expect(history.length).toBe(length);
+  expect(push).not.toHaveBeenCalled();
+  expect(replaceState).not.toHaveBeenCalled();
+  expect(host.shadowRoot.textContent).not.toContain("Page 1");
+  expect(host.shadowRoot.textContent).not.toMatch(/page \d+ of \d+/i);
+  push.mockRestore();
+  replaceState.mockRestore();
+});
+
 test("the element fires error with the refusal it shows", async () => {
   fakeApi(definitionOf([questions.parking]), {
     load: Response.json({ _tag: "FormClosed" }, { status: 409 }),

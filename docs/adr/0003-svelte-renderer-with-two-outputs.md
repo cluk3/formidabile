@@ -11,5 +11,5 @@ The renderer is self-contained: given a form id, it loads the version, submits, 
 
 - **A framework component only.** Rejected: hosts on other frameworks would have to write their own renderer.
 - **A separate custom element in Lit or plain DOM.** Rejected: Svelte compiles to a custom element with a runtime of a few KB, so a second UI paradigm would add maintenance for no gain in bundle size.
-- **A headless renderer core with one adapter per framework.** Rejected: with no conditional visibility, the renderer has almost no state of its own beyond the shared validation code.
+- **A headless renderer core with one adapter per framework.** Rejected: with no conditional visibility, the renderer has almost no state of its own beyond the shared validation code (amended 2026-10-22, see ADR-017: the renderer now holds the current page and the respondent's history, but the path comes from shared core code, so the rejection stands).
 - **A controlled renderer, where the host fetches and submits.** Rejected: every host would have to reimplement the version-consistency and editing rules.

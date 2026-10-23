@@ -1,10 +1,18 @@
 <script lang="ts">
   import type { Schemas } from "@fb/api-client";
-  import { interpretAnswers } from "@fb/core/answers";
-  import { parseDefinition } from "@fb/core/definition";
+  import { interpretAnswers, type Answers } from "@fb/core/answers";
+  import { parseDefinition, type QuestionTypeName } from "@fb/core/definition";
   import type { Snippet } from "svelte";
+  import type { AnswerProps } from "#lib/answers/props.ts";
   import { Button } from "#lib/components/ui/button/index.js";
   import { answerOf } from "#lib/registry.ts";
+
+  /**
+   * The stored value is the shared answers union, including the object arm (date range, matrix, address).
+   * Each answer component takes its own shape. The version schema already checked it.
+   */
+  const asAnswerValue = (value: Answers[string]): AnswerProps<QuestionTypeName>["value"] =>
+    value as AnswerProps<QuestionTypeName>["value"];
 
   let {
     detail,
@@ -18,11 +26,12 @@
   } = $props();
   const uid = $props.id();
 
-  const { response, version } = $derived(detail);
+  const { response, version, path } = $derived(detail);
   // Read back through core's structural checks; the answers passed this version's schema when they were stored.
+  // `path` is the question ids this response was shown, beside `response` and `version`.
   const interpreted = $derived.by(() => {
     const parsed = parseDefinition(version.definition);
-    return parsed.ok ? interpretAnswers(parsed.value, response.answers) : null;
+    return parsed.ok ? interpretAnswers(parsed.value, response.answers, path) : null;
   });
 </script>
 
@@ -54,15 +63,21 @@
     <p>This version uses a question type the builder doesn't support.</p>
   {:else}
     <dl class="flex flex-col gap-3">
-      {#each interpreted as { question, answer } (question.id)}
-        {@const Answer = answerOf(question)}
+      {#each interpreted as row (row.question.id)}
+        {@const Answer = answerOf(row.question)}
         <div class="flex flex-col gap-1">
-          <dt class="text-sm font-medium">{question.label}</dt>
+          <dt class="text-sm font-medium">{row.question.label}</dt>
           <dd>
-            {#if answer === undefined}
-              <span class="text-muted-foreground">Not answered</span>
+            {#if row.status === "answered" && row.answer !== undefined}
+              <Answer
+                question={row.question}
+                value={asAnswerValue(row.answer.value)}
+                display={row.answer.display}
+              />
+            {:else if row.status === "skipped"}
+              <span class="text-muted-foreground">Skipped</span>
             {:else}
-              <Answer {question} value={answer.value} display={answer.display} />
+              <span class="text-muted-foreground">Not shown</span>
             {/if}
           </dd>
         </div>

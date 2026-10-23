@@ -2,7 +2,7 @@ import { createFormApiClient, type Schemas } from "@fb/api-client";
 import { reidentifyQuestion } from "@fb/core/editing";
 import { declareLength } from "@fb/http-api/web";
 import { type DevUser, devUsers, mintDevToken, mintFormToken } from "../server/dev-users.ts";
-import { demoProjects, projectNamespace } from "../server/projects.ts";
+import { demoProjects, pagedDemoProject, projectNamespace } from "../server/projects.ts";
 
 type Fetch = (request: Request) => Promise<Response>;
 
@@ -81,6 +81,288 @@ const seedForm = async (
 };
 
 /**
+ * The acme trip planner: a format 2 form in four pages. It shows what the iteration added. One show condition
+ * hides a follow-up unless the respondent is unhappy, another hides the flight note from anyone who needs no
+ * flights, and a jump on page 1 passes over the flights page. It uses every new question type and number
+ * display. Both responses stay on their path, because the server refuses an answer to a question off it.
+ */
+const seedTripPlanner = async (fetch: Fetch) => {
+  const pages = {
+    trip: crypto.randomUUID(),
+    flights: crypto.randomUUID(),
+    stay: crypto.randomUUID(),
+    feedback: crypto.randomUUID(),
+  };
+  const q = {
+    phone: crypto.randomUUID(),
+    site: crypto.randomUUID(),
+    flights: crypto.randomUUID(),
+    depart: crypto.randomUUID(),
+    arrive: crypto.randomUUID(),
+    stay: crypto.randomUUID(),
+    address: crypto.randomUUID(),
+    flightNote: crypto.randomUUID(),
+    activities: crypto.randomUUID(),
+    service: crypto.randomUUID(),
+    extras: crypto.randomUUID(),
+    rating: crypto.randomUUID(),
+    comfort: crypto.randomUUID(),
+    budget: crypto.randomUUID(),
+    nps: crypto.randomUUID(),
+    improve: crypto.randomUUID(),
+    consent: crypto.randomUUID(),
+  };
+  const columns = [
+    { value: "poor", label: "Poor" },
+    { value: "good", label: "Good" },
+    { value: "great", label: "Great" },
+  ];
+  const line = (shown: boolean, required: boolean) => ({ shown, required });
+
+  await seedForm(
+    fetch,
+    "acme-admin",
+    [
+      {
+        definition: {
+          format: 2,
+          title: "Trip planner",
+          description: "Plan and review your spring trip with us.",
+          pages: [
+            {
+              id: pages.trip,
+              title: "Your trip",
+              // Nobody who needs no flights sees the flights page: the jump lands on the stay.
+              jumps: [
+                { condition: { questionId: q.flights, operator: "is_no" }, target: pages.stay },
+              ],
+              questions: [
+                { id: q.phone, type: "phone", label: "Contact phone", required: true, config: {} },
+                { id: q.site, type: "url", label: "Booking page", required: false, config: {} },
+                {
+                  id: q.flights,
+                  type: "boolean",
+                  label: "Do you need flights?",
+                  required: true,
+                  config: {},
+                },
+              ],
+            },
+            {
+              id: pages.flights,
+              title: "Your flights",
+              jumps: [],
+              questions: [
+                {
+                  id: q.depart,
+                  type: "time_of_day",
+                  label: "Preferred departure time",
+                  required: true,
+                  config: { earliest: "05:00", latest: "22:00" },
+                },
+                {
+                  id: q.arrive,
+                  type: "date_time",
+                  label: "Latest arrival",
+                  required: false,
+                  config: { min: "2027-06-01T00:00", max: "2027-06-30T23:59" },
+                },
+              ],
+            },
+            {
+              id: pages.stay,
+              title: "Your stay",
+              jumps: [],
+              questions: [
+                {
+                  id: q.stay,
+                  type: "date_range",
+                  label: "Your stay",
+                  required: true,
+                  config: { min: "2027-06-01", max: "2027-06-30" },
+                },
+                {
+                  id: q.address,
+                  type: "address",
+                  label: "Where should we send the itinerary?",
+                  required: true,
+                  config: {
+                    lines: {
+                      line1: line(true, true),
+                      line2: line(true, false),
+                      city: line(true, true),
+                      region: line(false, false),
+                      postalCode: line(true, false),
+                      country: line(true, true),
+                    },
+                  },
+                },
+                {
+                  id: q.flightNote,
+                  type: "text",
+                  label: "Anything we should know about your flights?",
+                  required: false,
+                  showCondition: { questionId: q.flights, operator: "is_yes" },
+                  config: { display: "multi_line", maxLength: 1000 },
+                },
+                {
+                  id: q.activities,
+                  type: "ranking",
+                  label: "Rank the activities you want",
+                  required: false,
+                  config: {
+                    options: [
+                      { value: "hike", label: "Hike the coast" },
+                      { value: "museum", label: "Visit a museum" },
+                      { value: "beach", label: "Spend a day on the beach" },
+                    ],
+                  },
+                },
+              ],
+            },
+            {
+              id: pages.feedback,
+              title: "How we did",
+              jumps: [],
+              questions: [
+                {
+                  id: q.service,
+                  type: "single_choice_matrix",
+                  label: "Rate each part of the service",
+                  required: false,
+                  config: {
+                    rows: [
+                      { value: "hotel", label: "Hotel" },
+                      { value: "food", label: "Food" },
+                    ],
+                    columns,
+                  },
+                },
+                {
+                  id: q.extras,
+                  type: "multiple_choice_matrix",
+                  label: "Which extras did you enjoy?",
+                  required: false,
+                  config: {
+                    rows: [
+                      { value: "morning", label: "Mornings" },
+                      { value: "evening", label: "Evenings" },
+                    ],
+                    columns: [
+                      { value: "spa", label: "Spa" },
+                      { value: "tour", label: "Tour" },
+                      { value: "show", label: "Show" },
+                    ],
+                  },
+                },
+                {
+                  id: q.rating,
+                  type: "number",
+                  label: "Rate the planning",
+                  required: false,
+                  config: { integer: true, min: 1, max: 5, display: "rating" },
+                },
+                {
+                  id: q.comfort,
+                  type: "number",
+                  label: "How comfortable was the hotel?",
+                  required: false,
+                  config: {
+                    integer: true,
+                    min: 1,
+                    max: 5,
+                    display: "scale",
+                    minLabel: "Not at all",
+                    maxLabel: "Very",
+                  },
+                },
+                {
+                  id: q.budget,
+                  type: "number",
+                  label: "What was your budget, in euros?",
+                  required: false,
+                  config: { integer: true, min: 0, max: 2000, step: 50, display: "slider" },
+                },
+                {
+                  id: q.nps,
+                  type: "number",
+                  label: "How likely are you to recommend us?",
+                  required: false,
+                  config: {
+                    integer: true,
+                    min: 0,
+                    max: 10,
+                    display: "nps",
+                    minLabel: "Not likely",
+                    maxLabel: "Very likely",
+                  },
+                },
+                {
+                  id: q.improve,
+                  type: "text",
+                  label: "What should we improve?",
+                  required: false,
+                  showCondition: { questionId: q.nps, operator: "at_most", constant: 6 },
+                  config: { display: "multi_line", maxLength: 2000 },
+                },
+                {
+                  id: q.consent,
+                  type: "boolean",
+                  label: "I agree to be contacted about this trip",
+                  required: true,
+                  config: { mustBeYes: true },
+                },
+              ],
+            },
+          ],
+        },
+        responses: [
+          // Needs flights: all four pages, and the flight note is shown. An NPS of 9 hides "What should we improve?".
+          [
+            "alice",
+            {
+              [q.phone]: "+14155550100",
+              [q.site]: "https://example.com/trips/42",
+              [q.flights]: true,
+              [q.depart]: "08:30",
+              [q.arrive]: "2027-06-04T21:15",
+              [q.stay]: { start: "2027-06-04", end: "2027-06-11" },
+              [q.address]: { line1: "1 High Street", city: "Leeds", country: "GB" },
+              [q.flightNote]: "We travel with a folding bicycle.",
+              [q.activities]: ["hike", "beach", "museum"],
+              [q.service]: { hotel: "great", food: "good" },
+              [q.extras]: { evening: ["show", "spa"] },
+              [q.rating]: 5,
+              [q.comfort]: 4,
+              [q.budget]: 1200,
+              [q.nps]: 9,
+              [q.consent]: true,
+            },
+          ],
+          // Needs no flights: the jump passes over page 2, the flight note is off the path, and an NPS of 4 shows
+          // "What should we improve?".
+          [
+            null,
+            {
+              [q.phone]: "+393331234567",
+              [q.flights]: false,
+              [q.stay]: { start: "2027-06-18", end: "2027-06-18" },
+              [q.address]: { line1: "Via Roma 1", city: "Pisa", country: "IT" },
+              [q.activities]: ["museum", "hike", "beach"],
+              [q.rating]: 3,
+              [q.nps]: 4,
+              [q.improve]: "The booking steps were hard to follow.",
+              [q.consent]: true,
+            },
+          ],
+        ],
+      },
+    ],
+    { namespace: projectNamespace, refId: pagedDemoProject },
+  );
+};
+
+/**
  * The acme form for analytics: version 2 drops a question; version 3 adds an option, relabels another and widens a
  * number range; version 4 reidentifies the text question, which keeps its type and label but is a new question
  * identity (ADR 0009).
@@ -145,7 +427,9 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
     { value: "manageable", label: "Manageable" },
     { value: "hard", label: "Hard" },
   ];
-  const definition = (questions: Schemas["FormDefinition"]["questions"]) => ({
+  const definition = (
+    questions: Extract<Schemas["FormDefinition"], { format: 1 }>["questions"],
+  ) => ({
     format: 1 as const,
     title: "Onboarding survey",
     description: "Tell us how setting up went.",
@@ -162,6 +446,7 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
   const fourth = reidentifyQuestion(third, teamText, {
     questionId: () => teamTextAgain,
     optionValue: () => crypto.randomUUID(),
+    pageId: () => crypto.randomUUID(),
   });
 
   await seedForm(fetch, "acme-admin", [
@@ -219,7 +504,7 @@ const seedOnboardingSurvey = async (fetch: Fetch) => {
 
 /**
  * Seeds each dev tenant's demo project through the module's API: its one open form and a response from a dev user
- * and from the anonymous user. Acme also gets the onboarding survey, with versions for analytics. Published forms
+ * and from the anonymous user. Acme also gets the trip planner, a paged form that shows the iteration's logic and question types, and the onboarding survey, with versions for analytics. Published forms
  * can't be deleted, so seeding twice adds a second copy: `seed:reset` drops the schema first.
  */
 export const seed = async (fetch: Fetch) => {
@@ -377,5 +662,6 @@ export const seed = async (fetch: Fetch) => {
     { namespace: projectNamespace, refId: demoProjects.globex },
   );
 
+  await seedTripPlanner(fetch);
   await seedOnboardingSurvey(fetch);
 };

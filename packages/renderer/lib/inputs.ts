@@ -1,13 +1,21 @@
 import type { QuestionSnapshotOf, QuestionTypeName } from "@fb/core/definition";
 import type { Component } from "svelte";
 import type { DraftOf } from "./drafts.ts";
+import AddressInput from "./inputs/AddressInput.svelte";
 import BooleanInput from "./inputs/BooleanInput.svelte";
+import RankingInput from "./inputs/RankingInput.svelte";
 import DateInput from "./inputs/DateInput.svelte";
+import DateTimeInput from "./inputs/DateTimeInput.svelte";
+import DateRangeInput from "./inputs/DateRangeInput.svelte";
 import EmailInput from "./inputs/EmailInput.svelte";
+import MatrixInput from "./inputs/MatrixInput.svelte";
 import MultipleChoiceInput from "./inputs/MultipleChoiceInput.svelte";
 import NumberInput from "./inputs/NumberInput.svelte";
+import PhoneInput from "./inputs/PhoneInput.svelte";
 import SingleChoiceInput from "./inputs/SingleChoiceInput.svelte";
 import TextInput from "./inputs/TextInput.svelte";
+import UrlInput from "./inputs/UrlInput.svelte";
+import TimeInput from "./inputs/TimeInput.svelte";
 
 /** The ids and state the question card hands its input, for labelling and error linking. */
 export type Field = {
@@ -33,4 +41,21 @@ export const inputs = {
   single_choice: SingleChoiceInput,
   multiple_choice: MultipleChoiceInput,
   boolean: BooleanInput,
+  ranking: RankingInput,
+  phone: PhoneInput,
+  url: UrlInput,
+  time_of_day: TimeInput,
+  date_time: DateTimeInput,
+  date_range: DateRangeInput,
+  address: AddressInput,
+  single_choice_matrix: MatrixInput as Component<
+    InputProps<"single_choice_matrix">,
+    object,
+    "value"
+  >,
+  multiple_choice_matrix: MatrixInput as Component<
+    InputProps<"multiple_choice_matrix">,
+    object,
+    "value"
+  >,
 } satisfies { [T in QuestionTypeName]: Component<InputProps<T>, object, "value"> };

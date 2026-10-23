@@ -227,8 +227,10 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
       const [readyView, colourView, toppingsView, scoreView, commentView] = result.questions;
       expect(readyView!.combined).toEqual({
         responses: 5,
+        shown: 5,
         answered: 5,
         skipped: 0,
+        notShown: 0,
         absentResponses: 0,
         summary: { type: "boolean", trueCount: 4, falseCount: 1 },
       });
@@ -239,8 +241,10 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
 
       expect(colourView!.combined).toEqual({
         responses: 5,
+        shown: 5,
         answered: 3,
         skipped: 2,
+        notShown: 0,
         absentResponses: 0,
         summary: {
           type: "single_choice",
@@ -281,8 +285,14 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
         ],
       });
       expect(toppingsView!.byVersion).toMatchObject([
-        { answered: 2, skipped: 1, constraints: { minSelected: null, maxSelected: null } },
-        { answered: 1, skipped: 1 },
+        {
+          shown: 3,
+          answered: 2,
+          skipped: 1,
+          notShown: 0,
+          constraints: { minSelected: null, maxSelected: null },
+        },
+        { shown: 2, answered: 1, skipped: 1, notShown: 0 },
       ]);
 
       expect(scoreView!.combined.summary).toEqual({
@@ -298,8 +308,10 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
           version: 1,
           present: true,
           responses: 3,
+          shown: 3,
           answered: 3,
           skipped: 0,
+          notShown: 0,
           summary: {
             type: "number",
             count: 3,
@@ -314,8 +326,10 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
           version: 2,
           present: true,
           responses: 2,
+          shown: 2,
           answered: 2,
           skipped: 0,
+          notShown: 0,
           summary: { type: "number", count: 2, min: 1, max: 5, mean: 3, median: 3 },
           constraints: { type: "number", integer: true, min: 1, max: 5 },
         },
@@ -323,12 +337,213 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
 
       expect(commentView!.combined).toEqual({
         responses: 3,
+        shown: 3,
         answered: 1,
         skipped: 2,
+        notShown: 0,
         absentResponses: 2,
         summary: { type: "text" },
       });
       expect(commentView!.byVersion[1]).toEqual({ version: 2, present: false });
+    });
+
+    test("an NPS display reports promoters, passives, detractors and the score, and only for versions that use it", async () => {
+      const recommendId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b1";
+      const starsId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b2";
+      const recommend = (display: "nps" | "scale") => ({
+        id: recommendId,
+        type: "number",
+        label: "Recommend?",
+        required: true,
+        config:
+          display === "nps"
+            ? {
+                integer: true,
+                min: 0,
+                max: 10,
+                display,
+                minLabel: "Not likely",
+                maxLabel: "Very likely",
+              }
+            : { integer: true, min: 0, max: 10, display },
+      });
+      const stars = {
+        id: starsId,
+        type: "number",
+        label: "Stars",
+        required: false,
+        config: { integer: true, min: 1, max: 5, display: "rating" },
+      };
+      const { result } = await run(
+        Effect.gen(function* () {
+          const { formId, v1 } = yield* openForm(admin, definition([recommend("nps"), stars]));
+          yield* submit(respondent("alice"), formId, v1.id, {
+            [recommendId]: 10,
+            [starsId]: 5,
+          });
+          yield* submit(respondent("bob"), formId, v1.id, { [recommendId]: 9, [starsId]: 1 });
+          yield* submit(respondent("carol"), formId, v1.id, { [recommendId]: 0 });
+          yield* submit(respondent("dave"), formId, v1.id, { [recommendId]: 7 });
+          const v2 = yield* publish(formId, definition([recommend("scale"), stars]));
+          yield* submit(respondent("erin"), formId, v2.id, { [recommendId]: 0 });
+          return { result: yield* analytics(formId) };
+        }),
+      );
+
+      const recommendView = result.questions.find((q) => q.questionId === recommendId)!;
+      expect(recommendView.combined.summary).toEqual({
+        type: "number",
+        count: 5,
+        min: 0,
+        max: 10,
+        mean: expect.closeTo(5.2, 5),
+        median: 7,
+        nps: { promoters: 2, passives: 1, detractors: 1, answered: 4, score: 25 },
+      });
+      expect(recommendView.byVersion).toEqual([
+        {
+          version: 1,
+          present: true,
+          responses: 4,
+          shown: 4,
+          answered: 4,
+          skipped: 0,
+          notShown: 0,
+          summary: {
+            type: "number",
+            count: 4,
+            min: 0,
+            max: 10,
+            mean: expect.closeTo(6.5, 5),
+            median: 8,
+            nps: { promoters: 2, passives: 1, detractors: 1, answered: 4, score: 25 },
+          },
+          constraints: { type: "number", integer: true, min: 0, max: 10 },
+        },
+        {
+          version: 2,
+          present: true,
+          responses: 1,
+          shown: 1,
+          answered: 1,
+          skipped: 0,
+          notShown: 0,
+          summary: { type: "number", count: 1, min: 0, max: 0, mean: 0, median: 0 },
+          constraints: { type: "number", integer: true, min: 0, max: 10 },
+        },
+      ]);
+
+      const starsView = result.questions.find((q) => q.questionId === starsId)!;
+      expect(starsView.combined.summary).toEqual({
+        type: "number",
+        count: 2,
+        min: 1,
+        max: 5,
+        mean: 3,
+        median: 3,
+      });
+    });
+
+    test("a ranking reports mean position and first place for the versions that offered each option", async () => {
+      const prioritiesId = "0192f5a0-7c3e-7b1a-9d2e-0000000000b1";
+      const priorities = (entries: ReadonlyArray<readonly [string, string]>) => ({
+        id: prioritiesId,
+        type: "ranking",
+        label: "Priorities",
+        required: false,
+        config: { options: entries.map(([value, label]) => ({ value, label })) },
+      });
+      const option = (
+        value: string,
+        label: string,
+        meanPosition: number | null,
+        firstPlace: number,
+        base: number,
+        offeredIn: number[],
+      ) => ({
+        value,
+        label,
+        otherLabels: [],
+        meanPosition,
+        firstPlace,
+        base,
+        offeredIn,
+      });
+      const { result } = await run(
+        Effect.gen(function* () {
+          const { formId, v1 } = yield* openForm(
+            admin,
+            definition([
+              priorities([
+                ["a", "Alpha"],
+                ["b", "Beta"],
+                ["c", "Gamma"],
+              ]),
+            ]),
+          );
+          // Places: a 1 then 2, b 2 then 1, c 3 then 3. Carol skips, so the base is 2.
+          yield* submit(respondent("alice"), formId, v1.id, { [prioritiesId]: ["a", "b", "c"] });
+          yield* submit(respondent("bob"), formId, v1.id, { [prioritiesId]: ["b", "a", "c"] });
+          yield* submit(respondent("carol"), formId, v1.id, {});
+          const v2 = yield* publish(
+            formId,
+            definition([
+              priorities([
+                ["a", "Alpha"],
+                ["b", "Beta"],
+              ]),
+            ]),
+          );
+          yield* submit(respondent("dave"), formId, v2.id, { [prioritiesId]: ["b", "a"] });
+          yield* submit(respondent("erin"), formId, v2.id, {});
+          return { result: yield* analytics(formId) };
+        }),
+      );
+
+      const view = result.questions.find((question) => question.questionId === prioritiesId)!;
+      expect(view.combined).toMatchObject({ responses: 5, answered: 3, skipped: 2 });
+      expect(view.combined.summary).toEqual({
+        type: "ranking",
+        options: [
+          option("a", "Alpha", 5 / 3, 1, 3, [1, 2]),
+          option("b", "Beta", 4 / 3, 2, 3, [1, 2]),
+          option("c", "Gamma", 3, 0, 2, [1]),
+        ],
+      });
+      expect(view.byVersion).toEqual([
+        {
+          version: 1,
+          present: true,
+          responses: 3,
+          shown: 3,
+          answered: 2,
+          skipped: 1,
+          notShown: 0,
+          summary: {
+            type: "ranking",
+            options: [
+              option("a", "Alpha", 1.5, 1, 2, [1]),
+              option("b", "Beta", 1.5, 1, 2, [1]),
+              option("c", "Gamma", 3, 0, 2, [1]),
+            ],
+          },
+          constraints: null,
+        },
+        {
+          version: 2,
+          present: true,
+          responses: 2,
+          shown: 2,
+          answered: 1,
+          skipped: 1,
+          notShown: 0,
+          summary: {
+            type: "ranking",
+            options: [option("a", "Alpha", 2, 0, 1, [2]), option("b", "Beta", 1, 1, 1, [2])],
+          },
+          constraints: null,
+        },
+      ]);
     });
 
     test("an analyst with only responses:read gets the analytics", async () => {
@@ -368,6 +583,98 @@ export const describeAnalytics = (database: Layer.Layer<Services, unknown>) => {
 
       expect(unknown._tag).toBe("NotFound");
       expect(otherTenant._tag).toBe("NotFound");
+    });
+
+    test("counts shown, skipped and not shown from the stored path, per version and combined", async () => {
+      const gateId = "0192f5a0-7c3e-7b1a-9d2e-0000000000d1";
+      const whyId = "0192f5a0-7c3e-7b1a-9d2e-0000000000d2";
+      const pageId = "0192f5a0-7c3e-7b1a-9d2e-0000000000d3";
+      const gate = { id: gateId, type: "boolean", label: "Stay?", required: true, config: {} };
+      const why = (conditioned: boolean) => ({
+        id: whyId,
+        type: "single_choice",
+        label: "Why not?",
+        required: false,
+        config: {
+          display: "radio",
+          options: [
+            { value: "price", label: "Price" },
+            { value: "time", label: "Time" },
+          ],
+        },
+        ...(conditioned ? { showCondition: { questionId: gateId, operator: "is_no" } } : {}),
+      });
+      const definition = (conditioned: boolean) => ({
+        format: 2,
+        title: "Survey",
+        pages: [{ id: pageId, questions: [gate, why(conditioned)], jumps: [] }],
+      });
+
+      const { result } = await run(
+        Effect.gen(function* () {
+          const { formId, v1 } = yield* openForm(admin, definition(true));
+          yield* submit(respondent("alice"), formId, v1.id, {
+            [gateId]: false,
+            [whyId]: "price",
+          });
+          yield* submit(respondent("bob"), formId, v1.id, { [gateId]: false });
+          yield* submit(respondent("carol"), formId, v1.id, { [gateId]: true });
+          // No show condition: the stored path lists every question, as a response collected before
+          // this iteration does, so both responses are shown and neither is not shown.
+          const v2 = yield* publish(formId, definition(false));
+          yield* submit(respondent("dave"), formId, v2.id, { [gateId]: true, [whyId]: "time" });
+          yield* submit(respondent("erin"), formId, v2.id, { [gateId]: false });
+          return { result: yield* analytics(formId) };
+        }),
+      );
+
+      const whyView = result.questions.find((q) => q.questionId === whyId)!;
+      expect(whyView.combined).toMatchObject({
+        responses: 5,
+        shown: 4,
+        answered: 2,
+        skipped: 2,
+        notShown: 1,
+      });
+      expect(whyView.byVersion).toMatchObject([
+        { version: 1, present: true, responses: 3, shown: 2, answered: 1, skipped: 1, notShown: 1 },
+        { version: 2, present: true, responses: 2, shown: 2, answered: 1, skipped: 1, notShown: 0 },
+      ]);
+      const price = {
+        value: "price",
+        label: "Price",
+        otherLabels: [],
+        count: 1,
+        base: 1,
+        offeredIn: [1],
+      };
+      const time = {
+        value: "time",
+        label: "Time",
+        otherLabels: [],
+        count: 0,
+        base: 1,
+        offeredIn: [1],
+      };
+      expect(whyView.byVersion[0]).toMatchObject({
+        summary: { type: "single_choice", options: [price, time] },
+      });
+      expect(whyView.combined.summary).toEqual({
+        type: "single_choice",
+        options: [
+          { ...price, base: 2, offeredIn: [1, 2] },
+          { ...time, count: 1, base: 2, offeredIn: [1, 2] },
+        ],
+      });
+
+      const gateView = result.questions.find((q) => q.questionId === gateId)!;
+      expect(gateView.combined).toMatchObject({
+        responses: 5,
+        shown: 5,
+        answered: 5,
+        skipped: 0,
+        notShown: 0,
+      });
     });
   });
 };

@@ -1,5 +1,14 @@
-import { validateAnswers, type Answers } from "@fb/core/answers";
-import type { FormDefinition, Issue, QuestionTypeName } from "@fb/core/definition";
+import { pathOf, validateAnswers, type Answers } from "@fb/core/answers";
+import {
+  addressLines,
+  questionsOf,
+  type AddressLine,
+  type FormDefinition,
+  type Issue,
+  type QuestionSnapshot,
+  type QuestionSnapshotOf,
+  type QuestionTypeName,
+} from "@fb/core/definition";
 
 /** What each type's input holds while the respondent works on it: `undefined` until first touched. */
 type Drafts = {
@@ -10,6 +19,15 @@ type Drafts = {
   single_choice: string;
   multiple_choice: string[];
   boolean: boolean;
+  ranking: string[];
+  phone: string;
+  url: string;
+  time_of_day: string;
+  date_time: string;
+  date_range: { start: string; end: string };
+  address: { [K in AddressLine]?: string };
+  single_choice_matrix: Record<string, string>;
+  multiple_choice_matrix: Record<string, string[]>;
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -28,7 +46,50 @@ const answerOf = {
   single_choice: unlessBlank,
   multiple_choice: (draft) => (draft === undefined || draft.length === 0 ? undefined : draft),
   boolean: (draft) => draft,
-} satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
+  ranking: (draft, question) => {
+    if (draft === undefined) return undefined;
+    const expected = question.config.options.map((option) => option.value);
+    if (draft.length !== expected.length || new Set(draft).size !== draft.length) return undefined;
+    return draft.every((value) => expected.includes(value)) ? draft : undefined;
+  },
+  phone: unlessBlank,
+  url: unlessBlank,
+  time_of_day: unlessBlank,
+  date_time: unlessBlank,
+  date_range: (draft) => {
+    if (draft === undefined) return undefined;
+    const start = draft.start.trim();
+    const end = draft.end.trim();
+    // Both empty is unanswered. One side filled is sent, and the server rejects the half range.
+    if (start === "" && end === "") return undefined;
+    return { start, end };
+  },
+  address: (draft) => {
+    if (draft === undefined) return undefined;
+    const filled: Record<string, string> = {};
+    for (const line of addressLines) {
+      const part = draft[line];
+      if (part === undefined) continue;
+      const trimmed = part.trim();
+      if (trimmed !== "") filled[line] = trimmed;
+    }
+    return Object.keys(filled).length === 0 ? undefined : filled;
+  },
+  single_choice_matrix: (draft) =>
+    draft === undefined || Object.keys(draft).length === 0 ? undefined : draft,
+  multiple_choice_matrix: (draft) => {
+    if (draft === undefined) return undefined;
+    const answered = Object.fromEntries(
+      Object.entries(draft).filter(([, columns]) => columns.length > 0),
+    );
+    return Object.keys(answered).length === 0 ? undefined : answered;
+  },
+} satisfies {
+  [T in QuestionTypeName]: (
+    draft: DraftOf<T>,
+    question: QuestionSnapshotOf<T>,
+  ) => Answer | undefined;
+};
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
 
@@ -41,6 +102,46 @@ const draftOf = {
   single_choice: stringDraft,
   multiple_choice: (answer) => (Array.isArray(answer) ? [...answer] : undefined),
   boolean: (answer) => (typeof answer === "boolean" ? answer : undefined),
+  ranking: (answer) =>
+    Array.isArray(answer) && answer.every((item) => typeof item === "string")
+      ? [...answer]
+      : undefined,
+  phone: stringDraft,
+  url: stringDraft,
+  time_of_day: stringDraft,
+  date_time: stringDraft,
+  date_range: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const { start, end } = answer;
+    if (typeof start !== "string" || typeof end !== "string") return undefined;
+    return { start, end };
+  },
+  address: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: { [K in AddressLine]?: string } = {};
+    for (const line of addressLines) {
+      const part = answer[line];
+      if (typeof part === "string") draft[line] = part;
+    }
+    return Object.keys(draft).length === 0 ? undefined : draft;
+  },
+  single_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string> = {};
+    for (const [row, column] of Object.entries(answer)) {
+      if (typeof column === "string") draft[row] = column;
+    }
+    return draft;
+  },
+  multiple_choice_matrix: (answer) => {
+    if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return undefined;
+    const draft: Record<string, string[]> = {};
+    for (const [row, columns] of Object.entries(answer)) {
+      if (Array.isArray(columns) && columns.every((column) => typeof column === "string"))
+        draft[row] = [...columns];
+    }
+    return draft;
+  },
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */
@@ -49,7 +150,7 @@ export const draftsOf = (
   answers: Readonly<Record<string, Answer>>,
 ): Record<string, Draft> => {
   const drafts: Record<string, Draft> = {};
-  for (const question of definition.questions) {
+  for (const question of questionsOf(definition)) {
     const answer = answers[question.id];
     if (answer !== undefined) drafts[question.id] = draftOf[question.type](answer);
   }
@@ -72,24 +173,81 @@ export type Checked =
   | { readonly ok: true; readonly answers: Answers }
   | { readonly ok: false; readonly errors: Record<string, string> };
 
+/** The answers the current drafts stand for, including invalid ones. An unanswered question has no key. */
+export const answersFromDrafts = (
+  definition: FormDefinition,
+  drafts: Readonly<Record<string, Draft>>,
+): Answers => {
+  const answers: Answers = {};
+  for (const question of questionsOf(definition)) {
+    const answer = (
+      answerOf[question.type] as (draft: Draft, question: QuestionSnapshot) => Answer | undefined
+    )(drafts[question.id], question);
+    if (answer !== undefined) answers[question.id] = answer;
+  }
+  return answers;
+};
+
 /**
- * The answers to send, validated by the version's own answer schema, or each invalid question's message. An
- * unanswered optional question has no key.
+ * The answers to send. A question off the path is left out, and a required question off the path is not
+ * demanded. An unanswered optional question on the path has no key.
  */
 export const checkDrafts = (
   definition: FormDefinition,
   drafts: Readonly<Record<string, Draft>>,
 ): Checked => {
+  const all = answersFromDrafts(definition, drafts);
+  const questions = pathOf(definition, all).questions;
   const answers: Answers = {};
-  const missing: Record<string, string> = {};
-  for (const question of definition.questions) {
-    const answer = (answerOf[question.type] as (draft: Draft) => Answer | undefined)(
-      drafts[question.id],
-    );
+  for (const question of questions) {
+    const answer = all[question.id];
     if (answer !== undefined) answers[question.id] = answer;
-    else if (question.required) missing[question.id] = unanswered;
   }
+  const missing: Record<string, string> = {};
+  for (const question of questions)
+    if (answers[question.id] === undefined && question.required) missing[question.id] = unanswered;
   const result = validateAnswers(definition, answers);
   if (result.ok && Object.keys(missing).length === 0) return { ok: true, answers: result.value };
   return { ok: false, errors: { ...(result.ok ? {} : questionErrors(result.issues)), ...missing } };
+};
+
+const checkedPageId = "00000000-0000-4000-8000-00000000c000";
+
+const withoutShowCondition = (question: QuestionSnapshot): QuestionSnapshot => {
+  if (question.showCondition === undefined) return question;
+  const { showCondition: _showCondition, ...rest } = question;
+  return rest;
+};
+
+/**
+ * Next checks the questions on the path on this page. The path is decided from the whole definition, so a
+ * condition can read an earlier page, and a required question on another page is not demanded yet.
+ */
+export const checkPage = (
+  definition: FormDefinition,
+  drafts: Readonly<Record<string, Draft>>,
+  questions: readonly QuestionSnapshot[],
+): Checked => {
+  const onPath = new Set(
+    pathOf(definition, answersFromDrafts(definition, drafts)).questions.map(
+      (question) => question.id,
+    ),
+  );
+  return checkDrafts(
+    {
+      format: 2,
+      title: definition.title,
+      ...(definition.description === undefined ? {} : { description: definition.description }),
+      pages: [
+        {
+          id: checkedPageId,
+          questions: questions
+            .filter((question) => onPath.has(question.id))
+            .map(withoutShowCondition),
+          jumps: [],
+        },
+      ],
+    },
+    drafts,
+  );
 };
