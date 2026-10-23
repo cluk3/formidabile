@@ -295,7 +295,7 @@ export interface components {
         QuestionAnalytics: {
             questionId: string;
             /** @enum {string} */
-            type: "text" | "email" | "number" | "date" | "single_choice" | "multiple_choice" | "boolean" | "phone" | "url" | "time_of_day";
+            type: "text" | "email" | "number" | "date" | "single_choice" | "multiple_choice" | "boolean" | "phone" | "url" | "time_of_day" | "date_time";
             label: string;
             otherLabels: {
                 label: string;
@@ -376,7 +376,7 @@ export interface components {
             };
         } | {
             /** @enum {string} */
-            type: "text" | "email" | "date" | "phone" | "url" | "time_of_day";
+            type: "text" | "email" | "date" | "phone" | "url" | "time_of_day" | "date_time";
         };
         DeletedResponses: {
             deleted: number;
@@ -1722,6 +1722,137 @@ export interface components {
                     earliest?: string;
                     latest?: string;
                 };
+            } | {
+                /** Format: uuid */
+                id: string;
+                label: string;
+                description?: string;
+                required: boolean;
+                showCondition?: {
+                    /** Format: uuid */
+                    questionId: string;
+                    operator: string;
+                    constant?: string | number | boolean | string[];
+                    row?: string;
+                } | ({
+                    all: ({
+                        /** Format: uuid */
+                        questionId: string;
+                        operator: string;
+                        constant?: string | number | boolean | string[];
+                        row?: string;
+                    } | ({
+                        all: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        } | {
+                            any: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        }))[];
+                    } | {
+                        any: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        } | {
+                            any: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        }))[];
+                    }))[];
+                } | {
+                    any: ({
+                        /** Format: uuid */
+                        questionId: string;
+                        operator: string;
+                        constant?: string | number | boolean | string[];
+                        row?: string;
+                    } | ({
+                        all: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        } | {
+                            any: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        }))[];
+                    } | {
+                        any: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        } | {
+                            any: {
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            }[];
+                        }))[];
+                    }))[];
+                });
+                /** @constant */
+                type: "date_time";
+                config: {
+                    min?: string;
+                    max?: string;
+                };
             })[];
         } | {
             /** @constant */
@@ -3049,6 +3180,137 @@ export interface components {
                     config: {
                         earliest?: string;
                         latest?: string;
+                    };
+                } | {
+                    /** Format: uuid */
+                    id: string;
+                    label: string;
+                    description?: string;
+                    required: boolean;
+                    showCondition?: {
+                        /** Format: uuid */
+                        questionId: string;
+                        operator: string;
+                        constant?: string | number | boolean | string[];
+                        row?: string;
+                    } | ({
+                        all: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: ({
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            } | ({
+                                all: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            } | {
+                                any: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            }))[];
+                        } | {
+                            any: ({
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            } | ({
+                                all: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            } | {
+                                any: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            }))[];
+                        }))[];
+                    } | {
+                        any: ({
+                            /** Format: uuid */
+                            questionId: string;
+                            operator: string;
+                            constant?: string | number | boolean | string[];
+                            row?: string;
+                        } | ({
+                            all: ({
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            } | ({
+                                all: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            } | {
+                                any: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            }))[];
+                        } | {
+                            any: ({
+                                /** Format: uuid */
+                                questionId: string;
+                                operator: string;
+                                constant?: string | number | boolean | string[];
+                                row?: string;
+                            } | ({
+                                all: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            } | {
+                                any: {
+                                    /** Format: uuid */
+                                    questionId: string;
+                                    operator: string;
+                                    constant?: string | number | boolean | string[];
+                                    row?: string;
+                                }[];
+                            }))[];
+                        }))[];
+                    });
+                    /** @constant */
+                    type: "date_time";
+                    config: {
+                        min?: string;
+                        max?: string;
                     };
                 })[];
                 jumps: {

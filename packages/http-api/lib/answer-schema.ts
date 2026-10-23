@@ -36,6 +36,13 @@ const generatorFixes = (question: QuestionSnapshot): Schema.JsonObject => {
       return { pattern: "^(?i:https?):\\/\\/[^\\s/?#]+[^\\s]*$" };
     case "time_of_day":
       return { pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" };
+    case "date_time": {
+      const { min, max } = question.config;
+      return {
+        ...(min === undefined ? {} : { "x-fb-minDateTime": min }),
+        ...(max === undefined ? {} : { "x-fb-maxDateTime": max }),
+      };
+    }
     default:
       return {};
   }

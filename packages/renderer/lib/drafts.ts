@@ -19,6 +19,7 @@ type Drafts = {
   phone: string;
   url: string;
   time_of_day: string;
+  date_time: string;
 };
 export type DraftOf<T extends QuestionTypeName> = Drafts[T] | undefined;
 export type Draft = DraftOf<QuestionTypeName>;
@@ -40,6 +41,7 @@ const answerOf = {
   phone: unlessBlank,
   url: unlessBlank,
   time_of_day: unlessBlank,
+  date_time: unlessBlank,
 } satisfies { [T in QuestionTypeName]: (draft: DraftOf<T>) => Answer | undefined };
 
 const stringDraft = (answer: Answer) => (typeof answer === "string" ? answer : undefined);
@@ -56,6 +58,7 @@ const draftOf = {
   phone: stringDraft,
   url: stringDraft,
   time_of_day: stringDraft,
+  date_time: stringDraft,
 } satisfies { [T in QuestionTypeName]: (answer: Answer) => DraftOf<T> };
 
 /** The drafts that show a response's stored answers, for editing it. */

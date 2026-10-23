@@ -3,6 +3,7 @@ import type { Component } from "svelte";
 import BooleanAnswer from "#lib/answers/BooleanAnswer.svelte";
 import ChoiceAnswer from "#lib/answers/ChoiceAnswer.svelte";
 import DateAnswer from "#lib/answers/DateAnswer.svelte";
+import DateTimeAnswer from "#lib/answers/DateTimeAnswer.svelte";
 import EmailAnswer from "#lib/answers/EmailAnswer.svelte";
 import MultipleChoiceAnswer from "#lib/answers/MultipleChoiceAnswer.svelte";
 import NumberAnswer from "#lib/answers/NumberAnswer.svelte";
@@ -13,6 +14,7 @@ import UrlAnswer from "#lib/answers/UrlAnswer.svelte";
 import TimeOfDayAnswer from "#lib/answers/TimeOfDayAnswer.svelte";
 import BooleanEditor from "#lib/editors/BooleanEditor.svelte";
 import DateEditor from "#lib/editors/DateEditor.svelte";
+import DateTimeEditor from "#lib/editors/DateTimeEditor.svelte";
 import EmailEditor from "#lib/editors/EmailEditor.svelte";
 import MultipleChoiceEditor from "#lib/editors/MultipleChoiceEditor.svelte";
 import NumberEditor from "#lib/editors/NumberEditor.svelte";
@@ -42,6 +44,7 @@ export const registry = {
   phone: { name: "Phone", editor: PhoneEditor, answer: PhoneAnswer },
   url: { name: "URL", editor: UrlEditor, answer: UrlAnswer },
   time_of_day: { name: "Time of day", editor: TimeOfDayEditor, answer: TimeOfDayAnswer },
+  date_time: { name: "Date and time", editor: DateTimeEditor, answer: DateTimeAnswer },
 } satisfies {
   [T in QuestionTypeName]: {
     name: string;

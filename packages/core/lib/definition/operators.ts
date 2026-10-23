@@ -1,7 +1,11 @@
 import { phoneOperators } from "./types/phone.ts";
+import { isLocalDateTime } from "./types/date-time.ts";
 
-/** What a leaf compares an answer with. `date` is an ISO calendar day; `time` is `HH:MM`; `strings` is an option-value list. */
-export type ConstantKind = "none" | "string" | "number" | "date" | "time" | "strings";
+/**
+ * What a leaf compares an answer with. `date` is an ISO calendar day; `time` is `HH:MM`;
+ * `date_time` is a local `YYYY-MM-DDTHH:MM`; `strings` is an option-value list.
+ */
+export type ConstantKind = "none" | "string" | "number" | "date" | "time" | "date_time" | "strings";
 
 /**
  * One operator a question type accepts. A later question type registers its row by appending one entry
@@ -235,6 +239,29 @@ const booleanOperators = [
   define("is_no", "none", (answer) => answer === false),
 ];
 
+const dateTimeIs =
+  (compare: (answer: string, constant: string) => boolean) =>
+  (answer: unknown, constant: unknown) =>
+    isLocalDateTime(answer) && isLocalDateTime(constant) && compare(answer, constant);
+
+const dateTimeOperators = [
+  define(
+    "is_at",
+    "date_time",
+    dateTimeIs((answer, constant) => answer === constant),
+  ),
+  define(
+    "is_before",
+    "date_time",
+    dateTimeIs((answer, constant) => answer < constant),
+  ),
+  define(
+    "is_after",
+    "date_time",
+    dateTimeIs((answer, constant) => answer > constant),
+  ),
+];
+
 /** Present on every type. `matches` runs only after the evaluator has decided the question was answered. */
 const presence = [
   define("is_answered", "none", () => true),
@@ -258,6 +285,7 @@ export const conditionOperators = {
   phone: withPresence(phoneOperators),
   url: withPresence(textOperators),
   time_of_day: withPresence(timeOperators),
+  date_time: withPresence(dateTimeOperators),
 };
 
 const operatorsFor = (type: string): readonly ConditionOperator[] =>
@@ -284,6 +312,8 @@ export const constantFits = (operator: ConditionOperator, constant: unknown): bo
       return isIsoDate(constant);
     case "time":
       return isTimeOfDay(constant);
+    case "date_time":
+      return isLocalDateTime(constant);
     case "number":
       return finite(constant);
     case "strings":

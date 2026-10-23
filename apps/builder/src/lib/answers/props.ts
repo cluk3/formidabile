@@ -12,6 +12,7 @@ type AnswerValue = {
   phone: string;
   url: string;
   time_of_day: string;
+  date_time: string;
 };
 
 /** What a question type's answer display gets: `interpretAnswers`'s question snapshot, raw value and display text. */
